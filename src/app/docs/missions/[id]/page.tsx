@@ -1,54 +1,101 @@
-// src/app/docs/missions/data.ts
+// src/app/docs/missions/[id]/page.tsx
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { missions, type Mission } from "../data";
 
-export type Mission = {
-  id: number;
-  title: string;
-  category: string;
-  level: "Beginner" | "Intermediate" | "Advanced";
-  summary: string;      // نص قصير يظهر في الكارد
-  description: string;  // شرح أطول يظهر في صفحة التفاصيل
-  steps: string[];      // خطوات تنفيذ المهمة
-  skills: string[];     // المهارات اللي يتعلمها المتدرّب
-  sourceUrl?: string;
-  sourceName?: string;
+type MissionDetailsPageProps = {
+  params: { id: string };
 };
 
-export const missions: Mission[] = [
-  {
-    id: 1,
-    title: "Build a React Counter Component",
-    category: "Web Development",
-    level: "Beginner",
-    summary: "Create a simple counter with + and - buttons using React.",
-    description:
-      "في هذه المهمة، المتدرّب يبني مكوّن React بسيط فيه عدّاد وزرين لزيادة وإنقاص القيمة. الهدف إنه يتعوّد على useState و JSX.",
-    steps: [
-      "Create a new React component called Counter.tsx.",
-      "Use the useState hook to store the counter value.",
-      "Add two buttons: one to increment and one to decrement the value.",
-      "Render the current value in a large, clear text.",
-    ],
-    skills: ["React", "useState", "Components", "State"],
-    sourceUrl: "https://github.com/4GeeksAcademy/react-tutorial-exercises",
-    sourceName: "4Geeks React Tutorial Exercises",
-  },
-  {
-    id: 2,
-    title: "Fetch and Render a List of Posts",
-    category: "API Integration",
-    level: "Intermediate",
-    summary: "Call a REST API and render the list of posts in a React component.",
-    description:
-      "في هذه المهمة، المتدرّب يتعلّم كيف يتعامل مع REST API ويعرض البيانات في واجهة React باستخدام fetch أو axios.",
-    steps: [
-      "Create a new page or component called PostsPage.tsx.",
-      "Use useEffect to call a public REST API (e.g. jsonplaceholder).",
-      "Store the result in state using useState.",
-      "Render the list in a styled <ul> with <li> for each post title.",
-    ],
-    skills: ["REST APIs", "React", "useEffect", "Async JavaScript"],
-    sourceUrl: "https://github.com/4GeeksAcademy/react-tutorial-exercises",
-    sourceName: "4Geeks React Tutorial Exercises",
-  },
-];
+export default function MissionDetailsPage({ params }: MissionDetailsPageProps) {
+  const missionId = Number(params.id);
+  const mission: Mission | undefined = missions.find(
+    (m) => m.id === missionId
+  );
+
+  if (!mission) {
+    notFound();
+  }
+
+  return (
+    <main className="max-w-4xl mx-auto px-4 py-10 space-y-8">
+      <Link
+        href="/docs/missions"
+        className="text-sm text-slate-500 hover:underline"
+      >
+        ← Back to missions
+      </Link>
+
+      <header className="space-y-2">
+        <p className="text-xs uppercase tracking-wide text-slate-400">
+          {mission.category} • {mission.level}
+        </p>
+        <h1 className="text-3xl font-bold tracking-tight">
+          {mission.title}
+        </h1>
+        <p className="text-slate-600">{mission.description}</p>
+      </header>
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">What will the intern do?</h2>
+        <p className="text-slate-700">
+          هذه المهمة مصمّمة كـ Task حقيقي لمتدرّب في شركة تقنية. طبّق الخطوات
+          التالية، واذا وقف معك شيء استخدم مساعد الذكاء الاصطناعي في intern.dev.
+        </p>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">Steps</h2>
+        <ol className="list-decimal list-inside space-y-2 text-slate-700">
+          {mission.steps.map((step, index) => (
+            <li key={index}>{step}</li>
+          ))}
+        </ol>
+      </section>
+
+      {mission.codeExample && (
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold">Code example</h2>
+          <pre className="rounded-lg bg-slate-950 text-slate-50 text-sm p-4 overflow-x-auto">
+            <code>{mission.codeExample}</code>
+          </pre>
+        </section>
+      )}
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">Skills practiced</h2>
+        <ul className="flex flex-wrap gap-2">
+          {mission.skills.map((skill) => (
+            <li
+              key={skill}
+              className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-700"
+            >
+              {skill}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {mission.sourceUrl && (
+        <section className="space-y-2">
+          <h2 className="text-lg font-semibold">Source / Reference</h2>
+          <p className="text-sm text-slate-700">
+            هذه المهمة مبنية على محتوى من{" "}
+            <Link
+              href={mission.sourceUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="underline"
+            >
+              {mission.sourceName ?? "Reference"}
+            </Link>
+            ، مع تبسيطها للمتدرّبين في intern.dev.
+          </p>
+        </section>
+      )}
+    </main>
+  );
+}
+
+
 
