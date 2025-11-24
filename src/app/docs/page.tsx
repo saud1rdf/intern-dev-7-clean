@@ -15,8 +15,9 @@ import {
   Filter,
   ArrowRight
 } from 'lucide-react'
-import Link from "next/link";
-import { missions } from "./missions/data";
+
+import Link from 'next/link'
+import { missions } from './missions/data'
 
 interface DocCategory {
   id: string
@@ -248,6 +249,66 @@ export default function DocsPage() {
             </p>
           </div>
         )}
+
+        {/* Missions Section */}
+        <div className="mt-12 space-y-4" id="missions">
+          <div className="flex items-center justify-between">
+            <h2 className={`text-2xl font-semibold tracking-tight ${
+              language === 'ar' ? 'font-arabic' : 'font-english'
+            }`}>
+              {language === 'ar' ? 'مهام المتدربين' : 'Missions for interns'}
+            </h2>
+
+            <Link
+              href="/docs/missions"
+              className={`text-sm text-slate-500 hover:underline ${
+                language === 'ar' ? 'font-arabic' : 'font-english'
+              }`}
+            >
+              {language === 'ar' ? 'عرض الكل →' : 'View all →'}
+            </Link>
+          </div>
+
+          <p className={`text-sm text-slate-600 dark:text-slate-300 ${
+            language === 'ar' ? 'font-arabic' : 'font-english'
+          }`}>
+            {language === 'ar'
+              ? 'مهام جاهزة للمتدربين: خطوات واضحة + مهارات مطلوبة + تعليمات يمكن تطبيقها داخل intern.dev'
+              : 'Ready-to-use tasks for interns: clear steps, required skills, and guided instructions.'}
+          </p>
+
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
+            {missions.slice(0, 4).map((mission) => (
+              <Link
+                key={mission.id}
+                href={`/docs/missions/${mission.id}`}
+                className="block rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-gray-800 p-5 shadow-sm hover:border-slate-400 hover:shadow-md transition"
+              >
+                <p className="text-xs uppercase text-slate-400 dark:text-slate-500 mb-1">
+                  {mission.category} • {mission.level}
+                </p>
+
+                <h3 className={`text-lg font-semibold text-gray-900 dark:text-white mb-1 ${
+                  language === 'ar' ? 'font-arabic' : 'font-english'
+                }`}>
+                  {mission.title}
+                </h3>
+
+                <p className={`text-sm text-slate-600 dark:text-slate-300 line-clamp-3 ${
+                  language === 'ar' ? 'font-arabic' : 'font-english'
+                }`}>
+                  {mission.summary}
+                </p>
+
+                <p className="mt-3 text-[11px] text-slate-400 dark:text-slate-500">
+                  {language === 'ar'
+                    ? 'جاهزة للتطبيق • محدثة حديثاً'
+                    : 'Updated recently • Ready for interns'}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   )
