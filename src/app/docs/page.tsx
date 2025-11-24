@@ -15,6 +15,8 @@ import {
   Filter,
   ArrowRight
 } from 'lucide-react'
+import Link from "next/link";
+import { missions } from "./missions/data";
 
 interface DocCategory {
   id: string
