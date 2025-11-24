@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
 type Mission = {
   id: number;
@@ -12,6 +13,7 @@ type Mission = {
   skills: string[];
 };
 
+// نفس بيانات المهمّات (مكررة هنا عشان نسويها بسرعة)
 const missions: Mission[] = [
   {
     id: 1,
@@ -110,7 +112,7 @@ const missions: Mission[] = [
     duration: "1–2 days",
     sourceName:
       "Advanced State Management Techniques in React (choose your article)",
-    sourceUrl: "https://medium.com/", // غيّرها لاحقًا بالرابط اللي تبيه
+    sourceUrl: "https://medium.com/",
     summary:
       "هذه المهمة عبارة عن تلخيص وتطبيق لأكثر من نمط لإدارة الحالة المشتركة في React: Context API، Redux أو Zustand، وكيف تختار المكتبة أو الأسلوب المناسب حسب حجم المشروع.",
     skills: [
@@ -122,114 +124,81 @@ const missions: Mission[] = [
   },
 ];
 
-export const metadata = {
-  title: "Intern Missions – Advanced Track | intern.dev",
-  description:
-    "مجموعة مهام تقنية متقدمة لطلاب علوم الحاسب والمتدربين، مبنية على مقالات ومراجع احترافية في React, Node.js, و Git.",
-};
+export default function MissionDetailsPage({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const missionId = Number(params.id);
+  const mission = missions.find((m) => m.id === missionId);
 
-export default function MissionsPage() {
+  if (!mission) {
+    return notFound();
+  }
+
   return (
     <main className="min-h-screen bg-slate-950 text-slate-50">
-      <div className="mx-auto max-w-5xl px-4 py-10 space-y-8">
-        <header className="space-y-3">
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-            Intern Missions · Advanced Track
-          </h1>
-          <p className="text-slate-300 text-sm md:text-base leading-relaxed">
-            هذه الصفحة تجمع المهام المتقدمة اللي اتفقنا عليها لمشروع{" "}
-            <span className="font-semibold">intern.dev</span>، علشان المتدرب
-            يختار مهمة، يقرأ المصدر المرجعي، وبعدين يطبق المطلوب خطوة بخطوة.
-          </p>
-          <p className="text-slate-400 text-xs md:text-sm">
-            الفكرة: كل كرت = مهمة واحدة (Mission) مبنية على مقال أو مرجع خارجي،
-            مع ملخّص بالعربي ونقاط المهارات اللي المفروض يتدرّب عليها المتدرب.
-          </p>
+      <div className="mx-auto max-w-3xl px-4 py-8 space-y-6">
+        <Link
+          href="/docs/missions"
+          className="text-xs text-slate-400 hover:text-violet-300"
+        >
+          ← رجوع إلى قائمة المهمات
+        </Link>
+
+        <header className="space-y-2">
+          <p className="text-xs text-slate-400">{mission.category}</p>
+          <h1 className="text-2xl md:text-3xl font-bold">{mission.title}</h1>
+          <div className="flex gap-3 text-xs text-slate-400">
+            <span className="rounded-full border border-slate-700 px-2 py-0.5">
+              المستوى: {mission.difficulty}
+            </span>
+            <span className="rounded-full border border-slate-700 px-2 py-0.5">
+              المدة المتوقعة: {mission.duration}
+            </span>
+          </div>
         </header>
 
-        <section className="grid gap-6 md:grid-cols-2">
-          {missions.map((mission) => (
-            <article
-              key={mission.id}
-              className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 shadow-sm transition hover:border-violet-500 hover:shadow-violet-500/20"
-            >
-              <div className="mb-2 flex items-center justify-between text-xs text-slate-400">
-                <span>{mission.category}</span>
-                <span className="rounded-full border border-slate-700 px-2 py-0.5 text-[11px]">
-                  {mission.difficulty}
-                </span>
-              </div>
-
-              <h2 className="text-lg font-semibold mb-2 leading-snug">
-                {mission.title}
-              </h2>
-
-              <p className="text-sm text-slate-300 mb-3 leading-relaxed">
-                {mission.summary}
-              </p>
-
-              <div className="mb-3 flex flex-wrap gap-1.5">
-                {mission.skills.map((skill) => (
-                  <span
-                    key={skill}
-                    className="rounded-full bg-slate-800 px-2 py-0.5 text-[11px] text-slate-200"
-                  >
-                    {skill}
-                  </span>
-                ))}
-              </div>
-
-              <div className="mt-3 flex items-center justify-between border-t border-slate-800 pt-3">
-                <div className="text-xs text-slate-400 max-w-[65%]">
-                  <div className="font-medium text-slate-200 mb-0.5">
-                    المصدر المرجعي
-                  </div>
-                  <Link
-                    href={mission.sourceUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="underline underline-offset-4 hover:text-violet-400"
-                  >
-                    {mission.sourceName}
-                  </Link>
-                </div>
-
-                <div className="text-right text-xs text-slate-400">
-                  <div>تقدير الوقت</div>
-                  <div className="font-medium text-slate-200">
-                    {mission.duration}
-                  </div>
-                </div>
-              </div>
-
-              {/* 🔹 زر يفتح صفحة التفاصيل */}
-              <div className="mt-4 flex justify-end">
-                <Link
-                  href={`/docs/missions/${mission.id}`}
-                  className="text-[11px] md:text-xs rounded-full border border-violet-500 px-3 py-1 hover:bg-violet-500 hover:text-white transition"
-                >
-                  افتح المهمة الكاملة →
-                </Link>
-              </div>
-            </article>
-          ))}
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold">ملخص المهمة</h2>
+          <p className="text-sm text-slate-200 leading-relaxed">
+            {mission.summary}
+          </p>
         </section>
 
-        <footer className="pt-4 border-t border-slate-900 text-xs text-slate-500 space-y-1">
-          <p>
-            لاحقًا تقدر تضيف قسم &quot;خطوات التطبيق&quot; لكل مهمة، أو رابط
-            لصفحة &quot;Code Playground&quot; خاصة بها داخل intern.dev.
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold">المهارات المستهدفة</h2>
+          <ul className="list-disc list-inside space-y-1 text-sm text-slate-200">
+            {mission.skills.map((skill) => (
+              <li key={skill}>{skill}</li>
+            ))}
+          </ul>
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold">المصدر المرجعي</h2>
+          <p className="text-sm text-slate-200">
+            اقرأ المقال أو المصدر التالي كوّن فكرة كاملة عن الموضوع، ثم ارجع
+            وطبّق المطلوب في Code Playground أو مشروعك:
           </p>
-          <p>
-            لإضافة مهمة جديدة، كل اللي عليك تضيف عنصر جديد داخل المصفوفة{" "}
-            <code className="rounded bg-slate-900 px-1 py-0.5">
-              missions
-            </code>{" "}
-            بنفس التنسيق.
+          <Link
+            href={mission.sourceUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center text-sm text-violet-300 underline underline-offset-4 hover:text-violet-200"
+          >
+            {mission.sourceName}
+          </Link>
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold">خطوات مقترحة للتطبيق</h2>
+          <p className="text-sm text-slate-200">
+            هنا تقدر لاحقًا تضيف خطوات مفصّلة (Step-by-step) لكل مهمة، وكود
+            جاهز كمثال، أو حتى رابط لملف GitHub خاص بالمهمة.
           </p>
-        </footer>
+        </section>
       </div>
     </main>
   );
 }
-
