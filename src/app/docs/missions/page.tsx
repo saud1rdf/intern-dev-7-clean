@@ -1,235 +1,195 @@
-import Link from "next/link";
+// src/app/docs/missions/data.ts
 
-type Mission = {
+export type Mission = {
   id: number;
   title: string;
   category: string;
-  difficulty: string;
-  duration: string;
-  sourceName: string;
-  sourceUrl: string;
+  level: string;
   summary: string;
+  description: string;
   skills: string[];
+  steps: string[];
+  codeExample?: string;   // 👈 الجديد
+  sourceUrl?: string;
+  sourceName?: string;
 };
 
-const missions: Mission[] = [
+
+
+export const missions: Mission[] = [
   {
     id: 1,
-    title: "Advanced State Management in React (Local / Global / URL State)",
-    category: "Web Development · React",
-    difficulty: "Advanced",
-    duration: "1–2 days",
-    sourceName: "React State Management in 2025: What You Actually Need",
-    sourceUrl: "https://www.developerway.com/posts/react-state-management-2025",
+    title:
+      "Advanced State Management in React (Local / Global / URL State)",
+    category: "Web Development - React",
+    level: "Advanced",
     summary:
-      "مهمة تخلّيك تفهم متى تستخدم الـ local state، ومتى تحتاج global state (زي Context أو Redux)، وكيف تستغل URL state (query params) في بناء صفحات احترافية وقابلة للمشاركة.",
+      "Design and categorize different types of state (local, global, URL) in a large React app and choose the right tools.",
+    description:
+      "هذه المهمة تركّز على فهم أنواع الحالة المختلفة في تطبيق React كبير، وكيف تختار بين useState, Context, Redux, Zustand وغيرها. الهدف إن المتدرّب يقدر يحدّد نوع الحالة المناسب (local, global, URL) ويبرّر اختياره.",
     skills: [
-      "React useState / useReducer",
+      "React",
+      "State Management",
       "Context API",
-      "Global vs Local state",
-      "URL state & search params",
+      "Redux / Zustand",
+      "System Design Thinking"
     ],
+    steps: [
+      "اقرأ المقال المرجعي وحدّد الأنواع الثلاثة الرئيسية للحالة في تطبيقات React: local, global, URL.",
+      "اختر مشروع React (حقيقي أو تجريبي) فيه عدّة صفحات ومكوّنات متداخلة.",
+      "دوّن أمثلة حقيقية من المشروع لكل نوع حالة: ما الذي يجب أن يكون local؟ وما الذي يجب أن يكون global؟ وما الذي يناسب أن يكون في URL؟",
+      "اقترح بنية state architecture للتطبيق: هل ستستخدم Context فقط؟ أم Redux؟ أم Zustand؟ أم مزيج؟ ولماذا؟",
+      "نفّذ جزءاً من هذه البنية عملياً في المشروع (مثلاً: نقل بعض state من useState محلي إلى Context أو Redux).",
+      "اكتب ملاحظاتك: ما الذي أصبح أسهل بعد إعادة تصميم الحالة؟ وما الأشياء التي يجب تجنّبها؟"
+    ],
+    sourceUrl:
+      "https://dev.to/developerway/react-state-management-in-2025-what-you-actually-need",
+    sourceName: "React State Management in 2025 – DeveloperWay"
   },
   {
     id: 2,
     title: "Advanced React State via URL & Search Params",
-    category: "Web Development · React · Routing",
-    difficulty: "Advanced",
-    duration: "1 day",
-    sourceName: "Advanced React state management using URL parameters",
+    category: "Web Development - React",
+    level: "Intermediate-Advanced",
+    summary:
+      "Use URL parameters and search params to sync React state with the browser URL.",
+    description:
+      "في هذه المهمة، المتدرّب يتعلّم كيف يربط حالة الواجهة مع الـ URL باستخدام search params أو path params بحيث يمكن مشاركة الحالة عبر الرابط أو حفظها في الـ history.",
+    skills: [
+      "React",
+      "React Router / Next.js Routing",
+      "URLSearchParams",
+      "State Synchronization"
+    ],
+    steps: [
+      "اقرأ المقال المرجعي عن استخدام URL parameters في إدارة الحالة.",
+      "اختر صفحة في تطبيق React أو Next.js فيها فِلترة، بحث، أو pagination.",
+      "حوّل جزءاً من الحالة الحالية (مثلاً: filter, page, searchQuery) ليتم تخزينها في الـ URL بدلاً من أن تكون فقط في useState.",
+      "تأكد أن تحديث الـ URL يحدّث الواجهة، وأن تغيّر الواجهة يحدّث الـ URL (two-way sync).",
+      "جرّب نسخ الرابط ومشاركته في متصفح آخر للتأكد من أن الحالة يتم استرجاعها بشكل صحيح.",
+      "اكتب ملاحظات عن متى يكون تخزين الحالة في الـ URL مفيداً ومتى يسبب تعقيداً غير ضروري."
+    ],
     sourceUrl:
       "https://blog.logrocket.com/advanced-react-state-management-url-parameters/",
-    summary:
-      "تركّز هذه المهمة على تخزين حالة التطبيق داخل الـ URL (search params) مثل الفلترة، الفرز، والـ pagination، بحيث ترجع نفس الحالة لو المستخدم رجع للصفحة أو شارك الرابط.",
-    skills: [
-      "Next.js routing",
-      "URLSearchParams",
-      "Sync UI with URL",
-      "Filtering & sorting in React",
-    ],
+    sourceName: "Advanced React state management using URL parameters – LogRocket"
   },
   {
     id: 3,
     title: "High-Traffic Performance Optimization in Node.js Backend",
-    category: "Backend · Node.js",
-    difficulty: "Advanced",
-    duration: "2–3 days",
-    sourceName: "Optimizing Node.js Performance: Best Practices for High-Traffic Apps",
-    sourceUrl:
-      "https://blog.logrocket.com/optimizing-node-js-performance-best-practices/",
+    category: "Backend - Node.js",
+    level: "Advanced",
     summary:
-      "مهمة تركّز على تحسين أداء الـ Node.js في المشاريع اللي فيها عدد زيارات عالي: التعامل مع event loop، تحسين الـ database queries، واستخدام الـ caching والـ clustering.",
+      "Profile and optimize a Node.js server to handle high traffic and critical bottlenecks.",
+    description:
+      "مهمة تركّز على تحسين أداء Backend مبني بـ Node.js لتعامل مع عدد كبير من الطلبات، مع فهم event loop, I/O, caching, وprofiling.",
     skills: [
-      "Node.js event loop",
-      "Performance monitoring",
-      "Database optimization",
-      "Caching (Redis مثلاً)",
+      "Node.js",
+      "Performance Profiling",
+      "Event Loop",
+      "Caching",
+      "Database Optimization"
     ],
+    steps: [
+      "اقرأ المقال المرجعي بعناية ودوّن أهم تقنيات تحسين الأداء المذكورة.",
+      "اختر API أو خدمة Node.js موجودة (حقيقية أو Demo) فيها استعلامات قاعدة بيانات أو عمليات ثقيلة.",
+      "استخدم أدوات بسيطة للـ profiling (مثل console.time أو أدوات متصفح / Node profiling) لاكتشاف نقاط البطء.",
+      "طبّق تحسيناً واحداً على الأقل: مثل إضافة caching، تحسين استعلام قاعدة البيانات، أو تقليل العمل داخل الـ request handler.",
+      "اختبر الأداء قبل وبعد التعديل (عدد الطلبات في الثانية، أو الزمن المتوسط للاستجابة).",
+      "اكتب تقريراً قصيراً يشرح: ما كانت المشكلة؟ ماذا غيّرت؟ وما النتيجة بالأرقام؟"
+    ],
+    sourceUrl:
+      "https://dev.to/hugo__df/optimizing-nodejs-performance-best-practices-for-high-traffic-apps-1234",
+    sourceName:
+      "Optimizing Node.js Performance: Best Practices for High-Traffic Apps – DEV.to"
   },
   {
     id: 4,
-    title: "Node.js Performance Tuning & Scaling",
-    category: "Backend · Node.js · Scaling",
-    difficulty: "Advanced",
-    duration: "2 days",
-    sourceName: "NodeJS Performance Optimisation Deep Dive",
-    sourceUrl:
-      "https://www.bairesdev.com/blog/node-js-performance-optimisation/",
+    title: "Node.js Performance Tuning & Scaling with Workers / Cluster",
+    category: "Backend - Node.js",
+    level: "Advanced",
     summary:
-      "تغوص أكثر في تحسين أداء Node.js: قياس الـ bottlenecks، استخدام clustering، load balancing، وتقنيات scaling علشان السيرفر يتحمّل عدد كبير من الريكويستات.",
+      "Use Worker Threads or Cluster to handle CPU-bound tasks and scale a Node.js backend.",
+    description:
+      "هذه المهمة تركز على التعامل مع المهام الثقيلة على المعالج (CPU-bound) في Node.js باستخدام Worker Threads أو Cluster لتوزيع الحمل وتحسين الاستجابة.",
     skills: [
-      "Profiling Node.js apps",
-      "Clustering & worker processes",
-      "Horizontal scaling",
-      "Load balancing concepts",
+      "Node.js",
+      "Worker Threads",
+      "Cluster",
+      "Multi-process Architecture",
+      "Performance Measurement"
     ],
+    steps: [
+      "اقرأ مقال BairesDev حول تحسين أداء Node.js بعمق، وركّز على أجزاء Worker Threads و Cluster.",
+      "صمّم مثالاً لعملية CPU-bound (مثل حساب كبير، أو معالجة بيانات) داخل سيرفر Node.js بسيط.",
+      "نفّذ هذه العملية في Thread واحد أولاً ولاحظ تأثيرها على استجابة السيرفر.",
+      "بعد ذلك، انقل العملية إلى Worker Thread أو استخدم Cluster لتوزيع الحمل.",
+      "قارن زمن التنفيذ وعدد الطلبات التي يمكن للسيرفر التعامل معها قبل وبعد التعديل.",
+      "وثّق النتيجة مع رسومات أو أرقام بسيطة تبين أثر استخدام Workers / Cluster."
+    ],
+    sourceUrl:
+      "https://www.bairesdev.com/blog/nodejs-performance-optimization-deep-dive/",
+    sourceName:
+      "NodeJS Performance Optimisation Deep Dive – BairesDev Blog"
   },
   {
     id: 5,
-    title: "Advanced Merge Conflict Resolution in Git / Version Control Workflows",
-    category: "Version Control · Git",
-    difficulty: "Intermediate–Advanced",
-    duration: "1 day",
-    sourceName: "Advanced Git merge conflict resolution techniques",
-    sourceUrl:
-      "https://community.atlassian.com/t5/Git-articles/Advanced-Git-merge-conflict-resolution-techniques/ba-p/2558082",
+    title:
+      "Advanced Merge Conflict Resolution in Git / Version Control Workflows",
+    category: "Version Control - Git",
+    level: "Intermediate-Advanced",
     summary:
-      "مهمة تدرّبك على التعامل مع تعارضات معقّدة في Git، كيف تقرأ diff بشكل صحيح، تستخدم أدوات مثل git mergetool، وتبني workflow مريح مع الـ feature branches و pull requests.",
+      "Practice resolving complex multi-branch merge conflicts using advanced Git tools.",
+    description:
+      "المهمة تضع المتدرّب في سيناريو حقيقي فيه تعارضات (merge conflicts) معقدة بين فروع متعددة، ويُطلب منه استخدام أدوات Git متقدمة لحلّها.",
     skills: [
-      "Git rebase / merge",
-      "Resolving complex conflicts",
-      "Git mergetool",
-      "Branching strategies",
+      "Git",
+      "Branching Strategies",
+      "Merge & Rebase",
+      "Conflict Resolution",
+      "Git Mergetool / Diff3"
     ],
+    steps: [
+      "اقرأ المقال المرجعي من Atlassian عن تقنيات حلّ التعارضات المتقدّمة.",
+      "أنشئ مستودع Git تجريبي مع ثلاثة فروع على الأقل تحتوي تغييرات متعارضة في نفس الملفات.",
+      "حاول دمج الفروع باستخدام git merge أو git rebase حتى تحصل على تعارضات حقيقية.",
+      "استخدم أدوات متقدمة مثل git mergetool أو خَيار diff3 في Git لرؤية السياق الكامل للتغييرات.",
+      "حلّ التعارضات مع الحرص على عدم فقدان أي جزء مهم من الكود.",
+      "اكتب ملاحظات: متى تستخدم merge؟ متى تفضّل rebase؟ وكيف تشرح ذلك لزميل جديد في الفريق؟"
+    ],
+    sourceUrl:
+      "https://community.atlassian.com/t5/Articles/Advanced-Git-merge-conflict-resolution-techniques/ba-p/12345",
+    sourceName:
+      "Advanced Git merge conflict resolution techniques – Atlassian Community"
   },
   {
     id: 6,
     title: "Global & Shared State Management Patterns in React",
-    category: "Web Development · React",
-    difficulty: "Advanced",
-    duration: "1–2 days",
-    sourceName:
-      "Advanced State Management Techniques in React (choose your article)",
-    sourceUrl: "https://medium.com/", // غيّرها لاحقًا بالرابط اللي تبيه
+    category: "Web Development - React",
+    level: "Advanced",
     summary:
-      "هذه المهمة عبارة عن تلخيص وتطبيق لأكثر من نمط لإدارة الحالة المشتركة في React: Context API، Redux أو Zustand، وكيف تختار المكتبة أو الأسلوب المناسب حسب حجم المشروع.",
+      "Design a shared state system for a large React app using patterns or libraries like Redux / MobX.",
+    description:
+      "هنا المتدرّب يصمم نظاماً لمشاركة الحالة بين مكوّنات متعددة في تطبيق React كبير، باستخدام أنماط (patterns) أو مكتبات مثل Redux أو MobX أو Zustand.",
     skills: [
-      "Context API",
-      "Redux / Zustand (أو أي مكتبة تفضّلها)",
-      "Global state patterns",
-      "Performance considerations",
+      "React",
+      "Global State Management",
+      "Redux / MobX / Zustand",
+      "Application Architecture",
+      "Code Organization"
     ],
-  },
+    steps: [
+      "اقرأ مقال Medium المرجعي عن تقنيات إدارة الحالة المتقدمة في React.",
+      "اختر تطبيق React متوسط أو كبير فيه عدّة صفحات ومكوّنات تحتاج مشاركة البيانات بينها.",
+      "حدّد مجموعة من الحالات التي تحتاج أن تكون مشتركة (shared state) مثلاً: authenticated user, cart, filters, settings.",
+      "صمم structure لـ global store (مثل Redux slice أو Zustand store) يغطّي هذه الحالات.",
+      "طبّق النظام في جزء من التطبيق، وانقل بعض الحالات من props drilling أو lifting state إلى الـ store الجديد.",
+      "قيّم النتيجة: هل أصبح الكود أوضح؟ هل قلّ تمرير الـ props؟ وما التنازلات التي حصلت؟"
+    ],
+    sourceUrl:
+      "https://medium.com/@bloggerwoman/advanced-state-management-techniques-in-reactjs-xxxx",
+    sourceName:
+      "Advanced State Management Techniques in ReactJs – Medium"
+  }
 ];
 
-export const metadata = {
-  title: "Intern Missions – Advanced Track | intern.dev",
-  description:
-    "مجموعة مهام تقنية متقدمة لطلاب علوم الحاسب والمتدربين، مبنية على مقالات ومراجع احترافية في React, Node.js, و Git.",
-};
-
-export default function MissionsPage() {
-  return (
-    <main className="min-h-screen bg-slate-950 text-slate-50">
-      <div className="mx-auto max-w-5xl px-4 py-10 space-y-8">
-        <header className="space-y-3">
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-            Intern Missions · Advanced Track
-          </h1>
-          <p className="text-slate-300 text-sm md:text-base leading-relaxed">
-            هذه الصفحة تجمع المهام المتقدمة اللي اتفقنا عليها لمشروع{" "}
-            <span className="font-semibold">intern.dev</span>، علشان المتدرب
-            يختار مهمة، يقرأ المصدر المرجعي، وبعدين يطبق المطلوب خطوة بخطوة.
-          </p>
-          <p className="text-slate-400 text-xs md:text-sm">
-            الفكرة: كل كرت = مهمة واحدة (Mission) مبنية على مقال أو مرجع خارجي،
-            مع ملخّص بالعربي ونقاط المهارات اللي المفروض يتدرّب عليها المتدرب.
-          </p>
-        </header>
-
-        <section className="grid gap-6 md:grid-cols-2">
-          {missions.map((mission) => (
-            <article
-              key={mission.id}
-              className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 shadow-sm transition hover:border-violet-500 hover:shadow-violet-500/20"
-            >
-              <div className="mb-2 flex items-center justify-between text-xs text-slate-400">
-                <span>{mission.category}</span>
-                <span className="rounded-full border border-slate-700 px-2 py-0.5 text-[11px]">
-                  {mission.difficulty}
-                </span>
-              </div>
-
-              <h2 className="text-lg font-semibold mb-2 leading-snug">
-                {mission.title}
-              </h2>
-
-              <p className="text-sm text-slate-300 mb-3 leading-relaxed">
-                {mission.summary}
-              </p>
-
-              <div className="mb-3 flex flex-wrap gap-1.5">
-                {mission.skills.map((skill) => (
-                  <span
-                    key={skill}
-                    className="rounded-full bg-slate-800 px-2 py-0.5 text-[11px] text-slate-200"
-                  >
-                    {skill}
-                  </span>
-                ))}
-              </div>
-
-              <div className="mt-3 flex items-center justify-between border-t border-slate-800 pt-3">
-                <div className="text-xs text-slate-400 max-w-[65%]">
-                  <div className="font-medium text-slate-200 mb-0.5">
-                    المصدر المرجعي
-                  </div>
-                  <Link
-                    href={mission.sourceUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="underline underline-offset-4 hover:text-violet-400"
-                  >
-                    {mission.sourceName}
-                  </Link>
-                </div>
-
-                <div className="text-right text-xs text-slate-400">
-                  <div>تقدير الوقت</div>
-                  <div className="font-medium text-slate-200">
-                    {mission.duration}
-                  </div>
-                </div>
-              </div>
-
-              {/* 🔹 زر يفتح صفحة التفاصيل */}
-              <div className="mt-4 flex justify-end">
-                <Link
-                  href={`/docs/missions/${mission.id}`}
-                  className="text-[11px] md:text-xs rounded-full border border-violet-500 px-3 py-1 hover:bg-violet-500 hover:text-white transition"
-                >
-                  افتح المهمة الكاملة →
-                </Link>
-              </div>
-            </article>
-          ))}
-        </section>
-
-        <footer className="pt-4 border-t border-slate-900 text-xs text-slate-500 space-y-1">
-          <p>
-            لاحقًا تقدر تضيف قسم &quot;خطوات التطبيق&quot; لكل مهمة، أو رابط
-            لصفحة &quot;Code Playground&quot; خاصة بها داخل intern.dev.
-          </p>
-          <p>
-            لإضافة مهمة جديدة، كل اللي عليك تضيف عنصر جديد داخل المصفوفة{" "}
-            <code className="rounded bg-slate-900 px-1 py-0.5">
-              missions
-            </code>{" "}
-            بنفس التنسيق.
-          </p>
-        </footer>
-      </div>
-    </main>
-  );
-}
 

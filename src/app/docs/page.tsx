@@ -1,5 +1,6 @@
 'use client'
 
+
 import { useState } from 'react'
 import { useLanguage } from '@/components/providers/LanguageProvider'
 import Navigation from '@/components/Navigation'
