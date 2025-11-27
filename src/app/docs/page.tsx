@@ -4,12 +4,12 @@ import { useState } from 'react'
 import { useLanguage } from '@/components/providers/LanguageProvider'
 import Navigation from '@/components/Navigation'
 import { Button } from '@/components/ui/Button'
-import { 
-  BookOpen, 
-  Code, 
-  GitBranch, 
-  Bug, 
-  Brain, 
+import {
+  BookOpen,
+  Code,
+  GitBranch,
+  Bug,
+  Brain,
   Database,
   Search,
   Filter,
@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 
 import Link from 'next/link'
-import { missions } from './missions/data'
+import { missions } from './missions/data' // 👈 استيراد المهام
 
 interface DocCategory {
   id: string
@@ -37,13 +37,27 @@ const docCategories: DocCategory[] = [
     id: 'web-development',
     title: 'Web Development',
     titleAr: 'تطوير الويب',
-    description: 'Learn modern web development with React, Next.js, HTML, CSS, and JavaScript',
-    descriptionAr: 'تعلم تطوير الويب الحديث باستخدام React, Next.js, HTML, CSS, و JavaScript',
+    description:
+      'Learn modern web development with React, Next.js, HTML, CSS, and JavaScript',
+    descriptionAr:
+      'تعلم تطوير الويب الحديث باستخدام React, Next.js, HTML, CSS, و JavaScript',
     icon: BookOpen,
     color: 'text-blue-600',
     bgColor: 'bg-blue-50 dark:bg-blue-900/20',
-    topics: ['React Basics', 'Next.js Framework', 'HTML & CSS', 'JavaScript ES6+', 'Responsive Design'],
-    topicsAr: ['أساسيات React', 'إطار Next.js', 'HTML & CSS', 'JavaScript ES6+', 'التصميم المتجاوب']
+    topics: [
+      'React Basics',
+      'Next.js Framework',
+      'HTML & CSS',
+      'JavaScript ES6+',
+      'Responsive Design'
+    ],
+    topicsAr: [
+      'أساسيات React',
+      'إطار Next.js',
+      'HTML & CSS',
+      'JavaScript ES6+',
+      'التصميم المتجاوب'
+    ]
   },
   {
     id: 'api-integration',
@@ -78,8 +92,20 @@ const docCategories: DocCategory[] = [
     icon: Bug,
     color: 'text-orange-600',
     bgColor: 'bg-orange-50 dark:bg-orange-900/20',
-    topics: ['Unit Testing', 'Integration Testing', 'Debugging Tools', 'Error Handling', 'Performance'],
-    topicsAr: ['اختبار الوحدة', 'اختبار التكامل', 'أدوات التشخيص', 'معالجة الأخطاء', 'الأداء']
+    topics: [
+      'Unit Testing',
+      'Integration Testing',
+      'Debugging Tools',
+      'Error Handling',
+      'Performance'
+    ],
+    topicsAr: [
+      'اختبار الوحدة',
+      'اختبار التكامل',
+      'أدوات التشخيص',
+      'معالجة الأخطاء',
+      'الأداء'
+    ]
   },
   {
     id: 'algorithms',
@@ -90,8 +116,20 @@ const docCategories: DocCategory[] = [
     icon: Brain,
     color: 'text-indigo-600',
     bgColor: 'bg-indigo-50 dark:bg-indigo-900/20',
-    topics: ['Sorting', 'Searching', 'Dynamic Programming', 'Graph Algorithms', 'Complexity Analysis'],
-    topicsAr: ['الترتيب', 'البحث', 'البرمجة الديناميكية', 'خوارزميات الرسوم', 'تحليل التعقيد']
+    topics: [
+      'Sorting',
+      'Searching',
+      'Dynamic Programming',
+      'Graph Algorithms',
+      'Complexity Analysis'
+    ],
+    topicsAr: [
+      'الترتيب',
+      'البحث',
+      'البرمجة الديناميكية',
+      'خوارزميات الرسوم',
+      'تحليل التعقيد'
+    ]
   },
   {
     id: 'data-structures',
@@ -112,37 +150,41 @@ export default function DocsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
 
-  const filteredCategories = docCategories.filter(category => {
-    const matchesSearch = searchQuery === '' || 
+  const filteredCategories = docCategories.filter((category) => {
+    const matchesSearch =
+      searchQuery === '' ||
       category.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       category.titleAr.includes(searchQuery) ||
       category.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       category.descriptionAr.includes(searchQuery)
-    
+
     const matchesCategory = selectedCategory === null || category.id === selectedCategory
-    
+
     return matchesSearch && matchesCategory
   })
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Navigation />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className={`text-3xl font-bold text-gray-900 dark:text-white mb-4 ${
-            language === 'ar' ? 'font-arabic' : 'font-english'
-          }`}>
+          <h1
+            className={`text-3xl font-bold text-gray-900 dark:text-white mb-4 ${
+              language === 'ar' ? 'font-arabic' : 'font-english'
+            }`}
+          >
             {t('nav.docs')}
           </h1>
-          <p className={`text-lg text-gray-600 dark:text-gray-300 ${
-            language === 'ar' ? 'font-arabic' : 'font-english'
-          }`}>
-            {language === 'ar' 
+          <p
+            className={`text-lg text-gray-600 dark:text-gray-300 ${
+              language === 'ar' ? 'font-arabic' : 'font-english'
+            }`}
+          >
+            {language === 'ar'
               ? 'دليل شامل لتعلم المهارات التقنية مع أمثلة عملية'
-              : 'Comprehensive guide to learning technical skills with practical examples'
-            }
+              : 'Comprehensive guide to learning technical skills with practical examples'}
           </p>
         </div>
 
@@ -169,7 +211,7 @@ export default function DocsPage() {
                 className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
               >
                 <option value="">{language === 'ar' ? 'جميع الفئات' : 'All Categories'}</option>
-                {docCategories.map(category => (
+                {docCategories.map((category) => (
                   <option key={category.id} value={category.id}>
                     {language === 'ar' ? category.titleAr : category.title}
                   </option>
@@ -182,134 +224,122 @@ export default function DocsPage() {
         {/* Categories Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCategories.map((category) => (
-            <div
-              key={category.id}
-              className={`p-6 rounded-xl ${category.bgColor} hover:shadow-lg transition-all duration-300 group cursor-pointer`}
-            >
-              <div className={`inline-flex p-3 rounded-lg ${category.bgColor} mb-4`}>
-                <category.icon className={`h-6 w-6 ${category.color}`} />
-              </div>
-              
-              <h3 className={`text-xl font-semibold text-gray-900 dark:text-white mb-3 ${
-                language === 'ar' ? 'font-arabic' : 'font-english'
-              }`}>
-                {language === 'ar' ? category.titleAr : category.title}
-              </h3>
-              
-              <p className={`text-gray-600 dark:text-gray-300 mb-4 ${
-                language === 'ar' ? 'font-arabic' : 'font-english'
-              }`}>
-                {language === 'ar' ? category.descriptionAr : category.description}
-              </p>
-
-              <div className="mb-4">
-                <h4 className={`text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 ${
-                  language === 'ar' ? 'font-arabic' : 'font-english'
-                }`}>
-                  {language === 'ar' ? 'المواضيع المشمولة:' : 'Topics Covered:'}
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {(language === 'ar' ? category.topicsAr : category.topics).slice(0, 3).map((topic, index) => (
-                    <span
-                      key={index}
-                      className="px-2 py-1 bg-white dark:bg-gray-800 text-xs rounded-full text-gray-600 dark:text-gray-300"
-                    >
-                      {topic}
-                    </span>
-                  ))}
-                  {(language === 'ar' ? category.topicsAr : category.topics).length > 3 && (
-                    <span className="px-2 py-1 bg-white dark:bg-gray-800 text-xs rounded-full text-gray-600 dark:text-gray-300">
-                      +{(language === 'ar' ? category.topicsAr : category.topics).length - 3} {language === 'ar' ? 'أكثر' : 'more'}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <Button 
-                variant="outline" 
-                className="group-hover:bg-white group-hover:text-gray-900 transition-colors w-full"
+            <Link key={category.id} href={`/docs/${category.id}`} className="block group">
+              <div
+                className={`p-6 rounded-xl ${category.bgColor} hover:shadow-lg transition-all duration-300 cursor-pointer`}
               >
-                {language === 'ar' ? 'ابدأ التعلم' : 'Start Learning'}
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
+                <div className={`inline-flex p-3 rounded-lg ${category.bgColor} mb-4`}>
+                  <category.icon className={`h-6 w-6 ${category.color}`} />
+                </div>
+
+                <h3
+                  className={`text-xl font-semibold text-gray-900 dark:text-white mb-3 ${
+                    language === 'ar' ? 'font-arabic' : 'font-english'
+                  }`}
+                >
+                  {language === 'ar' ? category.titleAr : category.title}
+                </h3>
+
+                <p
+                  className={`text-gray-600 dark:text-gray-300 mb-4 ${
+                    language === 'ar' ? 'font-arabic' : 'font-english'
+                  }`}
+                >
+                  {language === 'ar' ? category.descriptionAr : category.description}
+                </p>
+
+                <div className="mb-4">
+                  <h4
+                    className={`text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 ${
+                      language === 'ar' ? 'font-arabic' : 'font-english'
+                    }`}
+                  >
+                    {language === 'ar' ? 'المواضيع المشمولة:' : 'Topics Covered:'}
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {(language === 'ar' ? category.topicsAr : category.topics)
+                      .slice(0, 3)
+                      .map((topic, index) => (
+                        <span
+                          key={index}
+                          className="px-2 py-1 bg-white dark:bg-gray-800 text-xs rounded-full text-gray-600 dark:text-gray-300"
+                        >
+                          {topic}
+                        </span>
+                      ))}
+                    {(language === 'ar' ? category.topicsAr : category.topics).length > 3 && (
+                      <span className="px-2 py-1 bg-white dark:bg-gray-800 text-xs rounded-full text-gray-600 dark:text-gray-300">
+                        +
+                        {(language === 'ar' ? category.topicsAr : category.topics).length - 3}{' '}
+                        {language === 'ar' ? 'أكثر' : 'more'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <Button
+                  variant="outline"
+                  className="w-full group-hover:bg-white group-hover:text-gray-900 transition-colors"
+                >
+                  {language === 'ar' ? 'ابدأ التعلم' : 'Start Learning'}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </Link>
           ))}
         </div>
 
+        {/* لا توجد نتائج بحث */}
         {filteredCategories.length === 0 && (
           <div className="text-center py-12">
             <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className={`text-gray-500 dark:text-gray-400 ${
-              language === 'ar' ? 'font-arabic' : 'font-english'
-            }`}>
-              {language === 'ar' 
+            <p
+              className={`text-gray-500 dark:text-gray-400 ${
+                language === 'ar' ? 'font-arabic' : 'font-english'
+              }`}
+            >
+              {language === 'ar'
                 ? 'لم يتم العثور على نتائج مطابقة للبحث'
-                : 'No results found matching your search'
-              }
+                : 'No results found matching your search'}
             </p>
           </div>
         )}
 
-        {/* Missions Section */}
-        <div className="mt-12 space-y-4" id="missions">
-          <div className="flex items-center justify-between">
-            <h2 className={`text-2xl font-semibold tracking-tight ${
-              language === 'ar' ? 'font-arabic' : 'font-english'
-            }`}>
-              {language === 'ar' ? 'مهام المتدربين' : 'Missions for interns'}
-            </h2>
-
-            <Link
-              href="/docs/missions"
-              className={`text-sm text-slate-500 hover:underline ${
-                language === 'ar' ? 'font-arabic' : 'font-english'
-              }`}
-            >
-              {language === 'ar' ? 'عرض الكل →' : 'View all →'}
-            </Link>
-          </div>
-
-          <p className={`text-sm text-slate-600 dark:text-slate-300 ${
-            language === 'ar' ? 'font-arabic' : 'font-english'
-          }`}>
-            {language === 'ar'
-              ? 'مهام جاهزة للمتدربين: خطوات واضحة + مهارات مطلوبة + تعليمات يمكن تطبيقها داخل intern.dev'
-              : 'Ready-to-use tasks for interns: clear steps, required skills, and guided instructions.'}
+        {/* Missions section for interns */}
+        <section className="mt-12 space-y-4" id="missions">
+          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
+            مهام تقنية متقدمة للمتدرّبين
+          </h2>
+          <p className="text-gray-600 dark:text-gray-300">
+            اختر واحدة من المهام التالية وجرّب تنفيذها خطوة بخطوة، مع كود جاهز ومصدر تعليمي لكل
+            مهمة.
           </p>
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
-            {missions.slice(0, 4).map((mission) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {missions.slice(0, 6).map((mission) => (
               <Link
                 key={mission.id}
                 href={`/docs/missions/${mission.id}`}
-                className="block rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-gray-800 p-5 shadow-sm hover:border-slate-400 hover:shadow-md transition"
+                className="block rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/60 p-5 hover:shadow-lg transition-all duration-200"
               >
-                <p className="text-xs uppercase text-slate-400 dark:text-slate-500 mb-1">
+                <p className="text-xs uppercase tracking-wide text-slate-400 mb-1">
                   {mission.category} • {mission.level}
                 </p>
-
-                <h3 className={`text-lg font-semibold text-gray-900 dark:text-white mb-1 ${
-                  language === 'ar' ? 'font-arabic' : 'font-english'
-                }`}>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
                   {mission.title}
                 </h3>
-
-                <p className={`text-sm text-slate-600 dark:text-slate-300 line-clamp-3 ${
-                  language === 'ar' ? 'font-arabic' : 'font-english'
-                }`}>
+                <p className="text-sm text-slate-600 dark:text-slate-300 mb-3 line-clamp-3">
                   {mission.summary}
                 </p>
-
-                <p className="mt-3 text-[11px] text-slate-400 dark:text-slate-500">
-                  {language === 'ar'
-                    ? 'جاهزة للتطبيق • محدثة حديثاً'
-                    : 'Updated recently • Ready for interns'}
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  يشمل كود جاهز + مصدر تعليمي
                 </p>
               </Link>
             ))}
           </div>
-        </div>
+        </section>
       </div>
     </div>
   )
 }
+
