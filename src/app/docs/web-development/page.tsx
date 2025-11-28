@@ -5,121 +5,12 @@ import Navigation from '@/components/Navigation'
 import { Button } from '@/components/ui/Button'
 import { ArrowLeft, BookOpen, Code, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
+import { webDevelopmentTopics } from './data'
 
 export default function WebDevelopmentPage() {
   const { language, t } = useLanguage()
 
-  const topics = [
-    {
-      title: language === 'ar' ? 'مقدمة في React' : 'Introduction to React',
-      titleAr: 'مقدمة في React',
-      description: language === 'ar' 
-        ? 'تعلم أساسيات React وكيفية بناء مكونات تفاعلية'
-        : 'Learn the fundamentals of React and how to build interactive components',
-      difficulty: 'beginner',
-      estimatedTime: 30,
-      codeExample: `import React, { useState } from 'react';
-
-function Counter() {
-  const [count, setCount] = useState(0);
-
-  return (
-    <div>
-      <h2>Count: {count}</h2>
-      <button onClick={() => setCount(count + 1)}>
-        Increment
-      </button>
-      <button onClick={() => setCount(count - 1)}>
-        Decrement
-      </button>
-    </div>
-  );
-}
-
-export default Counter;`
-    },
-    {
-      title: language === 'ar' ? 'إدارة الحالة في React' : 'State Management in React',
-      titleAr: 'إدارة الحالة في React',
-      description: language === 'ar'
-        ? 'فهم كيفية إدارة الحالة في تطبيقات React المعقدة'
-        : 'Understand how to manage state in complex React applications',
-      difficulty: 'intermediate',
-      estimatedTime: 45,
-      codeExample: `import React, { createContext, useContext, useReducer } from 'react';
-
-// Context
-const AppContext = createContext();
-
-// Reducer
-function appReducer(state, action) {
-  switch (action.type) {
-    case 'INCREMENT':
-      return { ...state, count: state.count + 1 };
-    case 'DECREMENT':
-      return { ...state, count: state.count - 1 };
-    default:
-      return state;
-  }
-}
-
-// Provider
-export function AppProvider({ children }) {
-  const [state, dispatch] = useReducer(appReducer, { count: 0 });
-  
-  return (
-    <AppContext.Provider value={{ state, dispatch }}>
-      {children}
-    </AppContext.Provider>
-  );
-}
-
-// Hook
-export function useApp() {
-  return useContext(AppContext);
-}`
-    },
-    {
-      title: language === 'ar' ? 'Next.js و SSR' : 'Next.js and SSR',
-      titleAr: 'Next.js و SSR',
-      description: language === 'ar'
-        ? 'تعلم كيفية استخدام Next.js لبناء تطبيقات ويب سريعة'
-        : 'Learn how to use Next.js to build fast web applications',
-      difficulty: 'intermediate',
-      estimatedTime: 60,
-      codeExample: `import { GetServerSideProps } from 'next';
-
-interface Props {
-  data: {
-    title: string;
-    content: string;
-  };
-}
-
-export default function BlogPost({ data }: Props) {
-  return (
-    <div>
-      <h1>{data.title}</h1>
-      <p>{data.content}</p>
-    </div>
-  );
-}
-
-export const getServerSideProps: GetServerSideProps = async (context) => {
-  const { id } = context.params!;
-  
-  // Fetch data from API
-  const res = await fetch(\`https://api.example.com/posts/\${id}\`);
-  const data = await res.json();
-
-  return {
-    props: {
-      data,
-    },
-  };
-};`
-    }
-  ]
+  const topics = webDevelopmentTopics
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -212,10 +103,14 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
                   <Code className="h-4 w-4 mr-2" />
                   {language === 'ar' ? 'جرب في الملعب' : 'Try in Playground'}
                 </Button>
-                <Button variant="outline">
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  {language === 'ar' ? 'المراجع' : 'References'}
-                </Button>
+                {topic.resources && (
+                  <Button variant="outline" asChild>
+                    <a href={topic.resources.links[0]?.url} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      {language === 'ar' ? 'المراجع' : 'References'}
+                    </a>
+                  </Button>
+                )}
               </div>
             </div>
           ))}
