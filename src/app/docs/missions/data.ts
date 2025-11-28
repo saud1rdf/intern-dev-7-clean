@@ -10,8 +10,8 @@ export type Mission = {
   steps: string[];       // خطوات تنفيذ المهمة
   skills: string[];      // المهارات اللي يتدرّب عليها المتدرّب
   codeExample?: string;  // مثال كود يظهر في صفحة التفاصيل
-  sourceUrl?: string;
-  sourceName?: string;
+  sourceUrl?: string;    // رابط المصدر
+  sourceName?: string;   // اسم المصدر (اختياري)
 };
 
 export const missions: Mission[] = [
@@ -35,7 +35,7 @@ export const missions: Mission[] = [
       "Context API",
       "Redux / Zustand",
       "State Modeling",
-      "Architecture Thinking"
+      "Architecture Thinking",
     ],
     codeExample: `// مثال مبسّط لتقسيم الحالة بين local و global و URL
 
@@ -77,8 +77,7 @@ function ProductsList() {
   // استخدم قيمة sort القادمة من URL لعرض النتائج
   // ...
 }`,
-    sourceUrl:
-      "https://developerway.com/posts/react-state-management-2022",
+    sourceUrl: "https://developerway.com/posts/react-state-management-2022",
     sourceName: "DeveloperWay – React State Management in 2025",
   },
   {
@@ -284,7 +283,7 @@ git rebase -i main
     summary:
       "صمّم نظام مشاركة حالة (shared state) بين مكوّنات متعددة في تطبيق React كبير باستخدام patterns أو مكتبات مثل Redux / MobX.",
     description:
-      "هذه المهمة تركّز على تصميم shared state في تطبيقات React الكبيرة. المطلوب من المتدرّب هو تصميم store مركزي للحالة المشتركة، تحديد شكل الـ state (shape)، وكتابة slice أو store معSelectors واستخدامه من عدّة مكونات.",
+      "هذه المهمة تركّز على تصميم shared state في تطبيقات React الكبيرة. المطلوب من المتدرّب هو تصميم store مركزي للحالة المشتركة، تحديد شكل الـ state (shape)، وكتابة slice أو store مع Selectors واستخدامه من عدّة مكونات.",
     steps: [
       "اختر نطاق معيّن للحالة المشتركة (مثلاً: سلة مشتريات، user session، feature flags...).",
       "صمّم شكل state (objects, arrays, maps) وحدّد الـ actions / events التي تعدّلها.",
@@ -346,4 +345,3 @@ export function CartBadge() {
     sourceName: "Medium – Advanced State Management Techniques in ReactJs",
   },
 ];
-
