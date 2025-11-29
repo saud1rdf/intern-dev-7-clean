@@ -12,8 +12,10 @@ export default function VersionControlPage() {
   const topics = versionControlTopics
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <Navigation />
+    <>
+      <section id="content-start"></section>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <Navigation />
       
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <nav className="mb-8">
@@ -89,10 +91,15 @@ export default function VersionControlPage() {
               </div>
 
               <div className="flex items-center space-x-4">
-                <Button className="bg-blue-600 hover:bg-blue-700">
+                <button 
+                  onClick={() => {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background h-10 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white"
+                >
                   <BookOpen className="h-4 w-4 mr-2" />
                   {language === 'ar' ? 'اقرأ المزيد' : 'Read More'}
-                </Button>
+                </button>
                 <Button variant="outline">
                   <Code className="h-4 w-4 mr-2" />
                   {language === 'ar' ? 'جرب في الملعب' : 'Try in Playground'}
@@ -151,7 +158,9 @@ export default function VersionControlPage() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   )
 }
+
 
