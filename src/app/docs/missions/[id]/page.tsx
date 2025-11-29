@@ -3,11 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { missions, type Mission } from "../data";
 
-type MissionDetailsPageProps = {
+export default function MissionDetailsPage({
+  params,
+}: {
   params: { id: string };
-};
-
-export default function MissionDetailsPage({ params }: MissionDetailsPageProps) {
+}) {
   const missionId = Number(params.id);
   const mission: Mission | undefined = missions.find(
     (m) => m.id === missionId
@@ -96,6 +96,7 @@ export default function MissionDetailsPage({ params }: MissionDetailsPageProps) 
     </main>
   );
 }
+
 
 
 
