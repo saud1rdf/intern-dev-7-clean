@@ -3,12 +3,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { missions, type Mission } from "../data";
 
-export default function MissionDetailsPage({
+export default async function MissionDetailsPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const missionId = Number(params.id);
+  const { id } = await params;
+  const missionId = Number(id);
   const mission: Mission | undefined = missions.find(
     (m) => m.id === missionId
   );

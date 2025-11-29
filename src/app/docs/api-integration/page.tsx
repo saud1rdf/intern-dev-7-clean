@@ -98,12 +98,15 @@ export default function ApiIntegrationPage() {
                   {language === 'ar' ? 'جرب في الملعب' : 'Try in Playground'}
                 </Button>
                 {topic.resources && (
-                  <Button variant="outline" asChild>
-                    <a href={topic.resources.links[0]?.url} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      {language === 'ar' ? 'المراجع' : 'References'}
-                    </a>
-                  </Button>
+                  <a 
+                    href={topic.resources.links[0]?.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background border border-input hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    {language === 'ar' ? 'المراجع' : 'References'}
+                  </a>
                 )}
               </div>
             </div>
