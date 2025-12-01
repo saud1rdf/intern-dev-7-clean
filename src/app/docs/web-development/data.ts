@@ -30,6 +30,8 @@ function Counter() {
 }
 
 export default Counter;`,
+    explanation: "This example demonstrates the basic usage of the `useState` hook in React. We initialize a state variable `count` with 0. The `setCount` function is used to update this value. When the buttons are clicked, the state updates, and React re-renders the component to show the new count.",
+    explanationAr: "يوضح هذا المثال الاستخدام الأساسي لـ `useState` hook في React. نبدأ بمتغير حالة `count` بقيمة 0. تُستخدم دالة `setCount` لتحديث هذه القيمة. عند النقر على الأزرار، يتم تحديث الحالة، ويقوم React بإعادة رسم المكون لإظهار العدد الجديد.",
     resources: {
       title: 'Additional Resources',
       titleAr: 'موارد إضافية',
@@ -79,6 +81,8 @@ export function AppProvider({ children }) {
 export function useApp() {
   return useContext(AppContext);
 }`,
+    explanation: "This example shows how to manage complex state using `useReducer` and `useContext`. `useReducer` handles state logic (increment/decrement), while `useContext` allows sharing this state across the component tree without passing props manually at every level.",
+    explanationAr: "يوضح هذا المثال كيفية إدارة الحالة المعقدة باستخدام `useReducer` و `useContext`. يتولى `useReducer` منطق الحالة (زيادة/نقصان)، بينما يسمح `useContext` بمشاركة هذه الحالة عبر شجرة المكونات دون الحاجة لتمرير الخصائص (props) يدوياً في كل مستوى.",
     resources: {
       title: 'Additional Resources',
       titleAr: 'موارد إضافية',
@@ -127,6 +131,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     },
   };
 };`,
+    explanation: "This example demonstrates Server-Side Rendering (SSR) in Next.js using `getServerSideProps`. This function runs on the server for every request, fetching data before the page is sent to the browser. This is useful for SEO and ensuring users see the most up-to-date content immediately.",
+    explanationAr: "يوضح هذا المثال العرض من جانب الخادم (SSR) في Next.js باستخدام `getServerSideProps`. تعمل هذه الدالة على الخادم مع كل طلب، حيث تجلب البيانات قبل إرسال الصفحة إلى المتصفح. هذا مفيد لتحسين محركات البحث (SEO) وضمان رؤية المستخدمين لأحدث المحتويات فوراً.",
     resources: {
       title: 'Additional Resources',
       titleAr: 'موارد إضافية',

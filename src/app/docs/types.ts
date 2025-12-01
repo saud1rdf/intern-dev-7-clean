@@ -9,6 +9,8 @@ export type Topic = {
   difficulty: 'beginner' | 'intermediate' | 'advanced';
   estimatedTime: number; // بالدقائق
   codeExample: string;
+  explanation?: string;
+  explanationAr?: string;
   resources?: {
     title: string;
     titleAr: string;
