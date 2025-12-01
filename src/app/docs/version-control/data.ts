@@ -33,6 +33,8 @@ git branch feature-branch
 git checkout feature-branch
 # or use shorthand:
 git checkout -b feature-branch`,
+    explanation: "This section covers the fundamental Git commands for initializing a repository, checking status, staging files, committing changes, viewing history, and managing branches. These are the daily drivers for any developer using Git.",
+    explanationAr: "يغطي هذا القسم أوامر Git الأساسية لتهيئة المستودع، التحقق من الحالة، تجهيز الملفات، اعتماد التغييرات (commit)، عرض السجل، وإدارة الفروع. هذه هي الأدوات اليومية لأي مطور يستخدم Git.",
     resources: {
       title: 'Additional Resources',
       titleAr: 'موارد إضافية',
@@ -75,6 +77,8 @@ git rebase main
 
 # View differences between branches
 git diff main..feature/new-feature`,
+    explanation: "This example demonstrates how to work with branches: creating, switching, merging, and deleting them. It also introduces `rebase` as an alternative to merge for maintaining a linear history, and how to view differences between branches.",
+    explanationAr: "يوضح هذا المثال كيفية العمل مع الفروع: إنشاؤها، التبديل بينها، دمجها، وحذفها. كما يقدم `rebase` كبديل للدمج للحفاظ على تاريخ خطي، وكيفية عرض الفروقات بين الفروع.",
     resources: {
       title: 'Additional Resources',
       titleAr: 'موارد إضافية',
@@ -127,6 +131,8 @@ git push origin feature/add-button
 # 5. After merge, update local main
 git checkout main
 git pull origin main`,
+    explanation: "This workflow outlines the standard process for collaborating on GitHub: cloning, pushing branches, and creating Pull Requests. It emphasizes the cycle of local development -> push to remote -> pull request -> merge -> pull updates locally.",
+    explanationAr: "يحدد سير العمل هذا العملية القياسية للتعاون على GitHub: الاستنساخ، رفع الفروع، وإنشاء طلبات السحب (Pull Requests). يؤكد على دورة التطوير المحلي -> الرفع إلى البعيد -> طلب السحب -> الدمج -> سحب التحديثات محلياً.",
     resources: {
       title: 'Additional Resources',
       titleAr: 'موارد إضافية',
@@ -174,6 +180,8 @@ git push origin v1.0.0
 
 # Interactive rebase (clean up history)
 git rebase -i HEAD~3  # Edit last 3 commits`,
+    explanation: "This advanced section covers handling merge conflicts, undoing changes with `reset` and `checkout`, using `stash` to temporarily save work, and interactive rebasing to clean up commit history. These tools are essential for maintaining a clean and error-free codebase.",
+    explanationAr: "يغطي هذا القسم المتقدم التعامل مع تعارضات الدمج، التراجع عن التغييرات باستخدام `reset` و `checkout`، استخدام `stash` لحفظ العمل مؤقتاً، و `rebase` التفاعلي لتنظيف تاريخ الالتزامات. هذه الأدوات ضرورية للحفاظ على قاعدة كود نظيفة وخالية من الأخطاء.",
     resources: {
       title: 'Additional Resources',
       titleAr: 'موارد إضافية',

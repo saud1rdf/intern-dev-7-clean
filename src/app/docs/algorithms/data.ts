@@ -45,6 +45,8 @@ function isEven(n) {
 // 3. Definiteness: Each step is clear
 // 4. Finiteness: Algorithm terminates
 // 5. Effectiveness: Each step is doable`,
+    explanation: "This example illustrates the basic properties of an algorithm using a simple 'find maximum' function. It breaks down the steps: assumption, comparison, update, and return. It also defines key algorithm characteristics like input, output, definiteness, finiteness, and effectiveness.",
+    explanationAr: "يوضح هذا المثال الخصائص الأساسية للخوارزمية باستخدام دالة بسيطة 'لإيجاد القيمة القصوى'. يقوم بتقسيم الخطوات: الافتراض، المقارنة، التحديث، والإرجاع. كما يعرف الخصائص الرئيسية للخوارزمية مثل المدخلات، المخرجات، الوضوح، المحدودية، والفعالية.",
     resources: {
       title: 'Additional Resources',
       titleAr: 'موارد إضافية',
@@ -131,6 +133,8 @@ function merge(left, right) {
 console.log(bubbleSort([64, 34, 25, 12, 22]));
 console.log(quickSort([64, 34, 25, 12, 22]));
 console.log(mergeSort([64, 34, 25, 12, 22]));`,
+    explanation: "This code demonstrates three common sorting algorithms: Bubble Sort (simple but inefficient O(n²)), Quick Sort (efficient divide-and-conquer O(n log n)), and Merge Sort (stable divide-and-conquer O(n log n)). Each implementation shows a different approach to ordering data.",
+    explanationAr: "يوضح هذا الكود ثلاث خوارزميات ترتيب شائعة: Bubble Sort (بسيطة ولكن غير فعالة O(n²))، Quick Sort (فعالة تعتمد على فرق تسد O(n log n))، و Merge Sort (مستقرة تعتمد على فرق تسد O(n log n)). يظهر كل تنفيذ نهجاً مختلفاً لترتيب البيانات.",
     resources: {
       title: 'Additional Resources',
       titleAr: 'موارد إضافية',
@@ -204,6 +208,8 @@ const numbers = [1, 3, 5, 7, 9, 11, 13, 15];
 console.log(linearSearch(numbers, 7)); // Returns 3
 console.log(binarySearch(numbers, 7)); // Returns 3
 console.log(binarySearchRecursive(numbers, 7)); // Returns 3`,
+    explanation: "This example compares Linear Search (checking every element, O(n)) with Binary Search (dividing the search interval in half, O(log n)). Binary Search is much faster but requires the array to be sorted first. Both iterative and recursive implementations of Binary Search are provided.",
+    explanationAr: "يقارن هذا المثال بين البحث الخطي (فحص كل عنصر، O(n)) والبحث الثنائي (تقسيم مجال البحث إلى النصف، O(log n)). البحث الثنائي أسرع بكثير ولكنه يتطلب أن تكون المصفوفة مرتبة أولاً. تم توفير كل من التنفيذ التكراري والعودي للبحث الثنائي.",
     resources: {
       title: 'Additional Resources',
       titleAr: 'موارد إضافية',
@@ -277,6 +283,8 @@ function copyArray(arr) {
 
 // Common Complexity Rankings (fastest to slowest):
 // O(1) < O(log n) < O(n) < O(n log n) < O(n²) < O(2ⁿ)`,
+    explanation: "This section explains Big O notation, which is used to classify algorithms according to how their run time or space requirements grow as the input size grows. Examples include Constant O(1), Linear O(n), Quadratic O(n²), and Logarithmic O(log n) time complexities.",
+    explanationAr: "يشرح هذا القسم تدوين Big O، الذي يستخدم لتصنيف الخوارزميات وفقاً لكيفية نمو وقت تشغيلها أو متطلبات المساحة مع نمو حجم المدخلات. تشمل الأمثلة التعقيدات الزمنية الثابتة O(1)، الخطية O(n)، التربيعية O(n²)، واللوغاريتمية O(log n).",
     resources: {
       title: 'Additional Resources',
       titleAr: 'موارد إضافية',

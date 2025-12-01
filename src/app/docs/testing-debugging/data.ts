@@ -39,6 +39,8 @@ if (multiply(3, 4) === 12) {
 } else {
   console.log('❌ Test failed');
 }`,
+    explanation: "This example introduces unit testing concepts using simple assertions. It demonstrates the Test-Driven Development (TDD) cycle: Red (write failing test) -> Green (write code to pass) -> Refactor. It emphasizes testing code behavior before implementation.",
+    explanationAr: "يقدم هذا المثال مفاهيم اختبار الوحدات باستخدام تأكيدات بسيطة. يوضح دورة التطوير القائم على الاختبار (TDD): أحمر (كتابة اختبار فاشل) -> أخضر (كتابة كود للنجاح) -> إعادة هيكلة. يؤكد على اختبار سلوك الكود قبل التنفيذ.",
     resources: {
       title: 'Additional Resources',
       titleAr: 'موارد إضافية',
@@ -95,6 +97,8 @@ test('fetches user data', async () => {
 const mockFn = jest.fn();
 mockFn('hello');
 expect(mockFn).toHaveBeenCalledWith('hello');`,
+    explanation: "This section introduces Jest, a popular JavaScript testing framework. It covers writing test suites with `describe`, test cases with `test`, and assertions with `expect`. It also touches on parameterized tests, async testing, and using mock functions.",
+    explanationAr: "يقدم هذا القسم Jest، وهو إطار عمل شائع لاختبار JavaScript. يغطي كتابة مجموعات الاختبار باستخدام `describe`، حالات الاختبار باستخدام `test`، والتأكيدات باستخدام `expect`. كما يتطرق إلى الاختبارات ذات المعاملات، الاختبار غير المتزامن، واستخدام الدوال الوهمية (mock functions).",
     resources: {
       title: 'Additional Resources',
       titleAr: 'موارد إضافية',
@@ -151,6 +155,8 @@ test('user can type in input field', () => {
   
   expect(input.value).toBe('John');
 });`,
+    explanation: "This example shows how to test React components using React Testing Library. It demonstrates rendering components, querying the DOM with `screen`, simulating user events like clicks and typing with `fireEvent`, and asserting on the document state.",
+    explanationAr: "يوضح هذا المثال كيفية اختبار مكونات React باستخدام React Testing Library. يظهر كيفية عرض المكونات، الاستعلام عن DOM باستخدام `screen`، محاكاة أحداث المستخدم مثل النقرات والكتابة باستخدام `fireEvent`، والتأكيد على حالة المستند.",
     resources: {
       title: 'Additional Resources',
       titleAr: 'موارد إضافية',
@@ -208,6 +214,8 @@ if (DEBUG) {
 // React DevTools for component debugging
 // Install React DevTools browser extension
 // Inspect component props, state, and hooks`,
+    explanation: "This section provides a toolkit of debugging techniques: from basic `console.log` and `debugger` statements to using browser DevTools breakpoints and performance profiling. It also mentions React DevTools for component-specific debugging.",
+    explanationAr: "يوفر هذا القسم مجموعة أدوات من تقنيات التشخيص: من `console.log` الأساسي وعبارات `debugger` إلى استخدام نقاط التوقف في أدوات المطور للمتصفح وتحليل الأداء. كما يشير إلى React DevTools للتشخيص الخاص بالمكونات.",
     resources: {
       title: 'Additional Resources',
       titleAr: 'موارد إضافية',

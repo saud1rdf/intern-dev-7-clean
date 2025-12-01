@@ -86,6 +86,8 @@ list.append(1);
 list.append(2);
 list.append(3);
 list.print(); // 1, 2, 3`,
+    explanation: "This example contrasts Arrays (contiguous memory, fast access O(1), slow insertion/deletion O(n)) with Linked Lists (nodes with pointers, slow access O(n), fast insertion/deletion O(1)). It provides a full implementation of a Singly Linked List with append, getAt, and print methods.",
+    explanationAr: "يقارن هذا المثال بين المصفوفات (ذاكرة متصلة، وصول سريع O(1)، إدراج/حذف بطيء O(n)) والقوائم المرتبطة (عقد مع مؤشرات، وصول بطيء O(n)، إدراج/حذف سريع O(1)). يوفر تنفيذاً كاملاً لقائمة مرتبطة أحادية مع طرق الإضافة، الحصول على العنصر، والطباعة.",
     resources: {
       title: 'Additional Resources',
       titleAr: 'موارد إضافية',
@@ -208,6 +210,8 @@ function isBalanced(str) {
 
 console.log(isBalanced('()[]{}')); // true
 console.log(isBalanced('([)]')); // false`,
+    explanation: "This code implements a Stack (LIFO - Last In First Out) and a Queue (FIFO - First In First Out). It demonstrates their core operations (push/pop for Stack, enqueue/dequeue for Queue) and provides a practical example of using a Stack to check for balanced parentheses.",
+    explanationAr: "ينفذ هذا الكود المكدس (LIFO - ما يدخل أخيراً يخرج أولاً) والطابور (FIFO - ما يدخل أولاً يخرج أولاً). يوضح عملياتهم الأساسية (push/pop للمكدس، enqueue/dequeue للطابور) ويقدم مثالاً عملياً لاستخدام المكدس للتحقق من توازن الأقواس.",
     resources: {
       title: 'Additional Resources',
       titleAr: 'موارد إضافية',
@@ -328,6 +332,8 @@ bst.insert(7);
 console.log(bst.find(7)); // true
 console.log(bst.inOrder()); // [3, 5, 7, 10, 15]
 console.log(bst.preOrder()); // [10, 5, 3, 7, 15]`,
+    explanation: "This example implements a Binary Search Tree (BST), a hierarchical data structure where each node has at most two children. It includes methods for insertion, searching, and three types of depth-first traversal: In-order, Pre-order, and Post-order.",
+    explanationAr: "ينفذ هذا المثال شجرة البحث الثنائية (BST)، وهي هيكل بيانات هرمي حيث يكون لكل عقدة طفلان كحد أقصى. يتضمن طرقاً للإدراج، البحث، وثلاثة أنواع من الاجتياز بالعمق أولاً: In-order، Pre-order، و Post-order.",
     resources: {
       title: 'Additional Resources',
       titleAr: 'موارد إضافية',
@@ -439,6 +445,8 @@ map.set('key2', 'value2');
 console.log(map.get('key1')); // 'value1'
 console.log(map.has('key2')); // true
 map.delete('key2');`,
+    explanation: "This code shows how to implement a Hash Table, a data structure that maps keys to values for efficient lookup. It handles collisions using chaining (arrays of key-value pairs). It also shows the usage of JavaScript's built-in `Map` object.",
+    explanationAr: "يوضح هذا الكود كيفية تنفيذ جدول التجزئة (Hash Table)، وهو هيكل بيانات يربط المفاتيح بالقيم للبحث الفعال. يعالج التصادمات باستخدام التسلسل (مصفوفات من أزواج المفتاح-القيمة). كما يظهر استخدام كائن `Map` المدمج في JavaScript.",
     resources: {
       title: 'Additional Resources',
       titleAr: 'موارد إضافية',

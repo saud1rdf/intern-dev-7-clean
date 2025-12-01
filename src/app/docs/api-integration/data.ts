@@ -21,6 +21,8 @@ async function fetchUserData(userId) {
 // Using the function
 const user = await fetchUserData(123);
 console.log(user);`,
+    explanation: "This example demonstrates how to consume a REST API using the modern `fetch` API with `async/await`. It shows a simple function to get user data by ID, parsing the JSON response, and handling the asynchronous nature of network requests.",
+    explanationAr: "يوضح هذا المثال كيفية استهلاك REST API باستخدام `fetch` API الحديثة مع `async/await`. يظهر دالة بسيطة للحصول على بيانات المستخدم بواسطة المعرف، تحليل استجابة JSON، والتعامل مع الطبيعة غير المتزامنة لطلبات الشبكة.",
     resources: {
       title: 'Additional Resources',
       titleAr: 'موارد إضافية',
@@ -57,6 +59,8 @@ const { data } = await client.query({
   query: GET_USER,
   variables: { id: "123" }
 });`,
+    explanation: "This example introduces GraphQL, a query language for APIs. Unlike REST, GraphQL allows clients to request exactly the data they need. The example shows a query to fetch a user's name, email, and posts, demonstrating nested data fetching in a single request.",
+    explanationAr: "يقدم هذا المثال GraphQL، وهي لغة استعلام واجهات برمجة التطبيقات. على عكس REST، يسمح GraphQL للعملاء بطلب البيانات التي يحتاجونها بالضبط. يظهر المثال استعلاماً لجلب اسم المستخدم، بريده الإلكتروني، ومنشوراته، مما يوضح جلب البيانات المتداخلة في طلب واحد.",
     resources: {
       title: 'Additional Resources',
       titleAr: 'موارد إضافية',

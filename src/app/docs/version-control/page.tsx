@@ -16,148 +16,149 @@ export default function VersionControlPage() {
       <section id="content-start"></section>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <Navigation />
-      
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <nav className="mb-8">
-          <Link href="/docs" className="flex items-center text-blue-600 hover:text-blue-800">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            {language === 'ar' ? 'العودة إلى الوثائق' : 'Back to Documentation'}
-          </Link>
-        </nav>
 
-        <div className="mb-8">
-          <h1 className={`text-3xl font-bold text-gray-900 dark:text-white mb-4 ${
-            language === 'ar' ? 'font-arabic' : 'font-english'
-          }`}>
-            {language === 'ar' ? 'التحكم في الإصدارات' : 'Version Control'}
-          </h1>
-          <p className={`text-lg text-gray-600 dark:text-gray-300 ${
-            language === 'ar' ? 'font-arabic' : 'font-english'
-          }`}>
-            {language === 'ar'
-              ? 'تعلم Git و GitHub وممارسات التحكم في الإصدارات الحديثة'
-              : 'Learn Git, GitHub, and modern version control practices'
-            }
-          </p>
-        </div>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <nav className="mb-8">
+            <Link href="/docs" className="flex items-center text-blue-600 hover:text-blue-800">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              {language === 'ar' ? 'العودة إلى الوثائق' : 'Back to Documentation'}
+            </Link>
+          </nav>
 
-        <div className="space-y-8">
-          {topics.map((topic) => (
-            <div key={topic.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <h2 className={`text-xl font-semibold text-gray-900 dark:text-white mb-2 ${
-                    language === 'ar' ? 'font-arabic' : 'font-english'
-                  }`}>
-                    {language === 'ar' ? topic.titleAr : topic.title}
-                  </h2>
-                  <p className={`text-gray-600 dark:text-gray-300 mb-4 ${
-                    language === 'ar' ? 'font-arabic' : 'font-english'
-                  }`}>
-                    {language === 'ar' ? topic.descriptionAr : topic.description}
-                  </p>
+          <div className="mb-8">
+            <h1 className={`text-3xl font-bold text-gray-900 dark:text-white mb-4 ${language === 'ar' ? 'font-arabic' : 'font-english'
+              }`}>
+              {language === 'ar' ? 'التحكم في الإصدارات' : 'Version Control'}
+            </h1>
+            <p className={`text-lg text-gray-600 dark:text-gray-300 ${language === 'ar' ? 'font-arabic' : 'font-english'
+              }`}>
+              {language === 'ar'
+                ? 'تعلم Git و GitHub وممارسات التحكم في الإصدارات الحديثة'
+                : 'Learn Git, GitHub, and modern version control practices'
+              }
+            </p>
+          </div>
+
+          <div className="space-y-8">
+            {topics.map((topic) => (
+              <div key={topic.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <h2 className={`text-xl font-semibold text-gray-900 dark:text-white mb-2 ${language === 'ar' ? 'font-arabic' : 'font-english'
+                      }`}>
+                      {language === 'ar' ? topic.titleAr : topic.title}
+                    </h2>
+                    <p className={`text-gray-600 dark:text-gray-300 mb-4 ${language === 'ar' ? 'font-arabic' : 'font-english'
+                      }`}>
+                      {language === 'ar' ? topic.descriptionAr : topic.description}
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-2 ml-4">
+                    <span className={`px-2 py-1 text-xs rounded-full ${topic.difficulty === 'beginner'
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                        : topic.difficulty === 'intermediate'
+                          ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
+                          : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+                      }`}>
+                      {language === 'ar'
+                        ? topic.difficulty === 'beginner' ? 'مبتدئ'
+                          : topic.difficulty === 'intermediate' ? 'متوسط' : 'متقدم'
+                        : topic.difficulty.charAt(0).toUpperCase() + topic.difficulty.slice(1)
+                      }
+                    </span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                      {topic.estimatedTime} {language === 'ar' ? 'دقيقة' : 'min'}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2 ml-4">
-                  <span className={`px-2 py-1 text-xs rounded-full ${
-                    topic.difficulty === 'beginner' 
-                      ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-                      : topic.difficulty === 'intermediate'
-                      ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
-                      : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
-                  }`}>
-                    {language === 'ar' 
-                      ? topic.difficulty === 'beginner' ? 'مبتدئ' 
-                        : topic.difficulty === 'intermediate' ? 'متوسط' : 'متقدم'
-                      : topic.difficulty.charAt(0).toUpperCase() + topic.difficulty.slice(1)
-                    }
-                  </span>
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
-                    {topic.estimatedTime} {language === 'ar' ? 'دقيقة' : 'min'}
-                  </span>
-                </div>
-              </div>
 
-              <div className="mb-4">
-                <h3 className={`text-lg font-medium text-gray-900 dark:text-white mb-3 ${
-                  language === 'ar' ? 'font-arabic' : 'font-english'
-                }`}>
-                  {language === 'ar' ? 'مثال على الكود:' : 'Code Example:'}
-                </h3>
-                <div className="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto">
-                  <pre className="text-sm">
-                    <code>{topic.codeExample}</code>
-                  </pre>
+                <div className="mb-4">
+                  <h3 className={`text-lg font-medium text-gray-900 dark:text-white mb-3 ${language === 'ar' ? 'font-arabic' : 'font-english'
+                    }`}>
+                    {language === 'ar' ? 'مثال على الكود:' : 'Code Example:'}
+                  </h3>
+                  <div className="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto">
+                    <pre className="text-sm">
+                      <code>{topic.codeExample}</code>
+                    </pre>
+                  </div>
+                  {(topic.explanation || topic.explanationAr) && (
+                    <div className="mt-4 bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800">
+                      <h4 className={`text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2 ${language === 'ar' ? 'font-arabic' : 'font-english'
+                        }`}>
+                        {language === 'ar' ? 'الشرح:' : 'Explanation:'}
+                      </h4>
+                      <p className={`text-sm text-blue-800 dark:text-blue-200 leading-relaxed ${language === 'ar' ? 'font-arabic' : 'font-english'
+                        }`}>
+                        {language === 'ar' ? topic.explanationAr : topic.explanation}
+                      </p>
+                    </div>
+                  )}
                 </div>
-              </div>
 
-              <div className="flex items-center space-x-4">
-                <button 
-                  onClick={() => {
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  className="inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background h-10 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  <BookOpen className="h-4 w-4 mr-2" />
-                  {language === 'ar' ? 'اقرأ المزيد' : 'Read More'}
-                </button>
-                <Button variant="outline">
-                  <Code className="h-4 w-4 mr-2" />
-                  {language === 'ar' ? 'جرب في الملعب' : 'Try in Playground'}
-                </Button>
-                {topic.resources && (
-                  <a 
-                    href={topic.resources.links[0]?.url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background border border-input hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
+                <div className="flex items-center space-x-4">
+                  <button
+                    onClick={() => {
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background h-10 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white"
                   >
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    {language === 'ar' ? 'المراجع' : 'References'}
-                  </a>
-                )}
+                    <BookOpen className="h-4 w-4 mr-2" />
+                    {language === 'ar' ? 'اقرأ المزيد' : 'Read More'}
+                  </button>
+                  <Button variant="outline">
+                    <Code className="h-4 w-4 mr-2" />
+                    {language === 'ar' ? 'جرب في الملعب' : 'Try in Playground'}
+                  </Button>
+                  {topic.resources && (
+                    <a
+                      href={topic.resources.links[0]?.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background border border-input hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      {language === 'ar' ? 'المراجع' : 'References'}
+                    </a>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
 
-        <div className="mt-12 bg-purple-50 dark:bg-purple-900/20 rounded-lg p-6">
-          <h3 className={`text-lg font-semibold text-purple-900 dark:text-purple-100 mb-4 ${
-            language === 'ar' ? 'font-arabic' : 'font-english'
-          }`}>
-            {language === 'ar' ? 'موارد إضافية' : 'Additional Resources'}
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <h4 className={`font-medium text-purple-800 dark:text-purple-200 mb-2 ${
-                language === 'ar' ? 'font-arabic' : 'font-english'
+          <div className="mt-12 bg-purple-50 dark:bg-purple-900/20 rounded-lg p-6">
+            <h3 className={`text-lg font-semibold text-purple-900 dark:text-purple-100 mb-4 ${language === 'ar' ? 'font-arabic' : 'font-english'
               }`}>
-                {language === 'ar' ? 'الوثائق الرسمية' : 'Official Documentation'}
-              </h4>
-              <ul className={`space-y-1 text-purple-700 dark:text-purple-300 ${
-                language === 'ar' ? 'font-arabic' : 'font-english'
-              }`}>
-                <li>• Git Documentation</li>
-                <li>• GitHub Guides</li>
-                <li>• Atlassian Git Tutorials</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className={`font-medium text-purple-800 dark:text-purple-200 mb-2 ${
-                language === 'ar' ? 'font-arabic' : 'font-english'
-              }`}>
-                {language === 'ar' ? 'دورات تعليمية' : 'Learning Courses'}
-              </h4>
-              <ul className={`space-y-1 text-purple-700 dark:text-purple-300 ${
-                language === 'ar' ? 'font-arabic' : 'font-english'
-              }`}>
-                <li>• Git Basics on Atlassian</li>
-                <li>• GitHub Learning Lab</li>
-                <li>• Developer Roadmap - Git</li>
-              </ul>
+              {language === 'ar' ? 'موارد إضافية' : 'Additional Resources'}
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h4 className={`font-medium text-purple-800 dark:text-purple-200 mb-2 ${language === 'ar' ? 'font-arabic' : 'font-english'
+                  }`}>
+                  {language === 'ar' ? 'الوثائق الرسمية' : 'Official Documentation'}
+                </h4>
+                <ul className={`space-y-1 text-purple-700 dark:text-purple-300 ${language === 'ar' ? 'font-arabic' : 'font-english'
+                  }`}>
+                  <li>• Git Documentation</li>
+                  <li>• GitHub Guides</li>
+                  <li>• Atlassian Git Tutorials</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className={`font-medium text-purple-800 dark:text-purple-200 mb-2 ${language === 'ar' ? 'font-arabic' : 'font-english'
+                  }`}>
+                  {language === 'ar' ? 'دورات تعليمية' : 'Learning Courses'}
+                </h4>
+                <ul className={`space-y-1 text-purple-700 dark:text-purple-300 ${language === 'ar' ? 'font-arabic' : 'font-english'
+                  }`}>
+                  <li>• Git Basics on Atlassian</li>
+                  <li>• GitHub Learning Lab</li>
+                  <li>• Developer Roadmap - Git</li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>
-      </div>
       </div>
     </>
   )
