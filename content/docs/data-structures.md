@@ -89,6 +89,10 @@ list.append(3);
 list.print(); // 1, 2, 3
 ```
 
+### Explanation
+Arrays and Linked Lists are fundamental ways to store collections. Arrays store elements in contiguous memory blocks, allowing instant access (`O(1)`) to any element by its index. However, adding or removing elements from the beginning requires shifting all other elements, which is slow (`O(n)`). Linked Lists consist of nodes where each node points to the next. This makes adding or removing elements very fast (`O(1)`) if you have a reference to the node, but accessing a specific element requires traversing the list from the start (`O(n)`). The code implements a Singly Linked List to demonstrate this structure.
+**باختصار بالعربي:** المصفوفات سريعة في الوصول وبطيئة في التعديل، بينما القوائم المرتبطة عكس ذلك.
+
 ### 📝 Notes
 Choosing between arrays and linked lists depends on the frequency of access versus insertion/deletion operations.
 Resources:
@@ -216,6 +220,10 @@ console.log(isBalanced('()[]{}')); // true
 console.log(isBalanced('([)]')); // false
 ```
 
+### Explanation
+Stacks and Queues are abstract data types defined by how data is added and removed. A Stack follows LIFO (Last In, First Out), like a stack of plates; you push to the top and pop from the top. A Queue follows FIFO (First In, First Out), like a line at a store; you enqueue at the back and dequeue from the front. The `isBalanced` function shows a practical use of a Stack: to check if parentheses in a string are balanced. Opening brackets are pushed onto the stack, and closing brackets pop matching opening brackets off. If the stack is empty at the end, the string is balanced.
+**باختصار بالعربي:** المكدس (LIFO) مثل كومة الصحون، والطابور (FIFO) مثل صف الانتظار.
+
 ### 📝 Notes
 Stacks and Queues are essential for managing data flow in algorithms and system processes.
 Resources:
@@ -341,6 +349,10 @@ console.log(bst.inOrder()); // [3, 5, 7, 10, 15]
 console.log(bst.preOrder()); // [10, 5, 3, 7, 15]
 ```
 
+### Explanation
+A Tree is a hierarchical structure with a root node and child nodes. A Binary Search Tree (BST) is a specific type where every node has at most two children, and the left child is always smaller than the parent, while the right child is always larger. This property makes searching very efficient, similar to binary search in an array. The code implements insertion and search methods, as well as three ways to traverse (visit) all nodes: In-order (visits nodes in sorted order), Pre-order (root first), and Post-order (children first).
+**باختصار بالعربي:** شجرة البحث الثنائية ترتب البيانات بحيث يكون اليسار أصغر واليمين أكبر، مما يسهل البحث.
+
 ### 📝 Notes
 Trees are versatile structures used in databases, file systems, and more.
 Resources:
@@ -457,6 +469,10 @@ console.log(map.get('key1')); // 'value1'
 console.log(map.has('key2')); // true
 map.delete('key2');
 ```
+
+### Explanation
+A Hash Table is a powerful data structure that maps keys to values, allowing for very fast data retrieval. It uses a "hash function" to convert a key (like a string) into an index in an array. Sometimes two keys produce the same index (a collision); this implementation handles collisions by storing multiple items in the same "bucket" (an array at that index). JavaScript also has a built-in `Map` object that provides similar functionality with a cleaner API. Hash tables are the underlying technology behind objects and dictionaries in many programming languages.
+**باختصار بالعربي:** جداول التجزئة تربط المفاتيح بالقيم لاسترجاعها بسرعة فائقة، وهي أساس القواميس البرمجية.
 
 ### 📝 Notes
 Hash tables are fundamental for implementing associative arrays and database indexing.

@@ -43,6 +43,10 @@ if (multiply(3, 4) === 12) {
 }
 ```
 
+### Explanation
+This example introduces the concept of unit testing using simple assertions. `console.assert` checks if a condition is true; if not, it logs an error message. The code also demonstrates Test-Driven Development (TDD), a methodology where you write the test *before* the code. In the `multiply` example, we first write a test that expects `multiply(3, 4)` to return `12`. Since the function initially returns `0`, the test fails (Red). We would then implement the logic to make it pass (Green). This process ensures that your code meets its requirements from the start.
+**باختصار بالعربي:** يوضح هذا المثال أساسيات اختبار الوحدات ومنهجية التطوير القائم على الاختبار (TDD).
+
 ### 📝 Notes
 Testing code behavior before implementation ensures reliability and reduces bugs.
 Resources:
@@ -104,6 +108,10 @@ const mockFn = jest.fn();
 mockFn('hello');
 expect(mockFn).toHaveBeenCalledWith('hello');
 ```
+
+### Explanation
+Jest is a popular testing framework that provides structure and assertions. We use `describe` to group related tests into a "suite" (e.g., "Math functions"). Each `test` function describes a specific scenario. `expect(value).toBe(expected)` is an assertion that checks if the result matches our expectation. The example also shows how to test asynchronous code using `async/await` and how to use `jest.fn()` to create mock functions, which allow you to spy on function calls and control their behavior without invoking the actual implementation.
+**باختصار بالعربي:** يوفر Jest هيكلاً منظماً للاختبارات مع أدوات للتأكيد، الاختبار غير المتزامن، والدوال الوهمية.
 
 ### 📝 Notes
 Jest provides a comprehensive suite of tools for testing JavaScript applications effectively.
@@ -167,6 +175,10 @@ test('user can type in input field', () => {
 });
 ```
 
+### Explanation
+Testing React components involves rendering them in a virtual DOM and interacting with them as a user would. We use `render` to display the component. `screen.getByText` helps us find elements based on their content. `fireEvent` simulates user actions like clicking a button or typing in an input field. We then verify the results using assertions like `toBeInTheDocument` or `toHaveBeenCalledTimes`. This ensures that the UI renders correctly and responds to user interactions as expected, without needing to run the app in a real browser.
+**باختصار بالعربي:** نختبر مكونات React عن طريق محاكاة العرض وتفاعلات المستخدم للتأكد من صحة الواجهة.
+
 ### 📝 Notes
 Testing React components involves verifying rendering, user interactions, and state updates.
 Resources:
@@ -229,6 +241,10 @@ if (DEBUG) {
 // Install React DevTools browser extension
 // Inspect component props, state, and hooks
 ```
+
+### Explanation
+Effective debugging requires a mix of tools. `console.log` is the simplest way to inspect values. The `debugger` statement is more powerful; it pauses code execution in the browser's DevTools, allowing you to step through code line by line and inspect the current state. `try...catch` blocks are essential for handling runtime errors gracefully and logging stack traces. `console.time` helps measure how long an operation takes, which is useful for performance optimization. Finally, React DevTools is mentioned as a specialized tool for inspecting the component hierarchy and state.
+**باختصار بالعربي:** مجموعة من تقنيات التشخيص تشمل السجلات، نقاط التوقف، معالجة الأخطاء، وقياس الأداء.
 
 ### 📝 Notes
 A variety of debugging techniques, from console logs to advanced DevTools, helps in diagnosing issues efficiently.

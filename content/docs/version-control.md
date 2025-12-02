@@ -37,6 +37,10 @@ git checkout feature-branch
 git checkout -b feature-branch
 ```
 
+### Explanation
+This section covers the essential commands to start using Git. `git init` creates a new Git repository in your current directory. `git status` shows you which files are modified or untracked. `git add` moves changes from the working directory to the staging area, preparing them to be committed. `git commit` saves the staged changes to the repository history with a descriptive message. `git log` displays the history of commits, while `git branch` and `git checkout` are used to create and switch between different lines of development (branches), allowing you to work on features in isolation.
+**باختصار بالعربي:** هذه الأوامر الأساسية لإنشاء مستودع، حفظ التغييرات، وعرض السجل.
+
 ### 📝 Notes
 These commands form the daily workflow for any developer using Git.
 Resources:
@@ -84,6 +88,10 @@ git rebase main
 # View differences between branches
 git diff main..feature/new-feature
 ```
+
+### Explanation
+Branching allows you to diverge from the main line of development and continue to do work without messing with that main line. `git checkout -b` creates and switches to a new branch in one step. Once work is done, you switch back to the main branch (`git checkout main`) and use `git merge` to combine the changes from your feature branch. If a branch is no longer needed, `git branch -d` deletes it. `git rebase` is an alternative to merging that reapplies commits on top of another base tip, creating a linear history. `git diff` shows the changes between two branches.
+**باختصار بالعربي:** الفروع تسمح بالعمل المنفصل، والدمج يجمع التغييرات، بينما `rebase` يعيد ترتيب الالتزامات لتاريخ خطي.
 
 ### 📝 Notes
 Branching and merging are fundamental for managing parallel development efforts.
@@ -143,6 +151,10 @@ git checkout main
 git pull origin main
 ```
 
+### Explanation
+This workflow demonstrates how to collaborate with others using GitHub. `git clone` copies a remote repository to your local machine. `git push` uploads your local commits to the remote repository, while `git pull` fetches and merges changes from the remote to your local branch. The standard collaboration cycle involves creating a local branch, making changes, pushing that branch to GitHub, and then opening a Pull Request (PR) to discuss and review the code before merging it into the main codebase. This ensures code quality and team coordination.
+**باختصار بالعربي:** هذا هو سير العمل القياسي للتعاون: استنساخ، رفع التغييرات، وإنشاء طلبات سحب للمراجعة.
+
 ### 📝 Notes
 This standard workflow ensures smooth collaboration and code review processes.
 Resources:
@@ -195,6 +207,10 @@ git push origin v1.0.0
 # Interactive rebase (clean up history)
 git rebase -i HEAD~3  # Edit last 3 commits
 ```
+
+### Explanation
+This section covers advanced tools for fixing mistakes and managing history. When a merge conflict occurs, you must manually edit the conflicting files, then add and commit them. `git reset` is a powerful command to undo changes: `--soft` keeps your changes staged, while `--hard` discards them entirely. `git stash` temporarily shelves your changes so you can switch branches without committing incomplete work. Interactive rebase (`git rebase -i`) allows you to edit, squash, or reorder previous commits, which is useful for cleaning up your commit history before merging.
+**باختصار بالعربي:** أدوات متقدمة لحل التعارضات، التراجع عن الأخطاء، وتنظيف سجل الالتزامات.
 
 ### 📝 Notes
 Advanced operations are essential for maintaining a healthy and error-free codebase.

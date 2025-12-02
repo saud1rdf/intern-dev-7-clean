@@ -48,6 +48,10 @@ function isEven(n) {
 // 5. Effectiveness: Each step is doable
 ```
 
+### Explanation
+An algorithm is simply a sequence of steps to solve a problem. In the `findMax` example, we start by assuming the first number is the largest. Then, we iterate through the rest of the array, comparing each number to our current maximum. If we find a larger number, we update our maximum. Finally, we return the result. This demonstrates the core properties of an algorithm: it has a clear input (the array), a clear output (the max number), and a finite set of effective steps to get from one to the other.
+**باختصار بالعربي:** الخوارزمية هي خطوات محددة لحل مشكلة، مثل مقارنة الأرقام للعثور على الأكبر.
+
 ### 📝 Notes
 Algorithms are the core of computer science, defined by their ability to solve problems efficiently and reliably.
 Resources:
@@ -139,6 +143,10 @@ console.log(quickSort([64, 34, 25, 12, 22]));
 console.log(mergeSort([64, 34, 25, 12, 22]));
 ```
 
+### Explanation
+Sorting is a classic algorithmic problem. `bubbleSort` is the simplest: it repeatedly swaps adjacent elements if they are in the wrong order, "bubbling" the largest values to the top. However, it is slow for large datasets. `quickSort` and `mergeSort` are much faster "divide and conquer" algorithms. `quickSort` picks a "pivot" element and partitions the array into smaller and larger elements, then sorts them recursively. `mergeSort` splits the array in half until single elements remain, then merges them back together in sorted order. These examples highlight the trade-offs between simplicity and efficiency.
+**باختصار بالعربي:** خوارزميات الترتيب تختلف في الكفاءة؛ `Bubble Sort` بسيطة وبطيئة، بينما `Quick Sort` و `Merge Sort` أسرع وأكثر تعقيداً.
+
 ### 📝 Notes
 Understanding different sorting algorithms helps in choosing the right one for specific performance requirements.
 Resources:
@@ -217,6 +225,10 @@ console.log(linearSearch(numbers, 7)); // Returns 3
 console.log(binarySearch(numbers, 7)); // Returns 3
 console.log(binarySearchRecursive(numbers, 7)); // Returns 3
 ```
+
+### Explanation
+Searching involves finding a specific value in a collection. `linearSearch` checks every single element one by one; it works on any list but is slow for large ones. `binarySearch` is much faster but requires the list to be *sorted*. It works by repeatedly dividing the search interval in half. If the target value is less than the middle element, it searches the left half; otherwise, the right half. This logarithmic efficiency makes it ideal for large datasets. The code provides both an iterative (loop-based) and a recursive implementation of binary search.
+**باختصار بالعربي:** البحث الخطي يفحص كل عنصر، بينما البحث الثنائي (للبيانات المرتبة) يقسم المجال للنصف وهو أسرع بكثير.
 
 ### 📝 Notes
 Binary Search provides significant performance benefits over Linear Search for large, sorted datasets.
@@ -297,6 +309,10 @@ function copyArray(arr) {
 // Common Complexity Rankings (fastest to slowest):
 // O(1) < O(log n) < O(n) < O(n log n) < O(n²) < O(2ⁿ)
 ```
+
+### Explanation
+Big O notation is the standard way to measure how an algorithm's performance changes as the input size grows. `O(1)` means the time taken is constant, regardless of input size (e.g., accessing an array index). `O(n)` means time grows linearly with input (e.g., a loop). `O(n^2)` indicates quadratic growth, often seen in nested loops like Bubble Sort, which can be very slow for large inputs. `O(log n)` represents logarithmic growth, which is very efficient and typical of Binary Search. Understanding these complexities helps developers write code that scales well.
+**باختصار بالعربي:** يقيس Big O كفاءة الخوارزمية؛ `O(1)` هو الأسرع، و `O(n^2)` بطيء مع البيانات الكبيرة.
 
 ### 📝 Notes
 Understanding complexity helps in predicting algorithm performance and scalability.

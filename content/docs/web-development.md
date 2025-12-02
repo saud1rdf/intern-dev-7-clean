@@ -34,6 +34,10 @@ function Counter() {
 export default Counter;
 ```
 
+### Explanation
+This code defines a functional component named `Counter` that maintains a numeric state. We import the `useState` hook from React, which allows us to add state to function components. Inside the function, `useState(0)` initializes a state variable `count` with a value of `0` and provides a function `setCount` to update it. The component returns JSX that displays the current count in an `<h2>` tag. Two buttons are provided: one to increment the count and one to decrement it. When a button is clicked, `setCount` is called with the new value (current count + 1 or - 1), triggering a re-render of the component to update the UI.
+**باختصار بالعربي:** هذا المكون يستخدم `useState` لإنشاء عداد بسيط يمكن زيادته أو نقصانه عند الضغط على الأزرار.
+
 ### 📝 Notes
 Key concepts include the `useState` hook and component re-rendering upon state changes.
 Resources:
@@ -88,6 +92,10 @@ export function useApp() {
 }
 ```
 
+### Explanation
+This example demonstrates advanced state management using `useReducer` and `useContext`. First, we create a Context object `AppContext` to share data globally. We define a reducer function `appReducer` that takes the current state and an action, returning a new state based on the action type (INCREMENT or DECREMENT). The `AppProvider` component uses `useReducer` to manage the state logic and wraps its children in `AppContext.Provider`, passing down the state and dispatch function. Finally, the `useApp` custom hook simplifies accessing this context from any child component. This pattern is powerful for managing complex state across a large application without passing props through every level.
+**باختصار بالعربي:** نستخدم هنا `useReducer` لإدارة منطق الحالة المعقد و `useContext` لمشاركته مع جميع المكونات الفرعية بسهولة.
+
 ### 📝 Notes
 Managing complex state effectively involves combining `useReducer` for logic and `useContext` for distribution.
 Resources:
@@ -141,6 +149,10 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   };
 };
 ```
+
+### Explanation
+This code shows how to implement Server-Side Rendering (SSR) in a Next.js page. The `getServerSideProps` function is a special Next.js function that runs on the server for every request. Inside this function, we extract the `id` from the URL parameters and fetch the corresponding blog post data from an external API. The fetched `data` is then returned as props to the `BlogPost` component. When the user visits the page, the server generates the HTML with the data already populated, ensuring the content is visible immediately and is indexable by search engines.
+**باختصار بالعربي:** تقوم دالة `getServerSideProps` بجلب البيانات على الخادم قبل عرض الصفحة، مما يحسن الأداء ومحركات البحث.
 
 ### 📝 Notes
 Server-Side Rendering (SSR) is crucial for SEO and delivering dynamic content that needs to be fresh on every request.
