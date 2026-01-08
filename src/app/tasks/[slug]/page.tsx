@@ -1,37 +1,35 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'fs'
+import path from 'path'
+import { notFound } from 'next/navigation'
+import Navigation from '@/components/Navigation'
+import TaskArticle from './TaskArticle'
 
-type TaskParams ={
-  slug: string;
-};
-
-
-function getTaskContent(slug: string): string | null {
-  const tasksDir = path.join(process.cwd(), 'content', 'tasks');
-  const filePath = path.join(tasksDir, `${slug}.md`);
-  if (!fs.existsSync(filePath)) return null;
-  return fs.readFileSync(filePath, 'utf8');
+interface TaskDetailPageProps {
+  params: Promise<{ slug: string }>
 }
 
-export default function TaskDetailPage({ params }: any) {
-  const content = getTaskContent(params.slug);
+function getTaskContent(slug: string): string | null {
+  const tasksDir = path.join(process.cwd(), 'content', 'tasks')
+  const filePath = path.join(tasksDir, `${slug}.md`)
+  if (!fs.existsSync(filePath)) return null
+  return fs.readFileSync(filePath, 'utf8')
+}
+
+export default async function TaskDetailPage({ params }: TaskDetailPageProps) {
+  const { slug } = await params
+  const content = getTaskContent(slug)
 
   if (!content) {
-    return (
-      <main className="max-w-3xl mx-auto py-10 px-4">
-        <h1 className="text-xl font-semibold mb-4">Task not found</h1>
-        <p className="text-sm text-gray-500">No task file was found for this slug in <code>content/tasks</code>.</p>
-      </main>
-    );
+    notFound()
   }
 
   return (
-    <main className="max-w-3xl mx-auto py-10 px-4">
-      <article className="prose prose-neutral max-w-none">
-        <pre className="whitespace-pre-wrap text-sm leading-relaxed bg-gray-50 p-4 rounded-lg border">
-          {content}
-        </pre>
-      </article>
-    </main>
-  );
+    <>
+      <section id="content-start"></section>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <Navigation />
+        <TaskArticle content={content} slug={slug} />
+      </div>
+    </>
+  )
 }
