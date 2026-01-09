@@ -1,0 +1,34 @@
+---
+title: API Integration | تكامل الـ API
+description: REST, GraphQL, Postman, and real-world integration tips for interns | شرح REST وGraphQL وأساسيات الربط للمتدربين
+---
+
+# API Integration | تكامل الـ API
+
+## English
+APIs allow different applications to communicate. As an intern, your goal is to **consume** APIs safely and predictably:
+- Understand endpoints, methods, headers, and status codes
+- Handle errors and loading states
+- Learn authentication basics (API keys, Bearer tokens)
+
+### REST basics (fast mental model)
+- **GET**: read data
+- **POST**: create data
+- **PUT/PATCH**: update data
+- **DELETE**: remove data
+
+### Common status codes
+- **200/201**: success
+- **400**: bad request (your payload is wrong)
+- **401/403**: auth/permission issues
+- **404**: not found
+- **500**: server error
+
+### Example: fetch in JavaScript
+```js
+async function loadUsers() {
+  const res = await fetch("https://api.example.com/users");
+  if (!res.ok) throw new Error("Failed to fetch users");
+  const data = await res.json();
+  return data;
+}

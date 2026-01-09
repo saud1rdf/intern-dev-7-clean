@@ -1,16 +1,34 @@
 ---
-title: Web Development Fundamentals
-description: مقدمة لتطوير الويب + أساسيات React/Next.js
+title: Web Development Fundamentals | أساسيات تطوير الويب
+description: HTML/CSS/JS overview + how to practice as an intern | نظرة شاملة وكيف تتدرب كمتدرب
 ---
 
-# Web Development Fundamentals (أساسيات تطوير الويب)
+# Web Development Fundamentals | أساسيات تطوير الويب
 
 ## English
-Explain here the key concepts: HTML, CSS, JS, React, Next.js, how the project is structured, etc.
+Web development is the practice of building websites and web apps. As an intern, focus on **the core trio**:
+- **HTML**: structure (what’s on the page)
+- **CSS**: style (how it looks)
+- **JavaScript**: behavior (how it works)
 
-## العربية
-اكتب هنا شرح نفس الفكرة بالعربي: وش هو HTML/CSS/JS، وش يسوي React و Next.js، وكيف تشتغل الصفحات…
+### What you should learn first
+1. HTML semantic tags (header, nav, main, section)
+2. CSS layout (flexbox + grid)
+3. JavaScript basics (variables, functions, DOM)
+4. Fetching data (APIs)
+5. Debugging (DevTools)
 
-## Example
-```bash
-npm run dev
+### Mini practice task
+Build a simple page:
+- Header + navbar
+- Cards section (3 cards)
+- Button that changes text when clicked
+
+```html
+<button id="btn">Click me</button>
+<script>
+  document.getElementById("btn").addEventListener("click", () => {
+    document.getElementById("btn").textContent = "Done ✅";
+  });
+</script>
+

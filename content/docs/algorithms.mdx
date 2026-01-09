@@ -1,0 +1,31 @@
+
+---
+
+## 4️⃣ Algorithms  
+**المسار:**  
+`content/docs/algorithms.mdx`
+
+```mdx
+---
+title: Algorithms | الخوارزميات
+description: Problem solving and Big-O basics | أساسيات الخوارزميات للمتدربين
+---
+
+# Algorithms | الخوارزميات
+
+## English
+Algorithms are step-by-step solutions to problems.
+
+### Big-O basics
+- O(1)
+- O(n)
+- O(n²)
+
+```js
+function countFreq(arr) {
+  const map = new Map();
+  for (const x of arr) {
+    map.set(x, (map.get(x) || 0) + 1);
+  }
+  return map;
+}
