@@ -1,0 +1,527 @@
+---
+title: "GitHub Workflow"
+category: "version-control"
+summary: "Master GitHub workflows including pull requests, code reviews, branch protection, GitHub Actions, and collaborative development practices."
+readingTime: 25
+---
+
+## Introduction
+
+GitHub is a web-based platform for Git version control that provides additional collaboration features like pull requests, issues, project boards, and Actions for CI/CD. Understanding GitHub workflows is essential for modern software development because most open-source projects and many companies use GitHub as their collaboration hub.
+
+The GitHub workflow extends Git with powerful collaboration features. Pull requests enable code review before changes are merged. Issues track bugs, feature requests, and tasks. GitHub Actions automate testing, deployment, and other workflows. Together, these features create a powerful platform for team collaboration.
+
+## When to Use GitHub
+
+GitHub is valuable for all types of software projects, from personal projects to enterprise applications.
+
+### Open Source Projects
+
+GitHub hosts millions of open-source projects. Understanding how to contribute to and maintain open-source projects on GitHub is a valuable skill for any developer.
+
+### Team Collaboration
+
+GitHub's features for code review, discussion, and project management make it ideal for distributed teams working on shared codebases.
+
+### Continuous Integration
+
+GitHub Actions enables automated testing, building, and deployment directly from your repository, reducing manual work and catching issues early.
+
+### Project Management
+
+GitHub Issues, Projects, and Discussions provide lightweight project management capabilities integrated directly with your code.
+
+## Key Concepts
+
+### Pull Requests
+
+Pull requests propose changes from one branch to another and enable code review before merging.
+
+```bash
+# Create a pull request from command line (GitHub CLI)
+gh pr create --title "Add user authentication" \
+  --body "This PR implements user authentication with JWT tokens." \
+  --base main --head feature/auth
+
+# Or using the web interface:
+# 1. Push your branch: git push -u origin feature-branch
+# 2. Navigate to your repository on GitHub
+# 3. Click "Compare & pull request"
+# 4. Fill in PR template
+# 5. Click "Create pull request"
+
+# View pull requests
+gh pr list
+gh pr status
+
+# View specific PR
+gh pr view 42
+gh pr diff 42
+gh pr checks 42
+
+# Add PR review
+gh pr review 42 --approve
+gh pr review 42 --comment
+gh pr review 42 --request-changes
+
+# Merge PR
+gh pr merge 42 --admin --squash
+gh pr merge 42 --rebase
+gh pr merge 42 --delete-branch
+```
+
+### Branch Protection
+
+Configure branch protection rules in GitHub repository settings to enforce code quality.
+
+```yaml
+# Required settings (configured in GitHub UI):
+# 1. Require pull request before merging
+#    - Require approvals: 1 or more
+#    - Dismiss stale PR approvals when new commits
+#    - Require review from Code Owners
+    
+# 2. Require status checks to pass
+#    - Require branches to be up to date before merging
+#    - Select required checks:
+#      - CI / build-and-test
+#      - CI / lint
+#      - CI / type-check
+      
+# 3. Require signed commits (optional)
+# 4. Require linear history (optional)
+# 5. Allow force push (restricted)
+# 6. Restrict who can push to protected branches
+```
+
+### Issues and Labels
+
+```markdown
+<!-- Issue Template -->
+---
+name: Bug Report
+about: Create a report to help us improve
+title: '[Bug]: '
+labels: 'bug'
+assignees: ''
+
+---
+
+**Describe the Bug**
+A clear description of what the bug is.
+
+**To Reproduce**
+Steps to reproduce the behavior:
+1. Go to '...'
+2. Click on '...'
+3. Scroll down to '...'
+4. See error
+
+**Expected Behavior**
+A clear description of what you expected to happen.
+
+**Screenshots**
+If applicable, add screenshots to help explain your problem.
+
+**Desktop (please complete the following information):**
+- OS: [e.g., macOS]
+- Browser [e.g., chrome, safari]
+- Version [e.g., 22]
+
+**Additional Context**
+Add any other context about the problem here.
+```
+
+```bash
+# GitHub CLI for issues
+gh issue list
+gh issue view 42
+gh issue create --title "New feature" --body "Description"
+gh issue close 42
+gh issue reopen 42
+gh issue label add bug issue-42
+gh issue label remove enhancement issue-42
+
+# Search issues
+gh issue list --state open --label "bug"
+gh issue list --assignee "@me"
+gh issue list --search "is:open is:bug created:>2024-01-01"
+```
+
+### GitHub Actions
+
+Create automated workflows using YAML files in your repository.
+
+```yaml
+# .github/workflows/ci.yml
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  lint:
+    name: Lint and Type Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run ESLint
+        run: npm run lint
+        
+      - name: Run TypeScript check
+        run: npm run type-check
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    needs: lint
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run unit tests
+        run: npm run test:unit
+        
+      - name: Run integration tests
+        run: npm run test:integration
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage/lcov.info
+
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build application
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nextjs-build
+          path: .next/
+          retention-days: 7
+
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
+```
+
+## Full Example: Complete Development Workflow
+
+```yaml
+# .github/workflows/pr-checks.yml
+name: Pull Request Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  pr-title-check:
+    name: Validate PR Title
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Check PR title format
+        run: |
+          title="${{ github.event.pull_request.title }}"
+          regex='^(feat|fix|docs|style|refactor|perf|test|chore)(\(.+\))?: .+'
+          if ! echo "$title" | grep -Eq "$regex"; then
+            echo "Invalid PR title format"
+            echo "Expected format: <type>(<scope>): <description>"
+            echo "Types: feat, fix, docs, style, refactor, perf, test, chore"
+            exit 1
+          fi
+
+  lint:
+    name: Lint Code
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run ESLint
+        run: npm run lint --if-present
+        
+      - name: Run Prettier check
+        run: npm run format:check --if-present
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    container:
+      image: node:20-bullseye-slim
+      
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Setup PostgreSQL
+        run: |
+          npm run db:migrate
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/test_db
+          
+      - name: Run tests
+        run: npm run test:ci
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/test_db
+          JEST_JUNIT_OUTPUT_NAME: test-results.xml
+          
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: junit.xml
+          
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run npm audit
+        run: npm audit --audit-level=high --json > audit-results.json || true
+        
+      - name: Upload audit results
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit
+          path: audit-results.json
+          
+      - name: Check for vulnerable dependencies
+        run: |
+          if [ -f audit-results.json ] && grep -q '"vulnerabilities"' audit-results.json; then
+            echo "Security vulnerabilities found!"
+            cat audit-results.json
+            exit 1
+          fi
+
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build application
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: .next/
+          retention-days: 1
+
+  notify:
+    name: Notify on Failure
+    runs-on: ubuntu-latest
+    needs: [lint, test, build]
+    if: failure()
+    
+    steps:
+      - name: Send Slack notification
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          channel: '#deployments'
+          text: 'PR checks failed!'
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+```
+
+## Common Mistakes
+
+### Not Using Branch Protection
+
+```yaml
+# ❌ WRONG - No branch protection
+# Anyone can push directly to main
+# No code review required
+
+# ✅ CORRECT - Configure branch protection in GitHub UI
+# Settings > Branches > Add rule
+# Branch name pattern: main, develop
+# Require pull request reviews: 1
+# Require status checks: CI, lint, test
+# Require conversation resolution
+```
+
+### Large PRs
+
+```markdown
+# ❌ WRONG - Large, unfocused PR
+Title: "Lots of changes"
+Changes: 50 files, 2000 additions
+Review time: Hours
+```
+
+```markdown
+# ✅ CORRECT - Small, focused PRs
+Title: "feat: Add user registration form"
+Changes: 5 files, 200 additions
+Review time: Minutes
+
+Title: "fix: Correct validation error message"
+Changes: 2 files, 50 additions
+```
+
+### Not Using CI/CD
+
+```bash
+# ❌ WRONG - Manual deployment
+git checkout main
+git pull
+npm run build
+npm run start
+# Repeat for every change!
+
+# ✅ CORRECT - Automated CI/CD
+# Push to main triggers:
+# 1. Run tests
+# 2. Build application
+# 3. Deploy to staging
+# 4. (after approval) Deploy to production
+```
+
+## Exercises
+
+1. **PR Workflow Practice**: Fork a repository, create a feature branch, make changes, open a PR, address review feedback, and merge.
+
+2. **CI/CD Setup**: Configure GitHub Actions for a Node.js project including linting, testing, and deployment.
+
+3. **Code Review Exercise**: Review a team member's PR using GitHub's review features, leaving constructive comments.
+
+4. **Issue Management**: Create an issue template, file bugs, use labels and projects to track progress.
+
+## Sources
+
+- [GitHub Documentation](https://docs.github.com/en)
+- [GitHub Actions Documentation](https://docs.github.com/en/actions)
+- [GitHub Learning Lab](https://lab.github.com/)

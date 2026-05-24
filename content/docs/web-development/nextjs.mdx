@@ -1,0 +1,804 @@
+---
+title: "Next.js"
+category: "web-development"
+summary: "Master Next.js 15+ including App Router, Server Components, SSR, SSG, and API routes for building production-ready React applications."
+readingTime: 30
+---
+
+## Introduction
+
+Next.js is a React framework developed by Vercel that provides structure, features, and optimizations for building production-ready web applications. Originally released in 2016, Next.js has evolved to become the de facto standard for React applications, offering a comprehensive solution for routing, rendering, data fetching, and deployment.
+
+The framework addresses many of the challenges developers face when building React applications from scratch. It handles the complex configuration required for build tools like Webpack and Babel, provides intelligent file-based routing, and offers multiple rendering strategies to optimize performance and user experience.
+
+Next.js 15 introduced significant changes including the App Router, Server Components, and improved streaming capabilities. These features enable developers to build applications that are faster, more efficient, and easier to maintain. The App Router uses React Server Components by default, reducing the amount of JavaScript sent to the client and improving initial page load times.
+
+Understanding Next.js is essential for modern React development, as it provides the infrastructure and best practices that most production React applications rely on. Whether you're building a simple landing page or a complex enterprise application, Next.js provides the tools and patterns you need to succeed.
+
+## When to Use Next.js
+
+Next.js is appropriate for virtually any web application project, but it particularly excels in several scenarios that are common in modern web development.
+
+### Production Web Applications
+
+When building applications that will serve real users in production, Next.js provides the reliability, performance, and developer experience needed for success. The framework includes built-in optimizations for images, fonts, scripts, and other assets that directly impact user experience and Core Web Vitals scores.
+
+### Content-Driven Websites
+
+Websites that rely heavily on content, such as blogs, documentation sites, e-commerce platforms, and marketing sites, benefit greatly from Next.js's static generation and incremental static regeneration capabilities. These features allow you to pre-render pages at build time or on-demand, providing fast page loads while keeping content fresh.
+
+### Hybrid Applications
+
+Applications that require a mix of static and dynamic content, authenticated routes, and API endpoints are well-served by Next.js's hybrid rendering model. You can choose different rendering strategies for different pages based on their requirements, all within a single application.
+
+### SEO-Critical Applications
+
+For applications where search engine visibility is important, Next.js's server-side rendering and static generation provide fully rendered HTML to search engine crawlers. Combined with Next.js's automatic image optimization and metadata management, this makes Next.js an excellent choice for SEO-focused projects.
+
+## Key Concepts
+
+### App Router
+
+The App Router is the modern routing system in Next.js that uses React Server Components and supports nested layouts, streaming, and advanced data fetching patterns. It represents the recommended approach for new Next.js applications.
+
+```tsx
+// app/layout.tsx - Root layout for the entire application
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import './globals.css';
+
+const inter = Inter({ subsets: ['latin'] });
+
+export const metadata: Metadata = {
+  title: 'My Application',
+  description: 'Built with Next.js 15',
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en">
+      <body className={inter.className}>{children}</body>
+    </html>
+  );
+}
+```
+
+```tsx
+// app/page.tsx - Home page (Server Component by default)
+import Link from 'next/link';
+
+export default function HomePage() {
+  return (
+    <main className="min-h-screen p-8">
+      <h1 className="text-4xl font-bold mb-4">Welcome to Next.js</h1>
+      <p className="mb-4">
+        This page is rendered on the server by default.
+      </p>
+      <Link 
+        href="/about"
+        className="text-blue-600 hover:underline"
+      >
+        Go to About Page
+      </Link>
+    </main>
+  );
+}
+```
+
+```tsx
+// app/blog/[slug]/page.tsx - Dynamic route with parameters
+import { notFound } from 'next/navigation';
+
+interface BlogPostProps {
+  params: Promise<{ slug: string }>;
+}
+
+async function getBlogPost(slug: string) {
+  const post = await db.post.findUnique({
+    where: { slug },
+  });
+  
+  return post;
+}
+
+export async function generateStaticParams() {
+  const posts = await db.post.findMany({
+    select: { slug: true },
+  });
+  
+  return posts.map((post) => ({
+    slug: post.slug,
+  }));
+}
+
+export default async function BlogPostPage({ params }: BlogPostProps) {
+  const { slug } = await params;
+  const post = await getBlogPost(slug);
+  
+  if (!post) {
+    notFound();
+  }
+  
+  return (
+    <article className="max-w-3xl mx-auto py-8">
+      <h1 className="text-4xl font-bold mb-4">{post.title}</h1>
+      <time className="text-gray-500">
+        {new Date(post.publishedAt).toLocaleDateString()}
+      </time>
+      <div className="mt-8 prose">{post.content}</div>
+    </article>
+  );
+}
+```
+
+### Server Components
+
+Server Components are the default in the App Router, allowing you to write components that run exclusively on the server. This reduces the JavaScript bundle size sent to the client and enables direct access to backend resources like databases and file systems.
+
+```tsx
+// app/components/ProductList.tsx
+import { db } from '@/lib/db';
+
+async function getProducts() {
+  // This runs on the server
+  return db.product.findMany({
+    include: {
+      category: true,
+      reviews: true,
+    },
+  });
+}
+
+export default async function ProductList() {
+  const products = await getProducts();
+  
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {products.map((product) => (
+        <div key={product.id} className="border rounded-lg p-4">
+          <h2 className="text-xl font-semibold">{product.name}</h2>
+          <p className="text-gray-600">{product.category.name}</p>
+          <p className="text-lg font-bold mt-2">${product.price}</p>
+          <p className="text-sm text-gray-500 mt-2">
+            {product.reviews.length} reviews
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+### Data Fetching
+
+Next.js provides native support for async/await in Server Components, making data fetching intuitive and efficient.
+
+```tsx
+// app/users/page.tsx
+import { Suspense } from 'react';
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+}
+
+async function getUsers(): Promise<User[]> {
+  const res = await fetch('https://api.example.com/users', {
+    next: { revalidate: 60 }, // Revalidate every 60 seconds
+  });
+  
+  if (!res.ok) {
+    throw new Error('Failed to fetch users');
+  }
+  
+  return res.json();
+}
+
+function UsersSkeleton() {
+  return (
+    <div className="animate-pulse">
+      <div className="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
+      <div className="space-y-3">
+        <div className="h-12 bg-gray-200 rounded"></div>
+        <div className="h-12 bg-gray-200 rounded"></div>
+        <div className="h-12 bg-gray-200 rounded"></div>
+      </div>
+    </div>
+  );
+}
+
+export default async function UsersPage() {
+  return (
+    <main className="max-w-4xl mx-auto p-8">
+      <h1 className="text-3xl font-bold mb-8">Users</h1>
+      
+      <Suspense fallback={<UsersSkeleton />}>
+        <UsersList />
+      </Suspense>
+    </main>
+  );
+}
+
+async function UsersList() {
+  const users = await getUsers();
+  
+  return (
+    <ul className="space-y-4">
+      {users.map((user) => (
+        <li key={user.id} className="border p-4 rounded-lg">
+          <h2 className="font-semibold">{user.name}</h2>
+          <p className="text-gray-600">{user.email}</p>
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+### Server Actions
+
+Server Actions allow you to define asynchronous server functions that can be called directly from your components, enabling progressive enhancement and secure server-side operations.
+
+```tsx
+// app/actions.ts
+'use server';
+
+import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
+
+const schema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  email: z.string().email('Invalid email'),
+});
+
+export async function createUser(prevState: unknown, formData: FormData) {
+  const validatedFields = schema.safeParse({
+    name: formData.get('name'),
+    email: formData.get('email'),
+  });
+  
+  if (!validatedFields.success) {
+    return {
+      errors: validatedFields.error.flatten().fieldErrors,
+    };
+  }
+  
+  try {
+    await db.user.create({
+      data: {
+        name: validatedFields.data.name,
+        email: validatedFields.data.email,
+      },
+    });
+    
+    revalidatePath('/users');
+    
+    return { message: 'User created successfully' };
+  } catch (error) {
+    return { message: 'Failed to create user' };
+  }
+}
+```
+
+```tsx
+// app/users/create-form.tsx
+'use client';
+
+import { useFormState } from 'react-dom';
+import { createUser } from '@/app/actions';
+
+const initialState = {
+  message: '',
+  errors: {},
+};
+
+export default function CreateUserForm() {
+  const [state, dispatch] = useFormState(createUser, initialState);
+  
+  return (
+    <form action={dispatch} className="space-y-4">
+      <div>
+        <label htmlFor="name" className="block mb-1">
+          Name
+        </label>
+        <input
+          type="text"
+          id="name"
+          name="name"
+          className="w-full border rounded p-2"
+        />
+        {state.errors?.name && (
+          <p className="text-red-500">{state.errors.name}</p>
+        )}
+      </div>
+      
+      <div>
+        <label htmlFor="email" className="block mb-1">
+          Email
+        </label>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          className="w-full border rounded p-2"
+        />
+        {state.errors?.email && (
+          <p className="text-red-500">{state.errors.email}</p>
+        )}
+      </div>
+      
+      <button
+        type="submit"
+        className="px-4 py-2 bg-blue-600 text-white rounded"
+      >
+        Create User
+      </button>
+      
+      {state.message && (
+        <p className={state.message.includes('Failed') ? 'text-red-500' : 'text-green-500'}>
+          {state.message}
+        </p>
+      )}
+    </form>
+  );
+}
+```
+
+### Routing and Layouts
+
+Next.js uses a file-system based router where folders define routes and special files like page.tsx and layout.tsx define the UI.
+
+```tsx
+// app/dashboard/layout.tsx - Dashboard layout with its own sidebar
+import Link from 'next/link';
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex min-h-screen">
+      <aside className="w-64 bg-gray-900 text-white p-4">
+        <nav className="space-y-2">
+          <Link href="/dashboard" className="block p-2 hover:bg-gray-800 rounded">
+            Overview
+          </Link>
+          <Link href="/dashboard/analytics" className="block p-2 hover:bg-gray-800 rounded">
+            Analytics
+          </Link>
+          <Link href="/dashboard/settings" className="block p-2 hover:bg-gray-800 rounded">
+            Settings
+          </Link>
+        </nav>
+      </aside>
+      
+      <main className="flex-1 p-8">{children}</main>
+    </div>
+  );
+}
+```
+
+```tsx
+// app/dashboard/analytics/page.tsx - Analytics page
+export default function AnalyticsPage() {
+  return (
+    <div>
+      <h1 className="text-2xl font-bold mb-4">Analytics</h1>
+      <p>Analytics dashboard content here</p>
+    </div>
+  );
+}
+```
+
+### API Routes
+
+While Server Components and Server Actions handle most server-side logic, Next.js also supports API routes for creating RESTful endpoints.
+
+```tsx
+// app/api/users/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+
+export async function GET(request: NextRequest) {
+  const searchParams = request.nextUrl.searchParams;
+  const page = parseInt(searchParams.get('page') || '1');
+  const limit = parseInt(searchParams.get('limit') || '10');
+  
+  const [users, total] = await Promise.all([
+    db.user.findMany({
+      take: limit,
+      skip: (page - 1) * limit,
+      orderBy: { createdAt: 'desc' },
+    }),
+    db.user.count(),
+  ]);
+  
+  return NextResponse.json({
+    users,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  });
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    
+    const user = await db.user.create({
+      data: {
+        name: body.name,
+        email: body.email,
+      },
+    });
+    
+    return NextResponse.json(user, { status: 201 });
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Failed to create user' },
+      { status: 400 }
+    );
+  }
+}
+```
+
+## Full Example: Blog Application
+
+Here's a complete example of a blog application using Next.js App Router:
+
+```tsx
+// lib/posts.ts - Data access layer
+import fs from 'fs';
+import path from 'path';
+import matter from 'gray-matter';
+
+interface Post {
+  slug: string;
+  title: string;
+  date: string;
+  excerpt: string;
+  content: string;
+  tags: string[];
+}
+
+const postsDirectory = path.join(process.cwd(), 'content/posts');
+
+export function getAllPosts(): Post[] {
+  if (!fs.existsSync(postsDirectory)) {
+    return [];
+  }
+  
+  const fileNames = fs.readdirSync(postsDirectory);
+  
+  return fileNames
+    .filter((name) => name.endsWith('.md'))
+    .map((fileName) => {
+      const fullPath = path.join(postsDirectory, fileName);
+      const fileContents = fs.readFileSync(fullPath, 'utf-8');
+      const { data, content } = matter(fileContents);
+      
+      return {
+        slug: fileName.replace(/\.md$/, ''),
+        title: data.title,
+        date: data.date,
+        excerpt: data.excerpt,
+        content,
+        tags: data.tags || [],
+      };
+    })
+    .sort((a, b) => (a.date < b.date ? 1 : -1));
+}
+
+export function getPostBySlug(slug: string): Post | null {
+  const fullPath = path.join(postsDirectory, `${slug}.md`);
+  
+  if (!fs.existsSync(fullPath)) {
+    return null;
+  }
+  
+  const fileContents = fs.readFileSync(fullPath, 'utf-8');
+  const { data, content } = matter(fileContents);
+  
+  return {
+    slug,
+    title: data.title,
+    date: data.date,
+    excerpt: data.excerpt,
+    content,
+    tags: data.tags || [],
+  };
+}
+
+export function getRelatedPosts(currentSlug: string, limit = 3): Post[] {
+  const posts = getAllPosts();
+  const currentPost = posts.find((p) => p.slug === currentSlug);
+  
+  if (!currentPost) {
+    return [];
+  }
+  
+  return posts
+    .filter((post) => post.slug !== currentSlug)
+    .filter((post) =>
+      post.tags.some((tag) => currentPost.tags.includes(tag))
+    )
+    .slice(0, limit);
+}
+```
+
+```tsx
+// app/blog/page.tsx - Blog listing page
+import Link from 'next/link';
+import { getAllPosts } from '@/lib/posts';
+
+export const metadata = {
+  title: 'Blog',
+  description: 'Read our latest articles and tutorials',
+};
+
+export default function BlogPage() {
+  const posts = getAllPosts();
+  
+  return (
+    <main className="max-w-4xl mx-auto px-4 py-12">
+      <h1 className="text-4xl font-bold mb-8">Blog</h1>
+      
+      <div className="grid gap-8">
+        {posts.map((post) => (
+          <article key={post.slug} className="border-b pb-8">
+            <Link href={`/blog/${post.slug}`} className="group">
+              <h2 className="text-2xl font-semibold group-hover:text-blue-600">
+                {post.title}
+              </h2>
+            </Link>
+            <time className="text-gray-500 text-sm">
+              {new Date(post.date).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              })}
+            </time>
+            <p className="mt-2 text-gray-700">{post.excerpt}</p>
+            <div className="mt-4 flex gap-2">
+              {post.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="px-2 py-1 bg-gray-100 text-gray-600 text-sm rounded"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </article>
+        ))}
+      </div>
+      
+      {posts.length === 0 && (
+        <p className="text-gray-500">No posts yet.</p>
+      )}
+    </main>
+  );
+}
+```
+
+```tsx
+// app/blog/[slug]/page.tsx - Individual blog post page
+import { notFound } from 'next/navigation';
+import Link from 'next/link';
+import { getPostBySlug, getAllPosts, getRelatedPosts } from '@/lib/posts';
+import { MDXRemote } from 'next-mdx-remote/rsc';
+import rehypeHighlight from 'rehype-highlight';
+
+interface PageProps {
+  params: Promise<{ slug: string }>;
+}
+
+export async function generateStaticParams() {
+  const posts = getAllPosts();
+  return posts.map((post) => ({
+    slug: post.slug,
+  }));
+}
+
+export async function generateMetadata({ params }: PageProps) {
+  const { slug } = await params;
+  const post = getPostBySlug(slug);
+  
+  if (!post) {
+    return { title: 'Post Not Found' };
+  }
+  
+  return {
+    title: post.title,
+    description: post.excerpt,
+  };
+}
+
+export default async function BlogPostPage({ params }: PageProps) {
+  const { slug } = await params;
+  const post = getPostBySlug(slug);
+  
+  if (!post) {
+    notFound();
+  }
+  
+  const relatedPosts = getRelatedPosts(slug);
+  
+  return (
+    <main className="max-w-3xl mx-auto px-4 py-12">
+      <Link
+        href="/blog"
+        className="text-blue-600 hover:underline mb-8 inline-block"
+      >
+        ← Back to Blog
+      </Link>
+      
+      <article>
+        <header className="mb-8">
+          <h1 className="text-4xl font-bold mb-2">{post.title}</h1>
+          <time className="text-gray-500">
+            {new Date(post.date).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })}
+          </time>
+        </header>
+        
+        <div className="prose prose-lg max-w-none">
+          <MDXRemote
+            source={post.content}
+            options={{
+              mdxOptions: {
+                rehypePlugins: [rehypeHighlight],
+              },
+            }}
+          />
+        </div>
+        
+        <footer className="mt-8 pt-8 border-t">
+          <div className="flex gap-2 mb-6">
+            {post.tags.map((tag) => (
+              <span
+                key={tag}
+                className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        </footer>
+      </article>
+      
+      {relatedPosts.length > 0 && (
+        <aside className="mt-12 pt-8 border-t">
+          <h2 className="text-2xl font-bold mb-4">Related Posts</h2>
+          <div className="grid gap-4">
+            {relatedPosts.map((relatedPost) => (
+              <Link
+                key={relatedPost.slug}
+                href={`/blog/${relatedPost.slug}`}
+                className="block p-4 border rounded hover:bg-gray-50"
+              >
+                <h3 className="font-semibold">{relatedPost.title}</h3>
+                <time className="text-sm text-gray-500">
+                  {new Date(relatedPost.date).toLocaleDateString()}
+                </time>
+              </Link>
+            ))}
+          </div>
+        </aside>
+      )}
+    </main>
+  );
+}
+```
+
+## Common Mistakes
+
+### Mixing App Router and Pages Router
+
+Using both the App Router and the older Pages Router in the same project can lead to confusion and suboptimal patterns. Stick to one router for consistency.
+
+```tsx
+// ❌ WRONG - Don't mix patterns
+// app/page.tsx (App Router)
+import Link from 'next/link';
+
+// pages/about.tsx (Pages Router)
+import Link from 'next/link';
+
+// ✅ CORRECT - Use App Router consistently
+// app/page.tsx
+// app/about/page.tsx
+```
+
+### Not Handling Suspense Properly
+
+Forgetting to wrap async components with Suspense can cause hydration mismatches and poor user experience.
+
+```tsx
+// ❌ WRONG - Missing Suspense
+export default function Page() {
+  return (
+    <div>
+      <h1>Dashboard</h1>
+      <UserStats /> {/* Async component without Suspense */}
+      <RecentActivity />
+    </div>
+  );
+}
+
+// ✅ CORRECT - Wrap with Suspense
+import { Suspense } from 'react';
+
+export default function Page() {
+  return (
+    <div>
+      <h1>Dashboard</h1>
+      <Suspense fallback={<UserStatsSkeleton />}>
+        <UserStats />
+      </Suspense>
+      <Suspense fallback={<ActivitySkeleton />}>
+        <RecentActivity />
+      </Suspense>
+    </div>
+  );
+}
+```
+
+### Incorrectly Using useState in Server Components
+
+Server Components cannot use React hooks like useState because they don't execute on the client. Use Server Actions and pass handlers to Client Components instead.
+
+```tsx
+// ❌ WRONG - useState in Server Component
+export default function ServerComponent() {
+  const [count, setCount] = useState(0); // Error!
+  
+  return <button onClick={() => setCount(count + 1)}>{count}</button>;
+}
+
+// ✅ CORRECT - Separate Client Component
+// app/components/Counter.tsx
+'use client';
+
+export default function Counter() {
+  const [count, setCount] = useState(0);
+  return <button onClick={() => setCount(count + 1)}>{count}</button>;
+}
+
+// app/page.tsx
+import Counter from '@/components/Counter';
+
+export default function Page() {
+  return <Counter />;
+}
+```
+
+## Exercises
+
+1. **Personal Portfolio**: Build a portfolio site with home, about, projects, and contact pages. Use static generation for fast loading and implement a contact form with Server Actions.
+
+2. **E-commerce Store**: Create a product catalog with product listing, detail pages, and a shopping cart. Implement cart functionality using React Context and persist data to localStorage.
+
+3. **Documentation Site**: Build a documentation site similar to this one with sidebar navigation, table of contents, and syntax-highlighted code blocks.
+
+4. **Blog with Comments**: Extend the blog example to include a comment system. Use Server Actions for submitting comments and implement optimistic updates.
+
+5. **Dashboard with Authentication**: Create a dashboard with protected routes, user authentication, and data visualization using charts and metrics.
+
+## Sources
+
+- [Next.js Documentation](https://nextjs.org/docs)
+- [App Router Documentation](https://nextjs.org/docs/app)
+- [Server Actions](https://nextjs.org/docs/app/building-your-application/data-fetching/server-actions)

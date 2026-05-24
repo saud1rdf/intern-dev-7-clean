@@ -1,0 +1,605 @@
+---
+title: "Debugging Tools"
+category: "testing-debugging"
+summary: "Master debugging techniques including browser DevTools, Node.js debugging, logging strategies, and error tracking."
+readingTime: 25
+---
+
+## Introduction
+
+Debugging is the process of identifying, isolating, and fixing bugs in software. Effective debugging is a critical skill for developers, enabling you to quickly diagnose and resolve issues in your code. Modern development provides powerful debugging tools ranging from browser developer tools to Node.js debuggers and comprehensive error tracking services.
+
+Understanding debugging tools and techniques is essential because bugs are inevitable in software development. The ability to quickly identify the root cause of a problem, rather than guessing or randomly modifying code, dramatically improves productivity and code quality. This document covers the essential debugging tools and techniques for web and Node.js development.
+
+## When to Use Debugging Tools
+
+Different debugging approaches are appropriate for different scenarios.
+
+### Browser-Based Debugging
+
+For issues that appear in the browser, such as rendering problems, JavaScript errors, or network request failures, browser DevTools provide the most direct access to what's happening.
+
+### Node.js Debugging
+
+Server-side issues, API problems, and performance bottlenecks are best debugged using Node.js debugging tools and logging.
+
+### Complex State Issues
+
+When bugs involve complex state interactions, debugging tools that allow you to pause execution and inspect variables are invaluable.
+
+### Production Issues
+
+For bugs that only occur in production, error tracking services and log aggregation tools help identify issues without direct access to the running environment.
+
+## Key Concepts
+
+### Browser DevTools
+
+```javascript
+// Console API
+console.log('Debug message');
+console.info('Info message');
+console.warn('Warning message');
+console.error('Error message');
+
+// Grouping console output
+console.group('User Details');
+console.log('Name:', user.name);
+console.log('Email:', user.email);
+console.groupEnd();
+
+// Table display
+console.table(usersArray);
+
+// Timing operations
+console.time('operation');
+performOperation();
+console.timeEnd('operation');
+
+// Stack traces
+console.trace('Stack trace');
+
+// Conditional logging
+console.assert(condition, 'Assertion failed');
+
+// Using debugger statement
+function buggyFunction(data) {
+  const result = processData(data);
+  debugger; // Execution pauses here
+  return result;
+}
+
+// Breakpoint in DevTools Sources panel
+// 1. Open DevTools (Cmd+Opt+I on Mac, F12 on Windows)
+// 2. Go to Sources tab
+// 3. Find your file
+// 4. Click line number to set breakpoint
+```
+
+### Network Debugging
+
+```javascript
+// Common network issues to debug:
+// 1. Failed requests (red in Network tab)
+// 2. Slow requests (long duration)
+// 3. Incorrect request/response data
+// 4. CORS errors
+
+// Debug API calls
+fetch('/api/users')
+  .then(response => {
+    console.log('Response status:', response.status);
+    console.log('Response headers:', response.headers);
+    return response.json();
+  })
+  .then(data => {
+    console.log('Response data:', data);
+  })
+  .catch(error => {
+    console.error('Fetch error:', error);
+  });
+
+// Check request details in DevTools:
+// - Network tab shows all requests
+// - Click request to see headers, payload, response
+// - Timing tab shows request lifecycle
+// - Cookies tab shows cookie issues
+```
+
+### JavaScript Debugging Techniques
+
+```javascript
+// 1. Rubber duck debugging - explain code line by line
+// 2. Binary search - narrow down where bug occurs
+// 3. Log everything - add comprehensive logging
+// 4. Isolate the issue - create minimal reproduction
+
+// Minimal reproduction example
+function findBug() {
+  // Instead of testing whole app
+  const testInput = createMinimalTestCase();
+  const result = processInput(testInput);
+  console.log('Result:', result);
+  return result;
+}
+
+// 5. Use version control to find when bug was introduced
+git log --oneline --all --grep="bug"
+git log --oneline --since="2024-01-01"
+git bisect start
+git bisect bad
+git bisect good <known-good-commit>
+
+// 6. Test edge cases
+const testCases = [
+  null, undefined, 0, '', false,
+  [], {}, 'normal case',
+  'very long string...'.repeat(100),
+  { nested: { deep: { value: 1 } } }
+];
+
+testCases.forEach(testCase => {
+  try {
+    const result = processInput(testCase);
+    console.log(`Input: ${JSON.stringify(testCase).slice(0, 50)}`);
+    console.log(`Result:`, result);
+  } catch (error) {
+    console.error(`Error for input:`, testCase);
+    console.error(error);
+  }
+});
+```
+
+### Node.js Debugging
+
+```javascript
+// Node.js built-in debugger
+// node inspect script.js
+// Commands in debug mode:
+// - cont, c: Continue execution
+// - next, n: Step next
+// - step, s: Step in
+// - out, o: Step out
+// - repl: Evaluate expressions
+
+// Debug with Chrome DevTools
+node --inspect script.js
+// Then open chrome://inspect in Chrome
+
+// NDB - improved Node.js debugging
+// npm install -g ndb
+// ndb node script.js
+
+// VS Code debugger configuration
+// .vscode/launch.json
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug script",
+      "program": "${workspaceFolder}/script.js",
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "console": "integratedTerminal"
+    },
+    {
+      "type": "node",
+      "request": "attach",
+      "name": "Attach to Node",
+      "port": 9229,
+      "restart": true
+    }
+  ]
+}
+```
+
+### Error Handling and Logging
+
+```typescript
+// Structured error handling
+class ApiError extends Error {
+  constructor(
+    message: string,
+    public statusCode: number,
+    public code: string,
+    public details?: any
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+async function fetchData<T>(url: string): Promise<T> {
+  try {
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      throw new ApiError(
+        `Request failed with status ${response.status}`,
+        response.status,
+        'REQUEST_FAILED',
+        { url, status: response.status }
+      );
+    }
+    
+    return response.json();
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      throw new ApiError(
+        'Network error',
+        0,
+        'NETWORK_ERROR'
+      );
+    }
+    
+    throw new ApiError(
+      'Unknown error',
+      0,
+      'UNKNOWN_ERROR',
+      { originalError: error }
+    );
+  }
+}
+
+// Logger with different levels
+enum LogLevel {
+  DEBUG = 0,
+  INFO = 1,
+  WARN = 2,
+  ERROR = 3,
+}
+
+class Logger {
+  private level: LogLevel;
+  
+  constructor(level: LogLevel = LogLevel.INFO) {
+    this.level = level;
+  }
+  
+  private log(level: LogLevel, message: string, meta?: any) {
+    if (level < this.level) return;
+    
+    const timestamp = new Date().toISOString();
+    const logObject = {
+      timestamp,
+      level: LogLevel[level],
+      message,
+      ...meta,
+    };
+    
+    if (level >= LogLevel.ERROR) {
+      console.error(JSON.stringify(logObject));
+    } else if (level >= LogLevel.WARN) {
+      console.warn(JSON.stringify(logObject));
+    } else {
+      console.log(JSON.stringify(logObject));
+    }
+  }
+  
+  debug(message: string, meta?: any) {
+    this.log(LogLevel.DEBUG, message, meta);
+  }
+  
+  info(message: string, meta?: any) {
+    this.log(LogLevel.INFO, message, meta);
+  }
+  
+  warn(message: string, meta?: any) {
+    this.log(LogLevel.WARN, message, meta);
+  }
+  
+  error(message: string, meta?: any) {
+    this.log(LogLevel.ERROR, message, meta);
+  }
+}
+
+const logger = new Logger(LogLevel.DEBUG);
+
+logger.info('User logged in', { userId: 123 });
+logger.warn('Rate limit approaching', { remaining: 10 });
+logger.error('API request failed', { url, statusCode: 500 });
+```
+
+## Full Example: Debugging Workflow
+
+```typescript
+// A real debugging session example
+
+// Problem: Users report that the checkout process hangs
+// when selecting a payment method
+
+// Step 1: Gather information
+console.log('=== DEBUG: Checkout Issue ===');
+console.log('User reported:', {
+  browser: navigator.userAgent,
+  url: window.location.href,
+  timestamp: new Date().toISOString(),
+});
+
+// Step 2: Add comprehensive logging
+function debugCheckout() {
+  console.time('checkout-total');
+  console.log('[checkout] Step 1: Loading cart');
+  
+  const cart = loadCart();
+  console.log('[checkout] Cart loaded:', { 
+    itemCount: cart.items.length,
+    total: cart.total 
+  });
+  
+  console.log('[checkout] Step 2: Calculating taxes');
+  const taxes = calculateTaxes(cart);
+  console.log('[checkout] Taxes calculated:', taxes);
+  
+  console.log('[checkout] Step 3: Loading payment methods');
+  const paymentMethods = loadPaymentMethods();
+  console.log('[checkout] Payment methods:', {
+    count: paymentMethods.length,
+    methods: paymentMethods.map(m => m.type)
+  });
+  
+  console.log('[checkout] Step 4: User selects payment');
+  // User selects payment method
+  
+  console.log('[checkout] Step 5: Processing payment');
+  // This is where the issue occurs
+  console.timeLog('checkout-total', 'Payment processing started');
+  
+  try {
+    const result = processPayment(selectedPaymentMethod);
+    console.log('[checkout] Payment processed:', result);
+    console.timeEnd('checkout-total');
+  } catch (error) {
+    console.error('[checkout] Payment failed:', error);
+    console.timeEnd('checkout-total');
+    throw error;
+  }
+}
+
+// Step 3: Use Chrome DevTools breakpoints
+// In Sources panel, set breakpoint at:
+// - processPayment function entry
+// - Line inside processPayment where it hangs
+
+// Step 4: Check what's happening
+async function processPayment(paymentMethod: PaymentMethod) {
+  // Set breakpoint here
+  debugger;
+  
+  console.log('[payment] Processing:', paymentMethod.type);
+  
+  // Check each step
+  const validated = validatePaymentMethod(paymentMethod);
+  console.log('[payment] Validation result:', validated);
+  
+  const tokenized = await tokenizeCard(paymentMethod.card);
+  console.log('[payment] Card tokenized:', tokenized.id);
+  
+  const response = await fetch('/api/payments', {
+    method: 'POST',
+    body: JSON.stringify({
+      token: tokenized.id,
+      amount: cartTotal,
+    }),
+  });
+  
+  // If stuck here, check:
+  // 1. Is fetch being called?
+  // 2. What is the request body?
+  // 3. Check Network tab for the request
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message);
+  }
+  
+  return response.json();
+}
+
+// Step 5: Identify the issue
+// Found: fetch request is stuck in "pending" state
+// Reason: Missing Authorization header for API call
+
+// Step 6: Fix the issue
+async function processPayment(paymentMethod: PaymentMethod) {
+  // Get auth token
+  const token = getAuthToken(); // This was missing!
+  
+  const response = await fetch('/api/payments', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`, // Added this!
+    },
+    body: JSON.stringify({
+      token: tokenized.id,
+      amount: cartTotal,
+    }),
+  });
+  
+  return response.json();
+}
+
+// Step 7: Verify the fix
+console.log('[checkout] Fix applied, testing...');
+debugCheckout();
+
+// Step 8: Add regression test
+it('should process payment with auth token', async () => {
+  const paymentMethod = createTestPaymentMethod();
+  mockGetAuthToken('valid-token');
+  
+  const result = await processPayment(paymentMethod);
+  
+  expect(result).toBeDefined();
+  expect(fetch).toHaveBeenCalledWith(
+    '/api/payments',
+    expect.objectContaining({
+      headers: expect.objectContaining({
+        'Authorization': 'Bearer valid-token',
+      }),
+    })
+  );
+});
+```
+
+### Performance Debugging
+
+```javascript
+// Performance API
+console.time('operation');
+const start = performance.now();
+
+// Do work
+performExpensiveOperation();
+
+const end = performance.now();
+console.log(`Operation took ${end - start}ms`);
+
+// Use Performance tab in DevTools
+// 1. Record while reproducing issue
+// 2. Look for long tasks (>50ms)
+// 3. Check for layout thrashing
+// 4. Identify large paint/composite operations
+
+// Web Vitals monitoring
+import { getCLS, getFID, getLCP } from 'web-vitals';
+
+getCLS(console.log); // Cumulative Layout Shift
+getFID(console.log); // First Input Delay
+getLCP(console.log); // Largest Contentful Paint
+
+// Memory profiling
+// 1. Open DevTools Memory tab
+// 2. Take heap snapshot
+// 3. Perform actions
+// 4. Take another snapshot
+// 5. Compare to find memory leaks
+```
+
+### Production Error Tracking
+
+```typescript
+// Sentry integration
+import * as Sentry from '@sentry/nextjs';
+
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  environment: process.env.NODE_ENV,
+  tracesSampleRate: 0.1,
+  
+  beforeSend(event, hint) {
+    // Filter out known non-actionable errors
+    const error = hint.originalException;
+    if (error instanceof NetworkError) {
+      return null; // Don't send network errors
+    }
+    return event;
+  },
+  
+  initialScope: {
+    tags: {
+      component: 'checkout',
+    },
+  },
+});
+
+// Wrap pages with error boundary
+import { ErrorBoundary } from '@sentry/react';
+
+function App() {
+  return (
+    <ErrorBoundary
+      fallback={({ error, resetError }) => (
+        <ErrorPage 
+          error={error} 
+          onRetry={() => resetError()} 
+        />
+      )}
+    >
+      <MainApp />
+    </ErrorBoundary>
+  );
+}
+
+// Manual error capture
+try {
+  riskyOperation();
+} catch (error) {
+  Sentry.captureException(error, {
+    level: 'error',
+    extra: {
+      context: 'checkout-flow',
+      step: 'payment-processing',
+    },
+  });
+  throw error;
+}
+```
+
+## Common Mistakes
+
+### Not Reproducing the Issue
+
+```javascript
+// ❌ WRONG - Guessing without reproducing
+// "I think the issue might be..."
+// Makes random changes hoping to fix
+
+// ✅ CORRECT - Reproduce first
+// 1. Get exact steps to reproduce
+// 2. Create minimal test case
+// 3. Verify fix actually resolves issue
+```
+
+### Not Using Source Control
+
+```javascript
+// ❌ WRONG - Making random changes
+// "Let me try changing this..." -> "That didn't work" -> "Let me try this..."
+// No way to track what was tried
+
+// ✅ CORRECT - Use version control
+// 1. Create a branch for debugging
+// 2. Make one change at a time
+// 3. Document what you tried
+// 4. Easy to revert failed attempts
+```
+
+### Not Checking the Simplest Explanation
+
+```javascript
+// ❌ WRONG - Assuming complex cause
+// "The issue must be a race condition in the state manager"
+// "Maybe it's a memory leak in the component"
+
+// ✅ CORRECT - Check simple things first
+// 1. Is the API returning correct data?
+// 2. Are all dependencies loaded?
+// 3. Is there a typo in variable name?
+// 4. Is the code even being executed?
+```
+
+## Exercises
+
+1. **Debug a Broken Component**: Given a component with bugs, use DevTools to identify and fix the issues.
+
+2. **Performance Audit**: Use browser DevTools Performance tab to identify performance bottlenecks in a web page.
+
+3. **Error Tracking Setup**: Implement Sentry error tracking in a Next.js application with proper context.
+
+4. **Memory Leak Investigation**: Identify and fix a memory leak using Chrome DevTools Memory tab.
+
+## Sources
+
+- [Chrome DevTools](https://developer.chrome.com/docs/devtools/)
+- [Node.js Debugging](https://nodejs.org/en/docs/guides/debugging-getting-started/)
+- [Sentry Documentation](https://docs.sentry.io/)
+- [Web Vitals](https://web.dev/vitals/)

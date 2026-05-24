@@ -1,0 +1,787 @@
+---
+title: "JavaScript"
+category: "web-development"
+summary: "Master JavaScript fundamentals including variables, functions, objects, async programming, DOM manipulation, and modern ES6+ features."
+readingTime: 30
+---
+
+## Introduction
+
+JavaScript is the programming language of the web, enabling interactive and dynamic web experiences. Created by Brendan Eich in 1995 while he worked at Netscape, JavaScript has evolved from a simple scripting language to a powerful, versatile language used for web development, server-side applications, mobile apps, and even desktop applications.
+
+Modern JavaScript, standardized as ECMAScript, provides robust features for building complex applications. The language has benefited from annual updates that introduce new syntax, APIs, and capabilities. Understanding JavaScript deeply is essential because it underpins virtually all modern web development, including frameworks like React, Vue, and Angular.
+
+JavaScript's event-driven, non-blocking I/O model makes it efficient for building network applications and real-time services. The language's flexibility allows multiple programming paradigms including procedural, object-oriented, and functional programming styles. This versatility, combined with the vast npm ecosystem, makes JavaScript one of the most valuable skills for a developer.
+
+## When to Use JavaScript
+
+JavaScript is the universal language of web development and is used in virtually every web application. Understanding when and how to apply JavaScript effectively is crucial for building interactive user experiences.
+
+### Client-Side Interactivity
+
+JavaScript is essential for creating interactive user interfaces that respond to user actions without requiring page reloads. From form validation to complex animations, JavaScript enables the dynamic behavior users expect in modern web applications.
+
+### DOM Manipulation
+
+JavaScript provides direct access to the Document Object Model, allowing you to create, modify, and remove elements, handle events, and update content dynamically based on user interaction or other conditions.
+
+### Asynchronous Operations
+
+JavaScript's asynchronous capabilities through callbacks, promises, and async/await enable non-blocking operations for fetching data from APIs, reading files, and handling time-based events.
+
+### Full-Stack Development
+
+With Node.js, JavaScript runs on the server, enabling developers to use a single language across the entire application stack. This simplifies development and enables code sharing between client and server.
+
+## Key Concepts
+
+### Variables and Data Types
+
+JavaScript has several ways to declare variables and multiple data types for storing different kinds of information.
+
+```javascript
+// Variable declarations
+const name = 'Alice';     // Constant - cannot be reassigned
+let age = 25;             // Block-scoped variable
+var oldStyle = 'avoid';   // Function-scoped (legacy)
+
+// Primitive data types
+const string = 'Hello, World!';
+const number = 42;
+const bigInt = 9007199254740991n;
+const boolean = true;
+const undefinedValue = undefined;
+const nullValue = null;
+const symbol = Symbol('unique');
+const anotherBigInt = BigInt(12345678901234567890);
+
+// Type checking
+typeof 'hello'              // 'string'
+typeof 42                   // 'number'
+typeof true                 // 'boolean'
+typeof undefined            // 'undefined'
+typeof null                 // 'object' (historical quirk)
+typeof Symbol()             // 'symbol'
+typeof 42n                  // 'bigint'
+
+// Type conversion
+const num = '42';
+Number(num)                 // 42
+parseInt('42px')            // 42
+parseFloat('3.14')          // 3.14
+String(42)                  // '42'
+Boolean(1)                  // true
+!!'hello'                   // true
+
+// Template literals
+const greeting = `Hello, ${name}!`;
+const multiLine = `
+  This is a
+  multi-line
+  string
+`;
+```
+
+### Functions
+
+Functions are reusable blocks of code that perform specific tasks. JavaScript supports multiple function types.
+
+```javascript
+// Function declaration
+function greet(name) {
+  return `Hello, ${name}!`;
+}
+
+// Function expression
+const multiply = function(a, b) {
+  return a * b;
+};
+
+// Arrow functions (ES6+)
+const add = (a, b) => a + b;
+const square = x => x * x;
+const greetUser = name => `Hi, ${name}!`;
+
+// Default parameters
+function createUser(name, role = 'user', active = true) {
+  return { name, role, active };
+}
+
+// Rest parameters
+function sum(...numbers) {
+  return numbers.reduce((acc, num) => acc + num, 0);
+}
+
+// Destructuring in parameters
+function printUser({ name, email, role }) {
+  console.log(`${name} (${role}): ${email}`);
+}
+
+// Higher-order functions
+function createMultiplier(factor) {
+  return function(number) {
+    return number * factor;
+  };
+}
+
+// Callback example
+const numbers = [1, 2, 3, 4, 5];
+const doubled = numbers.map(num => num * 2);
+const evens = numbers.filter(num => num % 2 === 0);
+const total = numbers.reduce((sum, num) => sum + num, 0);
+
+// Async functions
+async function fetchUser(id) {
+  const response = await fetch(`/api/users/${id}`);
+  return response.json();
+}
+```
+
+### Objects and Arrays
+
+Objects and arrays are fundamental data structures in JavaScript for organizing and storing data.
+
+```javascript
+// Object creation and manipulation
+const person = {
+  name: 'John',
+  age: 30,
+  occupation: 'Developer',
+  'special-key': 'value', // Special characters need quotes
+  
+  // Method
+  greet() {
+    return `Hi, I'm ${this.name}`;
+  },
+  
+  // Computed property
+  ['key' + 'Name']: 'computed',
+  
+  // Getter
+  get info() {
+    return `${this.name}, ${this.age} years old`;
+  }
+};
+
+// Accessing properties
+person.name                 // 'John'
+person['age']              // 30
+person.occupation = 'Designer'; // Update
+
+// Adding new properties
+person.location = 'NYC';
+person['country'] = 'USA';
+
+// Object methods
+Object.keys(person)         // ['name', 'age', 'occupation', ...]
+Object.values(person)       // ['John', 30, 'Developer', ...]
+Object.entries(person)      // [['name', 'John'], ['age', 30], ...]
+
+// Spread operator
+const clonedPerson = { ...person };
+const extendedPerson = { ...person, email: 'john@example.com' };
+
+// Destructuring
+const { name, age } = person;
+const { name: fullName } = person; // Rename
+
+// Array operations
+const fruits = ['apple', 'banana', 'orange'];
+fruits[0]                    // 'apple'
+fruits.push('mango');        // Add to end
+fruits.pop();               // Remove from end
+fruits.unshift('grape');     // Add to start
+fruits.shift();             // Remove from start
+fruits.splice(1, 1, 'pear'); // Remove and insert
+
+// Array destructuring
+const [first, second, ...rest] = fruits;
+
+// Array methods
+const numbers = [1, 2, 3, 4, 5];
+numbers.map(n => n * 2);           // [2, 4, 6, 8, 10]
+numbers.filter(n => n > 2);        // [3, 4, 5]
+numbers.find(n => n > 3);          // 4
+numbers.findIndex(n => n > 3);     // 3
+numbers.reduce((sum, n) => sum + n, 0); // 15
+numbers.includes(3);              // true
+numbers.some(n => n > 4);         // true
+numbers.every(n => n > 0);        // true
+```
+
+### Classes and Object-Oriented Programming
+
+JavaScript supports class-based object-oriented programming with inheritance and encapsulation.
+
+```javascript
+// Class definition
+class Animal {
+  constructor(name) {
+    this.name = name;
+  }
+  
+  speak() {
+    console.log(`${this.name} makes a sound.`);
+  }
+  
+  // Static method
+  static createAnonymous(species) {
+    return new this(`Anonymous ${species}`);
+  }
+}
+
+// Inheritance
+class Dog extends Animal {
+  constructor(name, breed) {
+    super(name); // Call parent constructor
+    this.breed = breed;
+  }
+  
+  speak() {
+    console.log(`${this.name} barks!`);
+  }
+  
+  fetch() {
+    console.log(`${this.name} fetches the ball!`);
+  }
+}
+
+// Getters and Setters
+class Rectangle {
+  constructor(width, height) {
+    this._width = width;
+    this._height = height;
+  }
+  
+  get area() {
+    return this._width * this._height;
+  }
+  
+  set width(value) {
+    if (value <= 0) throw new Error('Width must be positive');
+    this._width = value;
+  }
+}
+
+// Private fields (ES2022)
+class Counter {
+  #count = 0;
+  
+  increment() {
+    this.#count++;
+  }
+  
+  getCount() {
+    return this.#count;
+  }
+}
+
+// Using classes
+const dog = new Dog('Max', 'Golden Retriever');
+dog.speak();     // 'Max barks!'
+dog.fetch();
+
+const rect = new Rectangle(5, 10);
+rect.area;       // 50
+```
+
+### Asynchronous JavaScript
+
+JavaScript's asynchronous programming model enables non-blocking operations essential for web applications.
+
+```javascript
+// Callbacks (traditional approach)
+function fetchData(callback) {
+  setTimeout(() => {
+    callback({ data: 'Hello!' });
+  }, 1000);
+}
+
+// Promises
+function fetchDataPromise() {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      const success = true;
+      if (success) {
+        resolve({ data: 'Hello!' });
+      } else {
+        reject(new Error('Failed to fetch'));
+      }
+    }, 1000);
+  });
+}
+
+// Promise chains
+fetchDataPromise()
+  .then(result => {
+    console.log(result);
+    return processData(result);
+  })
+  .then(processed => {
+    console.log(processed);
+  })
+  .catch(error => {
+    console.error(error);
+  })
+  .finally(() => {
+    console.log('Done');
+  });
+
+// Promise utilities
+Promise.all([
+  fetchUsers(),
+  fetchPosts(),
+  fetchComments()
+]).then(([users, posts, comments]) => {
+  console.log('All loaded!');
+});
+
+Promise.race([
+  fetchWithTimeout(dataPromise, 5000),
+  fallbackPromise
+]).then(data => console.log(data));
+
+// Async/Await (modern approach)
+async function loadData() {
+  try {
+    const users = await fetchUsers();
+    const posts = await fetchPosts();
+    return { users, posts };
+  } catch (error) {
+    console.error('Failed to load:', error);
+    throw error;
+  }
+}
+
+// Parallel execution with async/await
+async function loadAllData() {
+  const [users, posts] = await Promise.all([
+    fetchUsers(),
+    fetchPosts()
+  ]);
+  return { users, posts };
+}
+```
+
+### DOM Manipulation
+
+JavaScript can create, modify, and remove HTML elements, and respond to user events.
+
+```javascript
+// Selecting elements
+const element = document.getElementById('myId');
+const elements = document.getElementsByClassName('myClass');
+const selectors = document.querySelectorAll('.container .item');
+const first = document.querySelector('.item');
+
+// Creating elements
+const newDiv = document.createElement('div');
+newDiv.textContent = 'Hello, World!';
+newDiv.className = 'highlight';
+
+// Modifying elements
+element.textContent = 'Updated text';
+element.innerHTML = '<strong>Bold text</strong>';
+element.setAttribute('data-id', '123');
+element.style.color = 'blue';
+element.classList.add('active');
+element.classList.remove('hidden');
+element.classList.toggle('visible');
+
+// Event handling
+const button = document.querySelector('button');
+
+button.addEventListener('click', (event) => {
+  console.log('Button clicked!', event);
+});
+
+button.addEventListener('mouseenter', () => {
+  button.style.backgroundColor = '#f0f0f0';
+});
+
+// Event delegation
+document.getElementById('list').addEventListener('click', (event) => {
+  if (event.target.matches('.item')) {
+    console.log('Item clicked:', event.target.textContent);
+  }
+});
+
+// Form handling
+const form = document.querySelector('form');
+form.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  
+  const formData = new FormData(form);
+  const data = Object.fromEntries(formData);
+  
+  await fetch('/api/submit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+});
+```
+
+## Full Example: Task Management Application
+
+```javascript
+// TaskManager.js - Complete task management application
+
+class TaskManager {
+  constructor() {
+    this.tasks = this.loadFromStorage();
+    this.listeners = [];
+  }
+  
+  // Storage methods
+  loadFromStorage() {
+    const stored = localStorage.getItem('tasks');
+    return stored ? JSON.parse(stored) : [];
+  }
+  
+  saveToStorage() {
+    localStorage.setItem('tasks', JSON.stringify(this.tasks));
+  }
+  
+  // CRUD operations
+  addTask(text, priority = 'medium') {
+    const task = {
+      id: crypto.randomUUID(),
+      text: text.trim(),
+      priority,
+      completed: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    this.tasks.unshift(task);
+    this.saveToStorage();
+    this.notify('add', task);
+    
+    return task;
+  }
+  
+  updateTask(id, updates) {
+    const index = this.tasks.findIndex(t => t.id === id);
+    
+    if (index === -1) {
+      throw new Error(`Task with ID ${id} not found`);
+    }
+    
+    this.tasks[index] = {
+      ...this.tasks[index],
+      ...updates,
+      updatedAt: new Date().toISOString()
+    };
+    
+    this.saveToStorage();
+    this.notify('update', this.tasks[index]);
+    
+    return this.tasks[index];
+  }
+  
+  deleteTask(id) {
+    const index = this.tasks.findIndex(t => t.id === id);
+    
+    if (index === -1) {
+      throw new Error(`Task with ID ${id} not found`);
+    }
+    
+    const [deleted] = this.tasks.splice(index, 1);
+    this.saveToStorage();
+    this.notify('delete', deleted);
+    
+    return deleted;
+  }
+  
+  toggleTask(id) {
+    const task = this.tasks.find(t => t.id === id);
+    
+    if (!task) {
+      throw new Error(`Task with ID ${id} not found`);
+    }
+    
+    return this.updateTask(id, { completed: !task.completed });
+  }
+  
+  // Query methods
+  getTask(id) {
+    return this.tasks.find(t => t.id === id);
+  }
+  
+  getAllTasks() {
+    return [...this.tasks];
+  }
+  
+  getPendingTasks() {
+    return this.tasks.filter(t => !t.completed);
+  }
+  
+  getCompletedTasks() {
+    return this.tasks.filter(t => t.completed);
+  }
+  
+  getTasksByPriority(priority) {
+    return this.tasks.filter(t => t.priority === priority);
+  }
+  
+  searchTasks(query) {
+    const lowerQuery = query.toLowerCase();
+    return this.tasks.filter(t => 
+      t.text.toLowerCase().includes(lowerQuery)
+    );
+  }
+  
+  // Statistics
+  getStats() {
+    const total = this.tasks.length;
+    const completed = this.tasks.filter(t => t.completed).length;
+    const pending = total - completed;
+    
+    const byPriority = {
+      high: this.tasks.filter(t => t.priority === 'high').length,
+      medium: this.tasks.filter(t => t.priority === 'medium').length,
+      low: this.tasks.filter(t => t.priority === 'low').length
+    };
+    
+    return { total, completed, pending, byPriority };
+  }
+  
+  // Event system
+  subscribe(callback) {
+    this.listeners.push(callback);
+    
+    return () => {
+      this.listeners = this.listeners.filter(cb => cb !== callback);
+    };
+  }
+  
+  notify(action, data) {
+    this.listeners.forEach(callback => callback(action, data));
+  }
+}
+
+// UI Controller
+class TaskUI {
+  constructor(manager) {
+    this.manager = manager;
+    this.filter = 'all';
+    
+    this.initElements();
+    this.bindEvents();
+    this.render();
+    
+    // Subscribe to changes
+    this.unsubscribe = manager.subscribe(() => this.render());
+  }
+  
+  initElements() {
+    this.form = document.getElementById('task-form');
+    this.input = document.getElementById('task-input');
+    this.priority = document.getElementById('task-priority');
+    this.list = document.getElementById('task-list');
+    this.filterButtons = document.querySelectorAll('.filter-btn');
+    this.stats = document.getElementById('task-stats');
+  }
+  
+  bindEvents() {
+    this.form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      this.handleAddTask();
+    });
+    
+    this.filterButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.filter = btn.dataset.filter;
+        this.updateActiveFilter();
+        this.render();
+      });
+    });
+  }
+  
+  handleAddTask() {
+    const text = this.input.value.trim();
+    
+    if (!text) return;
+    
+    try {
+      this.manager.addTask(text, this.priority.value);
+      this.input.value = '';
+      this.priority.value = 'medium';
+    } catch (error) {
+      console.error('Failed to add task:', error);
+    }
+  }
+  
+  handleToggle(id) {
+    try {
+      this.manager.toggleTask(id);
+    } catch (error) {
+      console.error('Failed to toggle task:', error);
+    }
+  }
+  
+  handleDelete(id) {
+    try {
+      this.manager.deleteTask(id);
+    } catch (error) {
+      console.error('Failed to delete task:', error);
+    }
+  }
+  
+  updateActiveFilter() {
+    this.filterButtons.forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.filter === this.filter);
+    });
+  }
+  
+  getFilteredTasks() {
+    switch (this.filter) {
+      case 'pending':
+        return this.manager.getPendingTasks();
+      case 'completed':
+        return this.manager.getCompletedTasks();
+      default:
+        return this.manager.getAllTasks();
+    }
+  }
+  
+  render() {
+    this.renderList();
+    this.renderStats();
+  }
+  
+  renderList() {
+    const tasks = this.getFilteredTasks();
+    
+    if (tasks.length === 0) {
+      this.list.innerHTML = `
+        <li class="empty-state">
+          No tasks found. ${this.filter === 'all' ? 'Add your first task above!' : 'Try a different filter.'}
+        </li>
+      `;
+      return;
+    }
+    
+    this.list.innerHTML = tasks.map(task => `
+      <li class="task-item ${task.completed ? 'completed' : ''}" data-id="${task.id}">
+        <input 
+          type="checkbox" 
+          ${task.completed ? 'checked' : ''}
+          onchange="taskUI.handleToggle('${task.id}')"
+        >
+        <span class="task-text">${this.escapeHtml(task.text)}</span>
+        <span class="task-priority priority-${task.priority}">${task.priority}</span>
+        <button class="delete-btn" onclick="taskUI.handleDelete('${task.id}')">
+          Delete
+        </button>
+      </li>
+    `).join('');
+  }
+  
+  renderStats() {
+    const stats = this.manager.getStats();
+    this.stats.innerHTML = `
+      <span>Total: ${stats.total}</span>
+      <span>Pending: ${stats.pending}</span>
+      <span>Completed: ${stats.completed}</span>
+    `;
+  }
+  
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+}
+
+// Initialize application
+const taskManager = new TaskManager();
+const taskUI = new TaskUI(taskManager);
+```
+
+## Common Mistakes
+
+### Using == Instead of ===
+
+The loose equality operator (==) performs type coercion, which can lead to unexpected results.
+
+```javascript
+// ❌ WRONG - Using loose equality
+'5' == 5        // true (string converted to number)
+null == undefined  // true
+false == 0     // true
+
+// ✅ CORRECT - Using strict equality
+'5' === 5      // false
+null === undefined  // false
+false === 0    // false
+```
+
+### Mutating Arrays or Objects Directly
+
+Direct mutation can cause unexpected behavior and bugs.
+
+```javascript
+// ❌ WRONG - Mutating original array
+const numbers = [1, 2, 3];
+numbers.push(4); // Direct mutation
+
+// ✅ CORRECT - Creating new arrays
+const numbers = [1, 2, 3];
+const newNumbers = [...numbers, 4];
+
+// ❌ WRONG - Mutating object
+const user = { name: 'John' };
+user.age = 30;
+
+// ✅ CORRECT - Creating new object
+const user = { name: 'John' };
+const updatedUser = { ...user, age: 30 };
+```
+
+### Not Handling Asynchronous Errors
+
+Forgetting to handle errors in async operations can cause unhandled promise rejections.
+
+```javascript
+// ❌ WRONG - No error handling
+async function fetchData() {
+  const response = await fetch('/api/data');
+  return response.json();
+}
+
+// ✅ CORRECT - With try-catch
+async function fetchData() {
+  try {
+    const response = await fetch('/api/data');
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return response.json();
+  } catch (error) {
+    console.error('Failed to fetch data:', error);
+    throw error;
+  }
+}
+```
+
+## Exercises
+
+1. **Array Methods Practice**: Given an array of objects representing products, use map, filter, reduce, and sort to calculate total revenue and find products under a certain price.
+
+2. **Async/Await Project**: Build a simple weather app that fetches data from a weather API, handles loading and error states, and displays the results.
+
+3. **Class Inheritance**: Create a class hierarchy for different types of vehicles with properties like fuel capacity, speed, and methods for starting, stopping, and moving.
+
+4. **DOM Manipulation**: Build a todo list application that allows adding, completing, deleting, and filtering tasks, with all state managed in localStorage.
+
+5. **Custom Promise**: Implement a custom promise-based delay function and use it to create a loading animation sequence.
+
+## Sources
+
+- [MDN JavaScript Documentation](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
+- [JavaScript.info](https://javascript.info/)
+- [ES6 Features](https://es6.io/)

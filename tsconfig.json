@@ -20,7 +20,8 @@
     ],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@/content/*": ["./content/*"]
     },
     "types": ["react", "react-dom"]
   },

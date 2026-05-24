@@ -1,0 +1,536 @@
+---
+title: "React Basics"
+category: "web-development"
+summary: "Learn the fundamentals of React including components, props, state, hooks, and how to build interactive user interfaces."
+readingTime: 25
+---
+
+## Introduction
+
+React is a JavaScript library developed by Meta (formerly Facebook) for building user interfaces. It enables developers to create reusable UI components and manage the state of complex applications efficiently. Since its initial release in 2013, React has become one of the most popular frontend frameworks in the industry, adopted by thousands of companies worldwide including Instagram, Netflix, Airbnb, and WhatsApp.
+
+The core philosophy behind React is the concept of a "virtual DOM" - a lightweight representation of the actual DOM that allows for efficient updates and rendering. When the state of a component changes, React compares the virtual DOM with the actual DOM and only updates the parts that have changed, resulting in significant performance improvements compared to traditional DOM manipulation approaches.
+
+React uses a declarative programming paradigm, meaning you describe what you want the UI to look like, and React handles the actual DOM updates. This is in contrast to imperative programming, where you specify each step of how to update the DOM. The declarative approach makes code more predictable and easier to debug, as the UI state is always a function of the component's props and state.
+
+Another fundamental concept in React is the component-based architecture. Instead of building your entire application as a single monolithic structure, you break it down into small, isolated, and reusable pieces called components. Each component manages its own state and rendering logic, making it easier to develop, test, and maintain complex applications.
+
+## When to Use React
+
+React is an excellent choice for a wide range of web development scenarios. Understanding when to use React will help you make informed decisions about your technology stack and ensure you're leveraging its strengths effectively.
+
+### Single-Page Applications (SPAs)
+
+React is particularly well-suited for building single-page applications where user interactions happen dynamically without full page reloads. SPAs provide a more fluid user experience similar to native applications, making them ideal for dashboards, social media platforms, project management tools, and any application requiring real-time updates. React's efficient rendering and state management make it perfect for handling the complex interactions and data flows typical of SPAs.
+
+### Interactive User Interfaces
+
+When your application requires complex user interactions, animations, or dynamic content updates, React shines. The component-based architecture allows you to build interactive elements like drag-and-drop interfaces, form builders, data visualization components, and collaborative editing tools. React's state management and event handling systems make it straightforward to create rich, responsive user experiences.
+
+### Large-Scale Applications
+
+For enterprise-level applications with many features and complex state requirements, React's modular architecture provides significant advantages. The ability to break down a large application into smaller, manageable components makes development teams more productive and enables better code organization. React's ecosystem also includes powerful state management solutions like Redux, Zustand, and Recoil for handling complex application state.
+
+### Teams Working with JavaScript
+
+React is an ideal choice for teams already familiar with JavaScript. Unlike some frameworks that require learning a separate templating language or syntax, React uses plain JavaScript for component logic and JSX (a syntax extension that looks similar to HTML) for markup. This lowers the learning curve for experienced JavaScript developers and allows for more flexible code organization.
+
+## Key Concepts
+
+### Components
+
+Components are the building blocks of React applications. They are self-contained units that combine markup (JSX), logic (JavaScript), and styles into reusable pieces. React components can be classified into two main types: functional components and class components.
+
+Functional components are the modern and recommended approach in React. They are JavaScript functions that return JSX and can use React Hooks to manage state and side effects. Functional components are generally preferred because they are simpler, more concise, and easier to test than class components.
+
+```tsx
+// A simple functional component
+function Welcome({ name }: { name: string }) {
+  return <h1>Hello, {name}!</h1>;
+}
+
+// Usage
+<Welcome name="Alice" />;
+```
+
+Class components were the original way to create React components before Hooks were introduced. They extend from React.Component and use a different syntax for state management and lifecycle methods. While still supported, class components are less commonly used in new projects.
+
+```tsx
+// Class component example
+class Welcome extends React.Component<{ name: string }> {
+  render() {
+    return <h1>Hello, {this.props.name}!</h1>;
+  }
+}
+```
+
+Components can be composed together to build complex UIs. A parent component can pass data to child components through props, creating a unidirectional data flow that makes applications easier to understand and debug.
+
+### Props
+
+Props (short for properties) are the mechanism for passing data from parent components to child components. They are read-only and help create dynamic, reusable components. Props can be any JavaScript value including strings, numbers, booleans, objects, arrays, and even functions.
+
+```tsx
+// Parent component passing multiple props
+function App() {
+  return (
+    <UserCard
+      name="John Doe"
+      age={30}
+      isActive={true}
+      hobbies={['reading', 'coding', 'hiking']}
+      onContact={() => console.log('Contact clicked')}
+    />
+  );
+}
+
+// Child component receiving props
+interface UserCardProps {
+  name: string;
+  age: number;
+  isActive: boolean;
+  hobbies: string[];
+  onContact: () => void;
+}
+
+function UserCard({ name, age, isActive, hobbies, onContact }: UserCardProps) {
+  return (
+    <div className="user-card">
+      <h2>{name}</h2>
+      <p>Age: {age}</p>
+      <p>Status: {isActive ? 'Active' : 'Inactive'}</p>
+      <ul>
+        {hobbies.map((hobby, index) => (
+          <li key={index}>{hobby}</li>
+        ))}
+      </ul>
+      <button onClick={onContact}>Contact</button>
+    </div>
+  );
+}
+```
+
+### State and useState Hook
+
+State is data that is local to a component and can change over time. When state changes, React automatically re-renders the component to reflect the new state. The useState Hook is the primary way to add state to functional components.
+
+```tsx
+import { useState } from 'react';
+
+function Counter() {
+  const [count, setCount] = useState(0);
+  
+  return (
+    <div>
+      <p>Count: {count}</p>
+      <button onClick={() => setCount(count + 1)}>
+        Increment
+      </button>
+      <button onClick={() => setCount(count - 1)}>
+        Decrement
+      </button>
+      <button onClick={() => setCount(0)}>
+        Reset
+      </button>
+    </div>
+  );
+}
+```
+
+The useState Hook returns an array with two elements: the current state value and a function to update it. The initial state is passed as an argument to useState. It's important to note that state updates are asynchronous and React batches multiple state updates for performance.
+
+### useEffect Hook
+
+The useEffect Hook allows you to perform side effects in functional components. Side effects include data fetching, subscriptions, manual DOM manipulation, and timers. The Hook runs after every render by default, but you can control when it runs using dependency arrays.
+
+```tsx
+import { useState, useEffect } from 'react';
+
+function UserProfile({ userId }: { userId: string }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    
+    async function fetchUser() {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/users/${userId}`);
+        
+        if (!response.ok) {
+          throw new Error('User not found');
+        }
+        
+        const data = await response.json();
+        
+        if (isMounted) {
+          setUser(data);
+          setError(null);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(err instanceof Error ? err.message : 'An error occurred');
+          setUser(null);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+    
+    fetchUser();
+    
+    // Cleanup function
+    return () => {
+      isMounted = false;
+    };
+  }, [userId]);
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
+  if (!user) return <div>User not found</div>;
+  
+  return (
+    <div>
+      <h1>{user.name}</h1>
+      <p>{user.email}</p>
+    </div>
+  );
+}
+```
+
+### Conditional Rendering
+
+React allows you to render different content based on conditions using JavaScript operators and ternary expressions.
+
+```tsx
+function Greeting({ isLoggedIn, user }: { isLoggedIn: boolean; user?: { name: string } }) {
+  // Method 1: Logical && operator
+  if (isLoggedIn && user) {
+    return <h1>Welcome back, {user.name}!</h1>;
+  }
+  
+  // Method 2: Ternary operator
+  return <h1>{isLoggedIn ? 'Welcome!' : 'Please sign in.'}</h1>;
+  
+  // Method 3: Inline with &&
+  return (
+    <div>
+      <h1>Hello {user?.name || 'Guest'}</h1>
+      {user && <p>Your email: {user.email}</p>}
+      {!user && <p>Please log in to see more.</p>}
+    </div>
+  );
+}
+```
+
+### Lists and Keys
+
+When rendering lists of elements in React, each item needs a unique "key" prop to help React identify which items have changed, been added, or been removed.
+
+```tsx
+function TodoList({ todos }: { todos: Todo[] }) {
+  return (
+    <ul>
+      {todos.map((todo) => (
+        <li key={todo.id}>
+          <input
+            type="checkbox"
+            checked={todo.completed}
+            onChange={() => toggleTodo(todo.id)}
+          />
+          <span style={{ 
+            textDecoration: todo.completed ? 'line-through' : 'none' 
+          }}>
+            {todo.text}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+## Full Example: Task Management Application
+
+Here's a complete example of a simple task management application demonstrating the concepts we've covered:
+
+```tsx
+import { useState, useEffect } from 'react';
+
+interface Task {
+  id: string;
+  text: string;
+  completed: boolean;
+  createdAt: Date;
+}
+
+function App() {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [inputValue, setInputValue] = useState('');
+  const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
+
+  // Load tasks from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('tasks');
+    if (saved) {
+      try {
+        setTasks(JSON.parse(saved));
+      } catch {
+        console.error('Failed to parse tasks');
+      }
+    }
+  }, []);
+
+  // Save tasks to localStorage on change
+  useEffect(() => {
+    localStorage.setItem('tasks', JSON.stringify(tasks));
+  }, [tasks]);
+
+  const addTask = (text: string) => {
+    const newTask: Task = {
+      id: crypto.randomUUID(),
+      text: text.trim(),
+      completed: false,
+      createdAt: new Date(),
+    };
+    
+    if (newTask.text) {
+      setTasks([newTask, ...tasks]);
+      setInputValue('');
+    }
+  };
+
+  const toggleTask = (id: string) => {
+    setTasks(tasks.map(task =>
+      task.id === id ? { ...task, completed: !task.completed } : task
+    ));
+  };
+
+  const deleteTask = (id: string) => {
+    setTasks(tasks.filter(task => task.id !== id));
+  };
+
+  const filteredTasks = tasks.filter(task => {
+    if (filter === 'active') return !task.completed;
+    if (filter === 'completed') return task.completed;
+    return true;
+  });
+
+  return (
+    <div className="max-w-md mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Task Manager</h1>
+      
+      <div className="flex gap-2 mb-4">
+        <input
+          type="text"
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              addTask(inputValue);
+            }
+          }}
+          placeholder="Add a new task..."
+          className="flex-1 p-2 border rounded"
+        />
+        <button
+          onClick={() => addTask(inputValue)}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          Add
+        </button>
+      </div>
+      
+      <div className="flex gap-2 mb-4">
+        {(['all', 'active', 'completed'] as const).map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`px-3 py-1 rounded ${
+              filter === f 
+                ? 'bg-blue-500 text-white' 
+                : 'bg-gray-200 hover:bg-gray-300'
+            }`}
+          >
+            {f.charAt(0).toUpperCase() + f.slice(1)}
+          </button>
+        ))}
+      </div>
+      
+      <ul className="space-y-2">
+        {filteredTasks.map((task) => (
+          <li
+            key={task.id}
+            className="flex items-center gap-2 p-2 bg-white border rounded shadow-sm"
+          >
+            <input
+              type="checkbox"
+              checked={task.completed}
+              onChange={() => toggleTask(task.id)}
+            />
+            <span style={{ 
+              textDecoration: task.completed ? 'line-through' : 'none',
+              flex: 1,
+            }}>
+              {task.text}
+            </span>
+            <button
+              onClick={() => deleteTask(task.id)}
+              className="px-2 py-1 text-red-500 hover:bg-red-100 rounded"
+            >
+              Delete
+            </button>
+          </li>
+        ))}
+      </ul>
+      
+      {tasks.length === 0 && (
+        <p className="text-center text-gray-500 mt-4">
+          No tasks yet. Add one above!
+        </p>
+      )}
+      
+      <p className="mt-4 text-sm text-gray-500">
+        {tasks.filter(t => !t.completed).length} tasks remaining
+      </p>
+    </div>
+  );
+}
+
+export default App;
+```
+
+## Common Mistakes
+
+### Mutating State Directly
+
+One of the most common mistakes in React is mutating state directly instead of creating new copies. React relies on immutability to detect changes and trigger re-renders.
+
+```tsx
+// ❌ WRONG - Mutating state directly
+function WrongComponent() {
+  const [items, setItems] = useState(['a', 'b', 'c']);
+  
+  const addItem = () => {
+    items.push('d'); // Direct mutation!
+    setItems(items); // Won't trigger re-render reliably
+  };
+}
+
+// ✅ CORRECT - Creating new array
+function CorrectComponent() {
+  const [items, setItems] = useState(['a', 'b', 'c']);
+  
+  const addItem = () => {
+    setItems([...items, 'd']); // Spread operator creates new array
+  };
+}
+
+// For nested objects, use spread operator at each level
+function NestedUpdate() {
+  const [user, setUser] = useState({
+    name: 'John',
+    address: {
+      city: 'NYC',
+      zip: '10001',
+    },
+  });
+  
+  const updateCity = (newCity: string) => {
+    setUser({
+      ...user,
+      address: {
+        ...user.address,
+        city: newCity,
+      },
+    });
+  };
+}
+```
+
+### Not Using the Dependency Array Correctly
+
+The useEffect dependency array controls when the effect runs. Omitting dependencies or using incorrect ones can lead to stale closures or infinite loops.
+
+```tsx
+// ❌ WRONG - Missing dependency
+function WrongEffect() {
+  const [count, setCount] = useState(0);
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCount(count + 1); // count is stale!
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, []); // Empty but uses count!
+}
+
+// ✅ CORRECT - Using functional update
+function CorrectEffect() {
+  const [count, setCount] = useState(0);
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCount(c => c + 1); // Functional update
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, []); // Now correctly empty
+}
+```
+
+### Using Index as Key
+
+Using array indices as keys can cause issues when the array order changes, as React may not correctly identify which items have been added, removed, or moved.
+
+```tsx
+// ❌ WRONG - Index as key
+function WrongList({ items }: { items: string[] }) {
+  return (
+    <ul>
+      {items.map((item, index) => (
+        <li key={index}>{item}</li> // Problematic!
+      ))}
+    </ul>
+  );
+}
+
+// ✅ CORRECT - Using unique identifier
+interface Item {
+  id: string;
+  value: string;
+}
+
+function CorrectList({ items }: { items: Item[] }) {
+  return (
+    <ul>
+      {items.map((item) => (
+        <li key={item.id}>{item.value}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+## Exercises
+
+1. **Simple Counter with Limit**: Create a counter component that increments or decrements a value, but prevents the count from going below 0 or above 10. Add visual feedback when limits are reached.
+
+2. **Temperature Converter**: Build a component that converts temperatures between Celsius and Fahrenheit. Include input fields for both units that stay synchronized.
+
+3. **Theme Switcher**: Create a component that toggles between light and dark themes. Persist the user's preference in localStorage and apply it to the entire page.
+
+4. **Form Validation**: Build a registration form with fields for username, email, and password. Implement validation that checks minimum lengths, email format, and displays appropriate error messages.
+
+5. **Data Fetching**: Create a component that fetches and displays user data from an API. Handle loading states, error states, and display the data in a user-friendly format.
+
+## Sources
+
+- [React Documentation](https://react.dev/learn)
+- [React Hooks API Reference](https://react.dev/reference/react)
+- [Thinking in React](https://react.dev/learn/thinking-in-react)

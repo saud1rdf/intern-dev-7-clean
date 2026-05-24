@@ -1,0 +1,419 @@
+---
+title: "Git Basics"
+category: "version-control"
+summary: "Master Git fundamentals including repositories, commits, branches, and essential commands for version control."
+readingTime: 20
+---
+
+## Introduction
+
+Git is a distributed version control system created by Linus Torvalds in 2005. It has become the industry standard for tracking changes in source code during software development. Unlike centralized version control systems, Git allows every developer to have a complete copy of the repository history, enabling offline work, faster operations, and robust branching strategies.
+
+Understanding Git is fundamental for every software developer because version control is essential for collaboration, code backup, feature development, and project management. Git's flexibility and powerful features support workflows ranging from simple solo projects to large open-source collaborations with thousands of contributors.
+
+## When to Use Git
+
+Git is essential in virtually every software development scenario.
+
+### Code Version Tracking
+
+Git tracks every change made to your codebase, allowing you to see the complete history of modifications, who made them, and why. This is invaluable for understanding code evolution and troubleshooting issues.
+
+### Collaboration
+
+When multiple developers work on the same codebase, Git enables parallel development without interfering with each other's work. Features like branching and merging allow teams to work on features independently before combining their changes.
+
+### Backup and Recovery
+
+Git serves as a time machine for your code. If something breaks, you can easily revert to a previous working state. The distributed nature means every team member has a full backup of the repository.
+
+### Experimentation
+
+Git's branching capabilities allow you to experiment with new features or changes without affecting the main codebase. If experiments fail, you can simply discard the branch.
+
+## Key Concepts
+
+### Repository Initialization and Cloning
+
+```bash
+# Create a new Git repository in an existing directory
+cd my-project
+git init
+
+# Create a bare repository (for sharing)
+git init --bare
+
+# Clone an existing repository
+git clone https://github.com/username/repository.git
+
+# Clone with a specific directory name
+git clone https://github.com/username/repository.git my-project-name
+
+# Clone a specific branch
+git clone --branch develop https://github.com/username/repository.git
+
+# Clone with shallow history (faster)
+git clone --depth 1 https://github.com/username/repository.git
+```
+
+### Staging and Committing
+
+```bash
+# Check the status of your working directory
+git status
+
+# Stage specific files
+git add filename.js
+git add file1.txt file2.txt
+
+# Stage all changes
+git add .
+
+# Stage all changes with interactive selection
+git add -p
+
+# View staged changes
+git diff --cached
+
+# View all changes (staged and unstaged)
+git diff
+
+# Commit staged changes
+git commit -m "Add user authentication feature"
+
+# Commit with a detailed message
+git commit -m "Add user authentication feature
+
+This commit implements:
+- User registration with email validation
+- Login with JWT token generation
+- Password reset functionality
+- Session management
+
+Closes #42"
+
+# Amend the last commit (modify or add files)
+git commit --amend -m "Updated commit message"
+
+# Add files to the last commit without changing message
+git add forgotten-file.txt
+git commit --amend --no-edit
+
+# Change the last commit's author
+git commit --amend --author="New Name <newemail@example.com>"
+```
+
+### Viewing History
+
+```bash
+# View commit history
+git log
+
+# View compact history (one line per commit)
+git log --oneline
+
+# View history with graph
+git log --graph --oneline
+
+# View history for a specific file
+git log --follow filename.txt
+
+# View history with stats
+git log --stat
+
+# View history with diffs
+git log -p
+
+# View history for a specific author
+git log --author="John Doe"
+
+# View history for a date range
+git log --since="2024-01-01" --until="2024-12-31"
+
+# View history with search
+git log --grep="feature" --all
+
+# View the last N commits
+git log -5
+git log --max-count=10
+
+# View all branches in log
+git log --all --decorate --graph
+```
+
+### Undoing Changes
+
+```bash
+# Unstage a file (keep changes in working directory)
+git reset HEAD filename.txt
+git restore --staged filename.txt
+
+# Discard changes in working directory
+git checkout -- filename.txt
+git restore filename.txt
+
+# Discard all changes (WARNING: cannot undo)
+git checkout -- .
+git restore .
+
+# Undo the last commit (keep changes staged)
+git reset --soft HEAD~1
+
+# Undo the last commit (keep changes unstaged)
+git reset HEAD~1
+
+# Undo the last commit (discard all changes)
+git reset --hard HEAD~1
+
+# Undo specific commit (create new commit that undoes changes)
+git revert <commit-hash>
+
+# Undo the last N commits
+git revert --no-commit HEAD~3
+git revert --continue
+
+# Restore a deleted file
+git checkout -- filename.txt
+
+# Find a lost commit
+git reflog
+git checkout <commit-hash>
+
+# Create a new branch from a lost commit
+git branch recovery-branch <commit-hash>
+```
+
+### Working with Remotes
+
+```bash
+# List remote repositories
+git remote -v
+
+# Add a remote repository
+git remote add origin https://github.com/username/repository.git
+
+# Change remote URL
+git remote set-url origin https://github.com/username/new-repository.git
+
+# Rename remote
+git remote rename origin upstream
+
+# Remove remote
+git remote remove origin
+
+# Fetch changes from remote (without merging)
+git fetch origin
+
+# Fetch all remotes
+git fetch --all
+
+# Pull changes (fetch + merge)
+git pull origin main
+
+# Pull with rebase instead of merge
+git pull --rebase origin main
+
+# Push changes to remote
+git push origin main
+
+# Push to a new branch
+git push -u origin feature-branch
+
+# Push tags
+git push origin v1.0.0
+git push origin --delete v1.0.0
+
+# Delete remote branch
+git push origin --delete feature-branch
+
+# Force push (use with caution)
+git push --force origin main
+git push --force-with-lease origin main
+```
+
+### Tagging
+
+```bash
+# List tags
+git tag
+
+# Create an annotated tag
+git tag -a v1.0.0 -m "Release version 1.0.0"
+
+# Create a lightweight tag
+git tag v1.0.0
+
+# Tag a specific commit
+git tag -a v1.0.0 <commit-hash>
+
+# Tag with a GPG signature
+git tag -s v1.0.0 -m "Signed release"
+
+# View tag details
+git show v1.0.0
+
+# Delete tag locally
+git tag -d v1.0.0
+
+# Delete tag remotely
+git push origin --delete v1.0.0
+
+# Push all tags
+git push origin --tags
+```
+
+## Full Example: Feature Development Workflow
+
+```bash
+# 1. Start with an up-to-date main branch
+git checkout main
+git pull origin main
+
+# 2. Create a new feature branch
+git checkout -b feature/user-registration
+
+# 3. Make your changes
+# ... edit files ...
+
+# 4. Stage and commit changes
+git add .
+git commit -m "Add user registration form component
+
+- Created registration form with validation
+- Added password strength indicator
+- Implemented form submission handling
+
+Refs #123"
+
+# 5. Make more changes
+git add src/components/validation.ts
+git commit -m "Add email and password validation utilities
+
+- Implemented email format validation
+- Added password complexity requirements
+- Created reusable validation functions"
+
+# 6. Push branch to remote
+git push -u origin feature/user-registration
+
+# 7. Continue working on the feature
+git add src/api/auth.ts
+git commit -m "Implement registration API endpoint
+
+- Created POST /api/register endpoint
+- Added database user creation
+- Implemented error handling"
+
+# 8. Sync with main branch (rebase)
+git fetch origin
+git rebase origin/main
+
+# 9. Resolve conflicts if any
+# ... edit conflicting files ...
+git add .
+git rebase --continue
+
+# 10. Update remote with rebased changes
+git push --force-with-lease origin feature/user-registration
+
+# 11. After review, merge to main
+git checkout main
+git pull origin main
+git merge --no-ff feature/user-registration
+
+# Write a descriptive merge commit
+git commit -m "Merge feature/user-registration
+
+User registration feature including:
+- Registration form with client-side validation
+- Email and password validation utilities
+- Registration API endpoint
+
+Reviewed-by: @teammate
+Approved-by: @reviewer"
+
+# 12. Clean up feature branch
+git branch -d feature/user-registration
+git push origin --delete feature/user-registration
+```
+
+## Common Mistakes
+
+### Committing to Main Branch
+
+```bash
+# ❌ WRONG - Working directly on main
+git checkout main
+git add .
+git commit -m "WIP: lots of changes"
+# ... continues committing to main ...
+
+# ✅ CORRECT - Use feature branches
+git checkout -b feature/my-feature
+# ... make commits on feature branch ...
+git checkout main
+```
+
+### Not Using .gitignore
+
+```bash
+# ❌ WRONG - Committing all files including build artifacts
+git add .
+# Commits node_modules, .env, build/, dist/
+
+# ✅ CORRECT - Create .gitignore
+# .gitignore
+node_modules/
+.env
+.env.local
+build/
+dist/
+*.log
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+```
+
+### Force Pushing to Shared Branches
+
+```bash
+# ❌ WRONG - Force pushing to main or shared branches
+git push --force origin main
+# This can overwrite others' commits!
+
+# ✅ CORRECT - Never force push to shared branches
+# Use rebase locally, then merge
+# Or use force-with-lease (safer)
+git push --force-with-lease origin feature-branch
+```
+
+### Large Commits
+
+```bash
+# ❌ WRONG - Giant commit with many unrelated changes
+git add .
+git commit -m "Lots of changes: fixed bug, added feature, updated styles"
+
+# ✅ CORRECT - Atomic commits (one purpose per commit)
+git commit -m "Fix: correct validation error message"
+git commit -m "Feat: add user profile page"
+git commit -m "Style: update button colors"
+```
+
+## Exercises
+
+1. **Repository Setup**: Initialize a new Git repository, create a .gitignore file, make your first commit, and push to GitHub.
+
+2. **Branch Management Practice**: Create multiple branches for different features, switch between them, merge them, and resolve conflicts.
+
+3. **History Exploration**: Use git log, git blame, and git bisect to understand a codebase's history and find when a bug was introduced.
+
+4. **Undo Scenarios**: Practice various undo operations including git reset, git revert, and git checkout to understand when to use each.
+
+## Sources
+
+- [Git Official Documentation](https://git-scm.com/doc)
+- [Git Book](https://git-scm.com/book/en/v2)
+- [Git Internals](https://git-scm.com/book/en/v2/Git-Internals)

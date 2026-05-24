@@ -1,41 +1,38 @@
-import fs from "fs";
-import path from "path";
-import matter from "gray-matter";
-import { MDXRemote } from "next-mdx-remote/rsc";
+// This file is deprecated - use [...slug]/page.tsx instead
+import { redirect } from 'next/navigation';
 
-const docsDir = path.join(process.cwd(), "content/docs");
-
-export default function DocPage({ params }: { params: { slug: string } }) {
-  const filePath = path.join(docsDir, `${params.slug}.mdx`);
-
-  if (!fs.existsSync(filePath)) {
-    return (
-      <div className="mx-auto max-w-3xl p-6">
-        <h1 className="text-2xl font-bold">Doc not found</h1>
-        <p className="mt-2 text-gray-600">
-          Create this file:
-        </p>
-        <pre className="mt-3 rounded bg-gray-100 p-3 text-sm">
-{`content/docs/${params.slug}.mdx`}
-        </pre>
-      </div>
-    );
+export default async function OldSlugPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  
+  // Map old single-level slugs to new structure
+  const slugMapping: Record<string, string[]> = {
+    'html': ['web-development', 'html'],
+    'css': ['web-development', 'css'],
+    'javascript': ['web-development', 'javascript'],
+    'react-basics': ['web-development', 'react-basics'],
+    'nextjs': ['web-development', 'nextjs'],
+    'rest': ['api-integration', 'rest'],
+    'graphql': ['api-integration', 'graphql'],
+    'postman': ['api-integration', 'postman'],
+    'git-basics': ['version-control', 'git-basics'],
+    'github-workflow': ['version-control', 'github-workflow'],
+    'branching': ['version-control', 'branching'],
+    'merge-conflicts': ['version-control', 'merge-conflicts'],
+    'unit-testing': ['testing-debugging', 'unit-testing'],
+    'integration-testing': ['testing-debugging', 'integration-testing'],
+    'debugging-tools': ['testing-debugging', 'debugging-tools'],
+  };
+  
+  const newSlug = slugMapping[slug];
+  
+  if (newSlug) {
+    redirect(`/docs/${newSlug[0]}/${newSlug[1]}`);
   }
-
-  const raw = fs.readFileSync(filePath, "utf-8");
-  const { data, content } = matter(raw);
-
-  return (
-    <div className="mx-auto max-w-4xl p-6">
-      <h1 className="text-3xl font-bold">{data.title ?? params.slug}</h1>
-      {data.description && (
-        <p className="mt-2 text-gray-600">{data.description}</p>
-      )}
-
-      <article className="prose prose-zinc mt-8 max-w-none">
-        <MDXRemote source={content} />
-      </article>
-    </div>
-  );
+  
+  // If no mapping found, redirect to docs home
+  redirect('/docs');
 }
 
+export function generateStaticParams() {
+  return [];
+}

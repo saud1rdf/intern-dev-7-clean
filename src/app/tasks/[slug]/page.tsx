@@ -1,35 +1,45 @@
-import fs from 'fs'
-import path from 'path'
-import { notFound } from 'next/navigation'
-import Navigation from '@/components/Navigation'
-import TaskArticle from './TaskArticle'
-
-interface TaskDetailPageProps {
-  params: Promise<{ slug: string }>
-}
+import fs from "fs";
+import path from "path";
+import { notFound } from "next/navigation";
+import Navigation from "@/components/Navigation";
+import TaskArticle from "./TaskArticle";
 
 function getTaskContent(slug: string): string | null {
-  const tasksDir = path.join(process.cwd(), 'content', 'tasks')
-  const filePath = path.join(tasksDir, `${slug}.md`)
-  if (!fs.existsSync(filePath)) return null
-  return fs.readFileSync(filePath, 'utf8')
+  const tasksDir = path.join(process.cwd(), "content", "tasks");
+
+  const mdxPath = path.join(tasksDir, `${slug}.mdx`);
+  const mdPath = path.join(tasksDir, `${slug}.md`);
+
+  const filePath = fs.existsSync(mdxPath)
+    ? mdxPath
+    : fs.existsSync(mdPath)
+    ? mdPath
+    : null;
+
+  if (!filePath) return null;
+
+  return fs.readFileSync(filePath, "utf8");
 }
 
-export default async function TaskDetailPage({ params }: TaskDetailPageProps) {
-  const { slug } = await params
-  const content = getTaskContent(slug)
+export default function TaskPage({
+  params,
+}: {
+  params: { slug: string };
+}) {
+  const { slug } = params;
+  const content = getTaskContent(slug);
 
   if (!content) {
-    notFound()
+    notFound();
   }
 
   return (
     <>
-      <section id="content-start"></section>
+      <section id="content-start" />
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <Navigation />
         <TaskArticle content={content} slug={slug} />
       </div>
     </>
-  )
+  );
 }

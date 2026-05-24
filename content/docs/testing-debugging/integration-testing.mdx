@@ -1,0 +1,628 @@
+---
+title: "Integration Testing"
+category: "testing-debugging"
+summary: "Master integration testing with Jest and React Testing Library to test components, hooks, and full user flows."
+readingTime: 25
+---
+
+## Introduction
+
+Integration testing verifies that multiple components of your application work together correctly. While unit tests verify individual functions in isolation, integration tests ensure that components interact properly, API endpoints return expected data, and user flows work end-to-end. Integration tests fill the gap between fast, isolated unit tests and slower, comprehensive end-to-end tests.
+
+React Testing Library provides utilities for testing React components in a way that simulates how users interact with them. Rather than testing internal implementation details, React Testing Library encourages testing components through their public interface: the rendered output and the events users would trigger.
+
+Understanding integration testing is crucial because it catches issues that unit tests miss. Components may work individually but fail when combined. API responses may look correct but fail when processed by components. Integration tests verify the real behavior users will experience.
+
+## When to Use Integration Testing
+
+Integration testing is appropriate in several scenarios that require component interaction testing.
+
+### Component Interaction
+
+When multiple components work together, such as a parent component passing data to children, integration tests verify the complete interaction chain.
+
+### User Flows
+
+Testing complete user flows like logging in, submitting a form, and seeing the result ensures the application works as users expect.
+
+### API Integration
+
+Testing components that fetch data from APIs verifies error handling, loading states, and successful data display.
+
+### State Management
+
+Testing components that use context, Redux, or other state management solutions ensures the complete state flow works correctly.
+
+## Key Concepts
+
+### Rendering Components
+
+```typescript
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { UserProfile } from './UserProfile';
+
+// Basic render
+render(<UserProfile userId={1} />);
+
+// Render with providers
+render(
+  <AuthProvider>
+    <ThemeProvider>
+      <UserProfile userId={1} />
+    </ThemeProvider>
+  </AuthProvider>
+);
+
+// Render with custom props
+render(<UserProfile userId={1} onUpdate={mockOnUpdate} />);
+
+// Get elements by various selectors
+screen.getByText('Hello');                    // Exact text
+screen.getByText(/hello/i);                   // Regex
+screen.getByRole('button');                   // ARIA role
+screen.getByRole('heading', { level: 1 });    // Heading level
+screen.getByLabelText('Email');               // Label
+screen.getByPlaceholderText('Enter email');   // Placeholder
+screen.getByAltText('Profile picture');       // Alt text
+screen.getByTestId('custom-element');         // data-testid
+
+// Async queries
+await screen.findByText('Loaded');            // Waits for element
+screen.queryByText('Not found');              // Returns null if not found
+screen.findAllByRole('listitem');             // Finds all matches
+```
+
+### User Interactions
+
+```typescript
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+
+describe('Form interactions', () => {
+  it('should handle form input', async () => {
+    const user = userEvent.setup();
+    render(<LoginForm />);
+    
+    const emailInput = screen.getByLabelText('Email');
+    const passwordInput = screen.getByLabelText('Password');
+    const submitButton = screen.getByRole('button', { name: /submit/i });
+    
+    // Type into input
+    await user.type(emailInput, 'test@example.com');
+    await user.type(passwordInput, 'password123');
+    
+    // Verify input values
+    expect(emailInput).toHaveValue('test@example.com');
+    expect(passwordInput).toHaveValue('password123');
+    
+    // Click button
+    await user.click(submitButton);
+    
+    // Verify submission
+    await screen.findByText('Logging in...');
+  });
+  
+  it('should handle checkbox interaction', async () => {
+    const user = userEvent.setup();
+    render(<NewsletterCheckbox />);
+    
+    const checkbox = screen.getByRole('checkbox', { name: /subscribe/i });
+    
+    // Click to check
+    await user.click(checkbox);
+    expect(checkbox).toBeChecked();
+    
+    // Click again to uncheck
+    await user.click(checkbox);
+    expect(checkbox).not.toBeChecked();
+  });
+  
+  it('should handle select interaction', async () => {
+    const user = userEvent.setup();
+    render(<CountrySelect />);
+    
+    const select = screen.getByRole('combobox');
+    
+    await user.selectOptions(select, 'US');
+    expect(screen.getByRole('option', { name: 'United States' }).selected).toBe(true);
+  });
+  
+  it('should handle keyboard interactions', async () => {
+    const user = userEvent.setup();
+    render(<Modal />);
+    
+    // Press Escape to close
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+  
+  it('should handle hover interactions', async () => {
+    const user = userEvent.setup();
+    render(<Tooltip />);
+    
+    const trigger = screen.getByRole('button');
+    
+    await user.hover(trigger);
+    expect(screen.getByText('Tooltip content')).toBeVisible();
+    
+    await user.unhover(trigger);
+    expect(screen.queryByText('Tooltip content')).not.toBeInTheDocument();
+  });
+});
+```
+
+### Testing Async Operations
+
+```typescript
+import { render, screen, waitFor } from '@testing-library/react';
+import { rest } from 'msw';
+import { setupServer } from 'msw/node';
+
+// Mock API server
+const server = setupServer(
+  rest.get('/api/users/:id', (req, res, ctx) => {
+    return res(
+      ctx.json({
+        id: 1,
+        name: 'John Doe',
+        email: 'john@example.com',
+      })
+    );
+  })
+);
+
+beforeAll(() => server.listen());
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
+describe('UserProfile with API', () => {
+  it('should display loading state initially', () => {
+    render(<UserProfile userId={1} />);
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
+  });
+  
+  it('should display user data after loading', async () => {
+    render(<UserProfile userId={1} />);
+    
+    // Loading state is shown
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
+    
+    // Wait for data to load
+    await screen.findByText('John Doe');
+    expect(screen.getByText('john@example.com')).toBeInTheDocument();
+  });
+  
+  it('should handle API errors', async () => {
+    server.use(
+      rest.get('/api/users/:id', (req, res, ctx) => {
+        return res(ctx.status(404), ctx.json({ error: 'User not found' }));
+      })
+    );
+    
+    render(<UserProfile userId={999} />);
+    
+    await screen.findByText('User not found');
+    expect(screen.queryByText('Loading...')).not.toBeInTheDocument();
+  });
+  
+  it('should handle slow requests', async () => {
+    server.use(
+      rest.get('/api/users/:id', (req, res, ctx) => {
+        return res(ctx.delay(2000), ctx.json({ id: 1, name: 'Slow User' }));
+      })
+    );
+    
+    render(<UserProfile userId={1} />);
+    
+    // Loading state should still be visible after 1 second
+    await waitFor(() => {
+      expect(screen.getByText('Loading...')).toBeInTheDocument();
+    }, { timeout: 1500 });
+  });
+});
+```
+
+### Testing Custom Hooks
+
+```typescript
+import { renderHook, waitFor } from '@testing-library/react';
+import { useUser } from './useUser';
+import { wrapper } from './testWrapper';
+
+// Basic hook test
+describe('useUser hook', () => {
+  it('should return user data', async () => {
+    const { result } = renderHook(() => useUser(1), { wrapper });
+    
+    expect(result.current.isLoading).toBe(true);
+    
+    await waitFor(() => {
+      expect(result.current.user).toEqual({
+        id: 1,
+        name: 'John Doe',
+      });
+    });
+  });
+  
+  it('should handle errors', async () => {
+    const { result } = renderHook(() => useUser(999), { wrapper });
+    
+    await waitFor(() => {
+      expect(result.current.error).toBeDefined();
+    });
+  });
+});
+```
+
+## Full Example: Complete Integration Test Suite
+
+```typescript
+// src/components/UserList/__tests__/UserList.test.tsx
+import { render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { rest } from 'msw';
+import { setupServer } from 'msw/node';
+import UserList from '../UserList';
+import { AuthProvider } from '@/components/providers/AuthProvider';
+
+// Mock API server
+const server = setupServer(
+  rest.get('/api/users', (req, res, ctx) => {
+    const page = Number(req.url.searchParams.get('page')) || 1;
+    const limit = Number(req.url.searchParams.get('limit')) || 10;
+    
+    const users = generateMockUsers(page, limit);
+    
+    return res(
+      ctx.json({
+        data: users,
+        meta: {
+          total: 50,
+          page,
+          limit,
+          totalPages: 5,
+        },
+      })
+    );
+  }),
+  
+  rest.delete('/api/users/:id', (req, res, ctx) => {
+    return res(ctx.status(204));
+  })
+);
+
+function generateMockUsers(page: number, limit: number) {
+  const start = (page - 1) * limit;
+  return Array.from({ length: limit }, (_, i) => ({
+    id: start + i + 1,
+    name: `User ${start + i + 1}`,
+    email: `user${start + i + 1}@example.com`,
+    role: i % 3 === 0 ? 'admin' : 'user',
+    status: 'active',
+  }));
+}
+
+// Helper to generate test IDs
+const testIds = {
+  userList: 'user-list',
+  userListItem: 'user-list-item',
+  deleteButton: 'delete-button',
+  editButton: 'edit-button',
+  searchInput: 'search-input',
+  pagination: 'pagination',
+  pageButton: 'page-button',
+};
+
+describe('UserList Component', () => {
+  let user: ReturnType<typeof userEvent.setup>;
+  
+  beforeAll(() => {
+    server.listen();
+  });
+  
+  afterEach(() => {
+    server.resetHandlers();
+    user = userEvent.setup();
+  });
+  
+  afterAll(() => {
+    server.close();
+  });
+  
+  const renderWithAuth = (component: React.ReactNode) => {
+    return render(
+      <AuthProvider>
+        {component}
+      </AuthProvider>
+    );
+  };
+  
+  describe('Loading states', () => {
+    it('should show loading spinner on initial render', () => {
+      renderWithAuth(<UserList />);
+      expect(screen.getByRole('status')).toHaveTextContent(/loading/i);
+    });
+    
+    it('should show skeleton while loading', () => {
+      renderWithAuth(<UserList />);
+      const skeletons = screen.getAllByTestId('skeleton');
+      expect(skeletons.length).toBeGreaterThan(0);
+    });
+  });
+  
+  describe('User list display', () => {
+    it('should display list of users', async () => {
+      renderWithAuth(<UserList />);
+      
+      // Wait for users to load
+      await screen.findByTestId(testIds.userList);
+      
+      // Verify users are displayed
+      const userItems = screen.getAllByTestId(testIds.userListItem);
+      expect(userItems).toHaveLength(10); // Default page size
+      
+      // Check first user
+      expect(screen.getByText('User 1')).toBeInTheDocument();
+      expect(screen.getByText('user1@example.com')).toBeInTheDocument();
+    });
+    
+    it('should display user roles correctly', async () => {
+      renderWithAuth(<UserList />);
+      
+      await screen.findByTestId(testIds.userList);
+      
+      // Check for admin badge
+      const adminBadges = screen.getAllByText(/admin/i);
+      expect(adminBadges.length).toBeGreaterThan(0);
+    });
+    
+    it('should display empty state when no users', async () => {
+      server.use(
+        rest.get('/api/users', (req, res, ctx) => {
+          return res(ctx.json({ data: [], meta: { total: 0, page: 1, limit: 10, totalPages: 0 } }));
+        })
+      );
+      
+      renderWithAuth(<UserList />);
+      
+      await screen.findByText(/no users found/i);
+    });
+  });
+  
+  describe('Search functionality', () => {
+    it('should filter users by search term', async () => {
+      renderWithAuth(<UserList />);
+      
+      await screen.findByTestId(testIds.userList);
+      
+      const searchInput = screen.getByTestId(testIds.searchInput);
+      await user.type(searchInput, 'User 1');
+      
+      // Wait for filtered results
+      await waitFor(() => {
+        expect(screen.getByText('User 1')).toBeInTheDocument();
+      });
+      
+      // User 2 should not appear
+      expect(screen.queryByText('User 2')).not.toBeInTheDocument();
+    });
+    
+    it('should clear search and show all users', async () => {
+      renderWithAuth(<UserList />);
+      
+      await screen.findByTestId(testIds.userList);
+      
+      const searchInput = screen.getByTestId(testIds.searchInput);
+      await user.type(searchInput, 'test');
+      
+      // Clear search
+      await user.clear(searchInput);
+      
+      await waitFor(() => {
+        expect(screen.queryByText(/no users found/i)).not.toBeInTheDocument();
+      });
+    });
+  });
+  
+  describe('Pagination', () => {
+    it('should navigate to next page', async () => {
+      renderWithAuth(<UserList />);
+      
+      await screen.findByTestId(testIds.userList);
+      
+      const nextButton = screen.getByRole('button', { name: /next/i });
+      await user.click(nextButton);
+      
+      await waitFor(() => {
+        expect(screen.getByText('User 11')).toBeInTheDocument();
+      });
+    });
+    
+    it('should navigate to previous page', async () => {
+      renderWithAuth(<UserList />);
+      
+      await screen.findByTestId(testIds.userList);
+      
+      // Go to page 2
+      const nextButton = screen.getByRole('button', { name: /next/i });
+      await user.click(nextButton);
+      await screen.findByText('User 11');
+      
+      // Go back to page 1
+      const prevButton = screen.getByRole('button', { name: /previous/i });
+      await user.click(prevButton);
+      
+      await waitFor(() => {
+        expect(screen.getByText('User 1')).toBeInTheDocument();
+      });
+    });
+    
+    it('should show correct page numbers', async () => {
+      renderWithAuth(<UserList />);
+      
+      await screen.findByTestId(testIds.userList);
+      
+      const pageButtons = screen.getAllByTestId(testIds.pageButton);
+      expect(pageButtons).toHaveLength(5); // Total pages
+      
+      // Current page should be highlighted
+      const activePage = screen.getByRole('button', { name: /1/i });
+      expect(activePage).toHaveAttribute('aria-current', 'page');
+    });
+  });
+  
+  describe('User actions', () => {
+    it('should call delete API when delete button is clicked', async () => {
+      renderWithAuth(<UserList />);
+      
+      await screen.findByTestId(testIds.userList);
+      
+      const firstDeleteButton = screen.getAllByTestId(testIds.deleteButton)[0];
+      await user.click(firstDeleteButton);
+      
+      // Confirm deletion in dialog
+      const confirmButton = screen.getByRole('button', { name: /confirm/i });
+      await user.click(confirmButton);
+      
+      // Verify API was called
+      await waitFor(() => {
+        expect(server).toHaveRequestCount(2); // Initial load + delete
+      });
+    });
+    
+    it('should navigate to edit page when edit button is clicked', async () => {
+      const mockRouter = {
+        push: jest.fn(),
+      };
+      
+      renderWithAuth(
+        <UserList router={mockRouter} />
+      );
+      
+      await screen.findByTestId(testIds.userList);
+      
+      const firstEditButton = screen.getAllByTestId(testIds.editButton)[0];
+      await user.click(firstEditButton);
+      
+      expect(mockRouter.push).toHaveBeenCalledWith('/users/1/edit');
+    });
+  });
+  
+  describe('Error handling', () => {
+    it('should display error message when API fails', async () => {
+      server.use(
+        rest.get('/api/users', (req, res, ctx) => {
+          return res(ctx.status(500), ctx.json({ error: 'Server error' }));
+        })
+      );
+      
+      renderWithAuth(<UserList />);
+      
+      await screen.findByText(/error loading users/i);
+    });
+    
+    it('should show retry button on error', async () => {
+      server.use(
+        rest.get('/api/users', (req, res, ctx) => {
+          return res(ctx.status(500));
+        })
+      );
+      
+      renderWithAuth(<UserList />);
+      
+      await screen.findByRole('button', { name: /retry/i });
+      
+      // Click retry
+      server.resetHandlers();
+      server.use(
+        rest.get('/api/users', (req, res, ctx) => {
+          return res(ctx.json({ data: [], meta: { total: 0, page: 1, limit: 10, totalPages: 0 } }));
+        })
+      );
+      
+      await user.click(screen.getByRole('button', { name: /retry/i }));
+      
+      await waitFor(() => {
+        expect(screen.queryByText(/error/i)).not.toBeInTheDocument();
+      });
+    });
+  });
+});
+```
+
+## Common Mistakes
+
+### Testing Implementation Details
+
+```typescript
+// ❌ WRONG - Testing internal state
+it('should have isLoading state', () => {
+  render(<UserProfile />);
+  const component = screen.getByTestId('user-profile');
+  expect(component).toHaveAttribute('data-state', 'loading');
+});
+
+// ✅ CORRECT - Testing user-visible behavior
+it('should show loading state', () => {
+  render(<UserProfile />);
+  expect(screen.getByRole('status')).toHaveTextContent(/loading/i);
+});
+```
+
+### Overly Specific Tests
+
+```typescript
+// ❌ WRONG - Very specific selectors
+it('should display user name', () => {
+  render(<UserProfile />);
+  const div = screen.getByTestId('user-profile-name-container');
+  const span = within(div).getByTestId('user-name-text');
+  expect(span).toHaveTextContent('John Doe');
+});
+
+// ✅ CORRECT - Testing what user sees
+it('should display user name', () => {
+  render(<UserProfile />);
+  expect(screen.getByText('John Doe')).toBeInTheDocument();
+});
+```
+
+### Not Cleaning Up Between Tests
+
+```typescript
+// ❌ WRONG - No cleanup
+it('test 1', () => {
+  render(<Component />);
+  // Does something that affects global state
+});
+
+it('test 2', () => {
+  render(<Component />);
+  // Global state from test 1 affects this test
+});
+
+// ✅ CORRECT - Proper cleanup
+import { render, cleanup } from '@testing-library/react';
+
+afterEach(() => {
+  cleanup();
+});
+// Jest automatically calls cleanup between tests
+```
+
+## Exercises
+
+1. **Form Integration Test**: Write integration tests for a complete form including validation, submission, and success/error states.
+
+2. **Data Fetching Component**: Create integration tests for a component that fetches and displays data with loading and error states.
+
+3. **User Flow Test**: Test a complete user flow like login → dashboard → profile edit → save.
+
+4. **Multi-Component Interaction**: Test how multiple components interact, such as a parent passing data to children.
+
+## Sources
+
+- [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/)
+- [MSW Documentation](https://mswjs.io/docs/)
+- [Jest DOM Matchers](https://github.com/testing-library/jest-dom)

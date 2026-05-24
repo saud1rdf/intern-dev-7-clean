@@ -1,0 +1,655 @@
+---
+title: "Unit Testing"
+category: "testing-debugging"
+summary: "Master unit testing principles using Jest including test structure, assertions, mocking, and best practices for isolated tests."
+readingTime: 25
+---
+
+## Introduction
+
+Unit testing is the practice of testing individual units of code in isolation from the rest of the application. A unit is typically a single function, method, or class. Unit tests verify that each unit of your software performs as expected, serving as the first line of defense against bugs and regressions.
+
+Jest is a JavaScript testing framework created by Meta (Facebook) that has become the de facto standard for testing React applications and other JavaScript projects. Jest emphasizes simplicity and zero configuration, providing a complete testing solution out of the box including test runner, assertion library, mocking capabilities, and code coverage reporting.
+
+Understanding unit testing with Jest is essential for writing reliable, maintainable code. Well-written unit tests catch bugs early, serve as documentation for how code should behave, and enable confident refactoring. As applications grow in complexity, unit tests become invaluable for maintaining code quality.
+
+## When to Use Unit Testing
+
+Unit testing is appropriate for virtually all code, but particularly valuable in certain scenarios.
+
+### Business Logic
+
+Functions that contain conditional logic, calculations, or data transformations benefit greatly from unit tests. These functions often have clear inputs and outputs that can be easily tested.
+
+### Utility Functions
+
+Reusable utility functions should be thoroughly tested since they are used across the application. Bugs in utilities can propagate throughout the codebase.
+
+### React Components
+
+React components can be unit tested to verify they render correctly, respond to interactions, and handle props as expected. Tools like React Testing Library make this straightforward.
+
+### Data Processing
+
+Functions that transform, validate, or process data should have comprehensive unit tests verifying all edge cases and error conditions.
+
+## Key Concepts
+
+### Test Structure
+
+```typescript
+// describe: Groups related tests
+describe('User utilities', () => {
+  // it/test: Individual test case
+  it('should validate email addresses correctly', () => {
+    // Arrange: Set up test data
+    const email = 'test@example.com';
+    
+    // Act: Execute the function being tested
+    const result = validateEmail(email);
+    
+    // Assert: Verify the result
+    expect(result).toBe(true);
+  });
+  
+  it('should reject invalid email addresses', () => {
+    const invalidEmails = ['not-an-email', 'missing@domain', '@nodomain.com'];
+    
+    invalidEmails.forEach(email => {
+      expect(validateEmail(email)).toBe(false);
+    });
+  });
+  
+  // Async test
+  it('should fetch user data', async () => {
+    const user = await fetchUser(123);
+    
+    expect(user).toBeDefined();
+    expect(user.id).toBe(123);
+    expect(user.name).toBe('John Doe');
+  });
+  
+  // Test with done callback (legacy)
+  it('should call callback with result', done => {
+    processData('input', result => {
+      expect(result).toBe('processed: input');
+      done();
+    });
+  });
+});
+```
+
+### Matchers and Assertions
+
+```typescript
+// Equality
+expect(value).toBe(expected);          // Strict equality (===)
+expect(value).toEqual(expected);       // Deep equality
+expect(value).toStrictEqual(expected); // Strict equality for objects
+
+// Truthiness
+expect(value).toBeTruthy();
+expect(value).toBeFalsy();
+expect(value).toBeNull();
+expect(value).toBeUndefined();
+expect(value).toBeDefined();
+
+// Numbers
+expect(value).toBe(5);
+expect(value).toEqual(5);
+expect(value).toBeGreaterThan(5);
+expect(value).toBeGreaterThanOrEqual(5);
+expect(value).toBeLessThan(10);
+expect(value).toBeLessThanOrEqual(10);
+expect(value).toBeCloseTo(0.1 + 0.2, 5); // Floating point
+
+// Strings
+expect(str).toBe('hello');
+expect(str).toEqual('hello');
+expect(str).toContain('ell');
+expect(str).toMatch(/ell/);
+expect(str).toHaveLength(5);
+
+// Arrays
+expect(arr).toContain(item);
+expect(arr).toHaveLength(3);
+expect(arr).toEqual([1, 2, 3]);
+expect(arr).toStrictEqual([1, 2, 3]);
+expect(arr).toMatchObject([{ id: 1 }, { id: 2 }]);
+
+// Objects
+expect(obj).toHaveProperty('name');
+expect(obj).toHaveProperty('name', 'John');
+expect(obj).toEqual({ name: 'John', age: 30 });
+expect(obj).toStrictEqual({ name: 'John', age: 30 });
+expect(obj).toMatchObject({ name: 'John' });
+
+// Exceptions
+expect(() => throw new Error()).toThrow();
+expect(() => throw new Error('fail')).toThrow('fail');
+
+// Truth
+expect(condition).toBe(true);
+expect(result).toBeTruthy();
+
+// Negations
+expect(value).not.toBe(5);
+expect(str).not.toContain('error');
+expect(obj).not.toHaveProperty('error');
+```
+
+### Setup and Teardown
+
+```typescript
+describe('UserService', () => {
+  let userService: UserService;
+  let mockDatabase: jest.Mock;
+  
+  // Run before all tests in describe block
+  beforeAll(() => {
+    // Set up database connection
+    mockDatabase = createMockDatabase();
+  });
+  
+  // Run before each test
+  beforeEach(() => {
+    // Reset mocks and create fresh instance
+    jest.clearAllMocks();
+    userService = new UserService(mockDatabase);
+  });
+  
+  // Run after each test
+  afterEach(() => {
+    // Clean up after each test
+    jest.clearAllTimers();
+  });
+  
+  // Run after all tests
+  afterAll(() => {
+    // Clean up database connection
+    mockDatabase.disconnect();
+  });
+  
+  it('should create a user', () => {
+    // Test using fresh userService
+    const user = userService.createUser({ name: 'John' });
+    expect(user.name).toBe('John');
+  });
+});
+```
+
+### Mocking
+
+```typescript
+// Mock functions
+const mockCallback = jest.fn();
+mockCallback.mockReturnValue('result');
+mockCallback.mockResolvedValue('async result');
+mockCallback.mockRejectedValue(new Error('error'));
+
+mockCallback('arg1', 'arg2');
+expect(mockCallback).toHaveBeenCalled();
+expect(mockCallback).toHaveBeenCalledWith('arg1', 'arg2');
+expect(mockCallback).toHaveBeenCalledTimes(1);
+
+// Mock implementations
+const mockFn = jest.fn().mockImplementation((x: number) => x * 2);
+expect(mockFn(5)).toBe(10);
+
+// Mock modules
+jest.mock('../api/client');
+const mockApiClient = {
+  get: jest.fn().mockResolvedValue({ data: 'test' }),
+  post: jest.fn(),
+};
+import { apiClient } from '../api/client';
+(apiClient as jest.Mocked<typeof apiClient>).get.mockResolvedValue({ data: 'test' });
+
+// Mock timers
+jest.useFakeTimers();
+setTimeout(() => {}, 1000);
+jest.advanceTimersByTime(1000);
+jest.useRealTimers();
+
+// Mock environment variables
+process.env.API_URL = 'https://test.example.com';
+jest.spyOn(process.env, 'API_URL', 'get').mockReturnValue('https://test.example.com');
+```
+
+### Async Testing
+
+```typescript
+// Promise-based tests
+it('should fetch user data', async () => {
+  const user = await userService.getUser(1);
+  
+  expect(user).toBeDefined();
+  expect(user.id).toBe(1);
+});
+
+// Testing promises
+it('should fetch user data', () => {
+  return expect(userService.getUser(1)).resolves.toEqual({
+    id: 1,
+    name: 'John',
+  });
+});
+
+it('should throw error for invalid user', () => {
+  return expect(userService.getUser(999)).rejects.toThrow('User not found');
+});
+
+// Test async errors
+it('should handle async errors', async () => {
+  await expect(userService.getUser(999)).rejects.toMatchObject({
+    message: 'User not found',
+  });
+});
+
+// Testing with done callback
+it('should complete async operation', done => {
+  userService.processData('input', (error, result) => {
+    expect(error).toBeNull();
+    expect(result).toBe('processed: input');
+    done();
+  });
+});
+```
+
+## Full Example: Testing a User Service
+
+```typescript
+// src/services/userService.ts
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  createdAt: Date;
+}
+
+export interface CreateUserInput {
+  name: string;
+  email: string;
+}
+
+export class UserService {
+  constructor(private db: DatabaseClient) {}
+  
+  async getUser(id: number): Promise<User | null> {
+    return this.db.findById('users', id);
+  }
+  
+  async createUser(input: CreateUserInput): Promise<User> {
+    // Validate input
+    if (!input.name || input.name.trim().length < 2) {
+      throw new ValidationError('Name must be at least 2 characters');
+    }
+    
+    if (!this.isValidEmail(input.email)) {
+      throw new ValidationError('Invalid email address');
+    }
+    
+    // Check for duplicate email
+    const existingUser = await this.db.findOne('users', { 
+      email: input.email 
+    });
+    
+    if (existingUser) {
+      throw new DuplicateError('Email already in use');
+    }
+    
+    // Create user
+    const user: User = {
+      id: Date.now(), // Simple ID generation
+      name: input.name.trim(),
+      email: input.email.toLowerCase(),
+      createdAt: new Date(),
+    };
+    
+    await this.db.insert('users', user);
+    return user;
+  }
+  
+  async updateUser(id: number, updates: Partial<CreateUserInput>): Promise<User> {
+    const user = await this.getUser(id);
+    
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+    
+    if (updates.email && !this.isValidEmail(updates.email)) {
+      throw new ValidationError('Invalid email address');
+    }
+    
+    const updatedUser = {
+      ...user,
+      ...updates,
+      name: updates.name?.trim() ?? user.name,
+      email: updates.email?.toLowerCase() ?? user.email,
+      updatedAt: new Date(),
+    };
+    
+    await this.db.update('users', id, updatedUser);
+    return updatedUser;
+  }
+  
+  async deleteUser(id: number): Promise<void> {
+    const user = await this.getUser(id);
+    
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+    
+    await this.db.delete('users', id);
+  }
+  
+  private isValidEmail(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
+}
+
+// Custom error classes
+export class ValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ValidationError';
+  }
+}
+
+export class DuplicateError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'DuplicateError';
+  }
+}
+
+export class NotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'NotFoundError';
+  }
+}
+
+// src/services/__tests__/userService.test.ts
+import { UserService, ValidationError, NotFoundError, DuplicateError, User } from '../userService';
+
+interface MockUser {
+  id: number;
+  name: string;
+  email: string;
+  createdAt: Date;
+}
+
+interface MockDatabase {
+  findById: jest.Mock<Promise<MockUser | null>, [string, number]>;
+  findOne: jest.Mock<Promise<MockUser | null>, [string, object]>;
+  insert: jest.Mock<Promise<void>, [string, MockUser]>;
+  update: jest.Mock<Promise<void>, [string, number, Partial<MockUser>]>;
+  delete: jest.Mock<Promise<void>, [string, number]>;
+}
+
+describe('UserService', () => {
+  let userService: UserService;
+  let mockDatabase: MockDatabase;
+  
+  beforeEach(() => {
+    mockDatabase = {
+      findById: jest.fn(),
+      findOne: jest.fn(),
+      insert: jest.fn().mockResolvedValue(undefined),
+      update: jest.fn().mockResolvedValue(undefined),
+      delete: jest.fn().mockResolvedValue(undefined),
+    };
+    
+    userService = new UserService(mockDatabase as unknown as any);
+  });
+  
+  describe('getUser', () => {
+    it('should return user when user exists', async () => {
+      const mockUser: User = {
+        id: 1,
+        name: 'John Doe',
+        email: 'john@example.com',
+        createdAt: new Date('2024-01-01'),
+      };
+      
+      mockDatabase.findById.mockResolvedValue(mockUser);
+      
+      const user = await userService.getUser(1);
+      
+      expect(user).toEqual(mockUser);
+      expect(mockDatabase.findById).toHaveBeenCalledWith('users', 1);
+    });
+    
+    it('should return null when user does not exist', async () => {
+      mockDatabase.findById.mockResolvedValue(null);
+      
+      const user = await userService.getUser(999);
+      
+      expect(user).toBeNull();
+    });
+  });
+  
+  describe('createUser', () => {
+    it('should create user with valid input', async () => {
+      mockDatabase.findOne.mockResolvedValue(null);
+      
+      const user = await userService.createUser({
+        name: 'John Doe',
+        email: 'john@example.com',
+      });
+      
+      expect(user.name).toBe('John Doe');
+      expect(user.email).toBe('john@example.com');
+      expect(user.id).toBeDefined();
+      expect(user.createdAt).toBeInstanceOf(Date);
+      expect(mockDatabase.insert).toHaveBeenCalledWith('users', expect.objectContaining({
+        name: 'John Doe',
+        email: 'john@example.com',
+      }));
+    });
+    
+    it('should normalize email to lowercase', async () => {
+      mockDatabase.findOne.mockResolvedValue(null);
+      
+      const user = await userService.createUser({
+        name: 'John',
+        email: 'JOHN@EXAMPLE.COM',
+      });
+      
+      expect(user.email).toBe('john@example.com');
+    });
+    
+    it('should throw ValidationError for short name', async () => {
+      await expect(
+        userService.createUser({ name: 'J', email: 'john@example.com' })
+      ).rejects.toThrow(ValidationError);
+      
+      expect(mockDatabase.insert).not.toHaveBeenCalled();
+    });
+    
+    it('should throw ValidationError for empty name', async () => {
+      await expect(
+        userService.createUser({ name: '', email: 'john@example.com' })
+      ).rejects.toThrow(ValidationError);
+    });
+    
+    it('should throw ValidationError for invalid email', async () => {
+      await expect(
+        userService.createUser({ name: 'John', email: 'invalid-email' })
+      ).rejects.toThrow(ValidationError);
+    });
+    
+    it('should throw DuplicateError for existing email', async () => {
+      mockDatabase.findOne.mockResolvedValue({
+        id: 2,
+        name: 'Existing User',
+        email: 'john@example.com',
+        createdAt: new Date(),
+      });
+      
+      await expect(
+        userService.createUser({ name: 'John', email: 'john@example.com' })
+      ).rejects.toThrow(DuplicateError);
+    });
+  });
+  
+  describe('updateUser', () => {
+    it('should update user with valid input', async () => {
+      const existingUser: User = {
+        id: 1,
+        name: 'John Doe',
+        email: 'john@example.com',
+        createdAt: new Date('2024-01-01'),
+      };
+      
+      mockDatabase.findById.mockResolvedValue(existingUser);
+      mockDatabase.findOne.mockResolvedValue(null);
+      
+      const updatedUser = await userService.updateUser(1, {
+        name: 'Jane Doe',
+      });
+      
+      expect(updatedUser.name).toBe('Jane Doe');
+      expect(mockDatabase.update).toHaveBeenCalledWith(
+        'users',
+        1,
+        expect.objectContaining({ name: 'Jane Doe' })
+      );
+    });
+    
+    it('should throw NotFoundError when user does not exist', async () => {
+      mockDatabase.findById.mockResolvedValue(null);
+      
+      await expect(
+        userService.updateUser(999, { name: 'New Name' })
+      ).rejects.toThrow(NotFoundError);
+    });
+    
+    it('should preserve existing fields when updating', async () => {
+      const existingUser: User = {
+        id: 1,
+        name: 'John',
+        email: 'john@example.com',
+        createdAt: new Date('2024-01-01'),
+      };
+      
+      mockDatabase.findById.mockResolvedValue(existingUser);
+      
+      const updatedUser = await userService.updateUser(1, {
+        name: 'John Updated',
+      });
+      
+      expect(updatedUser.id).toBe(1);
+      expect(updatedUser.email).toBe('john@example.com');
+      expect(updatedUser.createdAt).toEqual(existingUser.createdAt);
+    });
+  });
+  
+  describe('deleteUser', () => {
+    it('should delete existing user', async () => {
+      mockDatabase.findById.mockResolvedValue({
+        id: 1,
+        name: 'John',
+        email: 'john@example.com',
+        createdAt: new Date(),
+      });
+      
+      await userService.deleteUser(1);
+      
+      expect(mockDatabase.delete).toHaveBeenCalledWith('users', 1);
+    });
+    
+    it('should throw NotFoundError when user does not exist', async () => {
+      mockDatabase.findById.mockResolvedValue(null);
+      
+      await expect(userService.deleteUser(999)).rejects.toThrow(NotFoundError);
+    });
+  });
+});
+```
+
+## Common Mistakes
+
+### Testing Implementation Details
+
+```typescript
+// ❌ WRONG - Testing internal implementation
+it('should call private method', () => {
+  const service = new UserService(db);
+  // Can't even access private methods!
+  const result = (service as any).validateInput('test');
+  expect(result).toBe(true);
+});
+
+// ✅ CORRECT - Testing public behavior
+it('should return validated result', async () => {
+  const service = new UserService(db);
+  const result = await service.processInput('test');
+  expect(result.isValid).toBe(true);
+});
+```
+
+### Not Testing Edge Cases
+
+```typescript
+// ❌ WRONG - Only testing happy path
+it('should create user', async () => {
+  const user = await service.createUser({ name: 'John', email: 'john@test.com' });
+  expect(user.name).toBe('John');
+});
+
+// ✅ CORRECT - Testing all scenarios
+it('should create user with valid input', async () => {
+  const user = await service.createUser({ name: 'John', email: 'john@test.com' });
+  expect(user.name).toBe('John');
+});
+
+it('should throw for empty name', async () => {
+  await expect(
+    service.createUser({ name: '', email: 'john@test.com' })
+  ).rejects.toThrow();
+});
+
+it('should throw for null email', async () => {
+  await expect(
+    service.createUser({ name: 'John', email: null as any })
+  ).rejects.toThrow();
+});
+
+it('should throw for whitespace-only name', async () => {
+  await expect(
+    service.createUser({ name: '   ', email: 'john@test.com' })
+  ).rejects.toThrow();
+});
+```
+
+### Over-Mocking
+
+```typescript
+// ❌ WRONG - Mocking everything
+jest.mock('../utils/logger');
+jest.mock('../config');
+jest.mock('../cache');
+// Not testing anything real!
+
+// ✅ CORRECT - Mock only external dependencies
+// Mock the database, but test the actual logic
+```
+
+## Exercises
+
+1. **Utility Function Testing**: Write unit tests for a date formatting utility function with various edge cases.
+
+2. **Component Testing**: Create unit tests for a React component testing props, state changes, and event handlers.
+
+3. **Service Layer Testing**: Build a test suite for a service class with mocked database interactions.
+
+4. **Async Operations**: Practice testing async functions including loading states, success, and error scenarios.
+
+## Sources
+
+- [Jest Documentation](https://jestjs.io/docs/getting-started)
+- [Testing Library](https://testing-library.com/docs/)
+- [Jest Matchers](https://jestjs.io/docs/expect)

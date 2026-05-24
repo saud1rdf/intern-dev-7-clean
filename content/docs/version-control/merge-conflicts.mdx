@@ -1,0 +1,487 @@
+---
+title: "Merge Conflicts"
+category: "version-control"
+summary: "Master merge conflict resolution including detection, manual resolution, tools, and prevention strategies."
+readingTime: 20
+---
+
+## Introduction
+
+Merge conflicts occur when Git cannot automatically combine changes from different branches. This happens when the same lines of a file are modified in different branches, or when one branch deletes a file that another branch modifies. Understanding how to resolve merge conflicts is essential for collaborative development, as they are inevitable in any team using Git.
+
+While merge conflicts can seem daunting at first, they are straightforward to resolve with the right knowledge and tools. The key is understanding what Git is telling you about the conflict and then making intentional decisions about which changes to keep. Most conflicts arise from concurrent edits to the same code, and they can be prevented or minimized with good communication and small, frequent merges.
+
+## When Merge Conflicts Occur
+
+Understanding when conflicts happen helps you anticipate and prevent them.
+
+### Concurrent Edits to Same Lines
+
+The most common conflict occurs when two developers modify the same lines of code in different branches. Git cannot automatically determine which change should take precedence.
+
+### File Deletion Conflicts
+
+Conflicts arise when one branch deletes a file while another branch modifies it. Git asks which action to keep.
+
+### Renamed File Conflicts
+
+When files are renamed in one branch and modified in another, Git may have trouble tracking the relationship.
+
+### Structural Changes
+
+Major refactoring that changes file structure, moves code between files, or reorganizes directories often causes conflicts when combined with other changes.
+
+## Key Concepts
+
+### Detecting Conflicts
+
+```bash
+# Check if there are conflicts before merging
+git status
+
+# During merge, check which files have conflicts
+git status --short
+
+# M = modified, D = deleted, UU = unmerged (conflict)
+
+# View conflicted files
+git diff --name-only --diff-filter=U
+
+# Get detailed conflict information
+git diff
+
+# Check merge status
+git ls-files -u
+
+# View conflict markers in a file
+cat conflicted-file.js
+# <<<<<<< HEAD
+# Changes in current branch
+# =======
+# Changes in incoming branch
+# >>>>>>> feature-branch
+```
+
+### Understanding Conflict Markers
+
+```javascript
+// Git inserts conflict markers like this:
+<<<<<<< HEAD
+// This is what you have in your current branch
+function calculateTotal(items) {
+  return items.reduce((sum, item) => sum + item.price, 0);
+}
+=======
+// This is what you're trying to merge
+function calculateTotal(products) {
+  let total = 0;
+  for (const product of products) {
+    total += product.cost;
+  }
+  return total;
+}
+>>>>>>> feature/discount-calculation
+
+// After resolution, keep only ONE version:
+function calculateTotal(items) {
+  return items.reduce((sum, item) => sum + item.price, 0);
+}
+```
+
+### Resolving Conflicts Manually
+
+```bash
+# Step 1: Start merge (if not already in conflict state)
+git merge feature-branch
+
+# Step 2: Identify conflicted files
+git status
+
+# Step 3: Open each conflicted file and resolve
+# Use your editor to choose which changes to keep
+
+# Step 4: Mark conflicts as resolved
+git add conflicted-file.js
+
+# Or stage all resolved files
+git add .
+
+# Step 5: Complete the merge
+git commit -m "Merge feature-branch into main
+
+Resolved conflicts:
+- src/utils/calculate.ts: kept feature branch implementation"
+
+# Abort merge if needed
+git merge --abort
+```
+
+### Conflict Resolution Strategies
+
+```bash
+# Strategy 1: Accept current branch changes (keep HEAD)
+git checkout --ours -- <file>
+
+# Strategy 2: Accept incoming branch changes
+git checkout --theirs -- <file>
+
+# Strategy 3: Accept both changes (keep both versions)
+# Edit file manually to combine both
+
+# Strategy 4: Use a merge tool
+git mergetool
+
+# Strategy 5: Keep the file as it was before merge
+git checkout -- <file>
+git merge --abort
+```
+
+### Using Merge Tools
+
+```bash
+# Configure merge tool
+git config merge.tool vimdiff
+
+# Common merge tools:
+# - vimdiff / gvimdiff
+# - meld (Linux)
+# - kdiff3
+# - Beyond Compare
+# - VS Code (vscode)
+# - IntelliJ IDEA / WebStorm
+
+# Use configured merge tool
+git mergetool
+
+# For VS Code
+git config merge.tool vscode
+git config mergetool.vscode.cmd 'code --wait --new-window $MERGED'
+```
+
+### Aborting and Retrying
+
+```bash
+# Abort the entire merge
+git merge --abort
+
+# Abort a rebase
+git rebase --abort
+
+# Undo a failed merge commit
+git reset --merge ORIG_HEAD
+# or
+git reset --hard ORIG_HEAD
+
+# Retry merge after fixing issues
+git merge feature-branch --no-ff
+```
+
+## Full Example: Complete Conflict Resolution Workflow
+
+```bash
+# Scenario: Two developers modify the same function
+
+# Developer A creates a feature branch
+git checkout -b feature/user-validation
+
+# Developer A modifies the validation function
+cat > src/validation.js << 'EOF'
+function validateEmail(email) {
+  // Regex-based validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+function validateUser(user) {
+  if (!user.email || !validateEmail(user.email)) {
+    return { valid: false, error: 'Invalid email' };
+  }
+  if (!user.name || user.name.length < 2) {
+    return { valid: false, error: 'Name must be at least 2 characters' };
+  }
+  return { valid: true };
+}
+
+module.exports = { validateEmail, validateUser };
+EOF
+
+git add src/validation.js
+git commit -m "feat: add user validation with regex"
+git push -u origin feature/user-validation
+
+# ============================================
+# Meanwhile, Developer B creates their own branch
+git checkout main
+git pull origin main
+git checkout -b feature/auth-validation
+
+# Developer B modifies the SAME function
+cat > src/validation.js << 'EOF'
+function validateEmail(email) {
+  // Simpler check for empty or null
+  if (!email || typeof email !== 'string') {
+    return false;
+  }
+  return email.includes('@') && email.includes('.');
+}
+
+function validateUser(user) {
+  const errors = [];
+  
+  if (!user.email) {
+    errors.push('Email is required');
+  } else if (!validateEmail(user.email)) {
+    errors.push('Invalid email format');
+  }
+  
+  if (!user.name) {
+    errors.push('Name is required');
+  } else if (user.name.length < 2) {
+    errors.push('Name must be at least 2 characters');
+  }
+  
+  if (errors.length > 0) {
+    return { valid: false, errors };
+  }
+  return { valid: true };
+}
+
+module.exports = { validateEmail, validateUser };
+EOF
+
+git add src/validation.js
+git commit -m "feat: add validation with detailed errors"
+git push -u origin feature/auth-validation
+
+# ============================================
+# Developer B merges first
+git checkout main
+git pull origin main
+git merge --no-ff feature/auth-validation
+# No conflicts, successful merge
+git push origin main
+
+# ============================================
+# Developer A tries to merge
+git checkout main
+git pull origin main
+git checkout feature/user-validation
+git rebase origin/main
+
+# CONFLICT!
+# First, resolve conflicts
+git status
+# Unmerged paths:
+#   both modified: src/validation.js
+
+# View the conflict
+git diff src/validation.js
+
+# Open the file and see:
+<<<<<<< HEAD
+function validateEmail(email) {
+  // Simpler check for empty or null
+  if (!email || typeof email !== 'string') {
+    return false;
+  }
+  return email.includes('@') && email.includes('.');
+}
+=======
+function validateEmail(email) {
+  // Regex-based validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+>>>>>>> 8a2b3c (feat: add user validation with regex)
+
+# Developer A decides to use BOTH approaches
+# They want the detailed error messages from B
+# but also want the regex validation from A
+
+cat > src/validation.js << 'EOF'
+function validateEmail(email) {
+  // Check for empty or null
+  if (!email || typeof email !== 'string') {
+    return false;
+  }
+  // Strict regex validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+function validateUser(user) {
+  const errors = [];
+  
+  if (!user.email) {
+    errors.push('Email is required');
+  } else if (!validateEmail(user.email)) {
+    errors.push('Invalid email format');
+  }
+  
+  if (!user.name) {
+    errors.push('Name is required');
+  } else if (user.name.length < 2) {
+    errors.push('Name must be at least 2 characters');
+  }
+  
+  if (errors.length > 0) {
+    return { valid: false, errors };
+  }
+  return { valid: true };
+}
+
+module.exports = { validateEmail, validateUser };
+EOF
+
+# Mark conflict as resolved
+git add src/validation.js
+
+# Continue rebase
+git rebase --continue
+# Editor opens with commit message, save and close
+
+# Push the rebased branch
+git push --force-with-lease origin feature/user-validation
+
+# ============================================
+# Now merge the feature branch
+git checkout main
+git pull origin main
+git merge --no-ff feature/user-validation
+git push origin main
+
+# Clean up
+git branch -d feature/user-validation
+git push origin --delete feature/user-validation
+```
+
+## Conflict Prevention Strategies
+
+### Small, Frequent Merges
+
+```bash
+# ❌ WRONG - Merge only after months of work
+git checkout feature/long-feature
+# ... months of work ...
+git merge main  # HUGE CONFLICTS!
+
+# ✅ CORRECT - Merge main frequently
+git checkout feature/long-feature
+git merge main  # Resolve small conflicts often
+# ... continue work ...
+git merge main  # Resolve more small conflicts
+```
+
+### Communication and Coordination
+
+```markdown
+// Team communication to prevent conflicts
+
+// 1. Claim files in a shared document
+// "Working on validation.js: @developer1"
+
+// 2. Use PR reviews early
+// - Create draft PRs for work-in-progress
+// - Get feedback before major changes
+
+// 3. Notify team before refactoring
+// "Planning to restructure the auth module"
+// "Will move validateUser to validation.js"
+```
+
+### Feature Flags
+
+```typescript
+// Use feature flags to merge incomplete features
+// This allows merging without activating code
+
+// feature-flags.ts
+export const features = {
+  newValidation: process.env.NEXT_PUBLIC_FEATURE_NEW_VALIDATION === 'true',
+  enhancedErrors: true,
+};
+
+// validation.ts
+import { features } from './feature-flags';
+
+export function validateUser(user) {
+  if (features.newValidation) {
+    // New implementation
+    return validateUserNew(user);
+  }
+  // Old implementation
+  return validateUserOld(user);
+}
+```
+
+### Modular Architecture
+
+```bash
+# Structure code to minimize conflicts
+# ❌ WRONG - One giant file
+src/
+  utils.js  # 2000 lines of utility functions
+
+# ✅ CORRECT - Modular files
+src/
+  utils/
+    validation.js      # Validation functions
+    formatting.js      # Formatting functions
+    helpers.js         # Helper utilities
+    index.js           # Re-exports
+```
+
+## Common Mistakes
+
+### Not Aborting When Confused
+
+```bash
+# ❌ WRONG - Making things worse
+# Confused by conflict markers, starts editing randomly
+# Makes situation worse
+
+# ✅ CORRECT - Abort and get help
+git merge --abort
+# Ask teammate for help or review the changes
+```
+
+### Resolving Conflicts Incorrectly
+
+```bash
+# ❌ WRONG - Accepting all changes blindly
+git checkout --theirs -- .
+# Loses all your changes!
+
+# ✅ CORRECT - Review each conflict
+# Open the file, understand both changes
+# Make an informed decision
+```
+
+### Forgetting to Stage Resolved Files
+
+```bash
+# ❌ WRONG - Editing file but not staging
+# Resolved conflict in file.js
+# Runs git commit directly
+# Error: still has unmerged files
+
+# ✅ CORRECT - Stage first
+git add resolved-file.js
+git commit -m "Resolve merge conflicts"
+```
+
+## Exercises
+
+1. **Conflict Simulation**: Create two branches with conflicting changes, then practice resolving the conflicts using different strategies.
+
+2. **Merge Tool Setup**: Configure and use a GUI merge tool like VS Code or Beyond Compare for conflict resolution.
+
+3. **Rebase Conflicts**: Practice resolving conflicts during a rebase, understanding the difference from merge conflicts.
+
+4. **Conflict Prevention**: Implement a workflow that minimizes conflicts through small merges and feature flags.
+
+## Sources
+
+- [Git Merge Documentation](https://git-scm.com/docs/git-merge)
+- [Resolving Merge Conflicts](https://git-scm.com/book/en/v2/Git-Branching-Basic-Branching-and-Merging)
+- [Advanced Merging](https://git-scm.com/book/en/v2/Git-Tools-Advanced-Merging)
