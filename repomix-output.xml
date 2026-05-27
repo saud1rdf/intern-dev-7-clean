@@ -1829,217 +1829,6 @@ pm.test("Create product", function() {
 - [Postman API Network](https://explore.postman.com/)
 </file>
 
-<file path="content/docs/api-integration/rest.mdx">
----
-title: "REST APIs Integration (Production-Grade)"
-category: "api-integration"
-summary: "Master enterprise-level REST API integration. Learn advanced fetch patterns, Next.js Route Handlers, error handling, and data validation using Zod."
-readingTime: 25
----
-
-## Introduction
-
-In enterprise applications, interacting with REST APIs goes beyond a simple `fetch()` call. Production-grade API integration requires strict type safety, robust error handling, security (like hiding API keys), and efficient caching. 
-
-In this guide, we will explore how top-tier companies structure their API integrations using modern Next.js (App Router) features and industry-standard practices.
-
----
-
-## 1. Building a Production-Ready API Route (Server-Side)
-
-In Next.js, we use **Route Handlers** to build backend endpoints securely. Never trust client data; always validate it. Industry standard is to use validation libraries like `Zod`.
-
-Here is a real-world example of a secure API endpoint that creates a user, similar to patterns found in large open-source projects like **Cal.com**:
-
-```typescript
-// app/api/users/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-
-// 1. Define strict validation schema using Zod
-const userSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Invalid email format"),
-});
-
-export async function POST(request: NextRequest) {
-  try {
-    // 2. Parse and validate the incoming request body
-    const body = await request.json();
-    const validatedData = userSchema.parse(body);
-
-    // 3. Connect to Database (Mock example)
-    // const newUser = await prisma.user.create({ data: validatedData });
-    
-    // 4. Return success response with proper status code
-    return NextResponse.json(
-      { success: true, data: validatedData },
-      { status: 201 }
-    );
-
-  } catch (error) {
-    // 5. Professional Error Handling
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { success: false, message: "Validation failed", errors: error.errors },
-        { status: 400 }
-      );
-    }
-
-    console.error('[API_USER_POST_ERROR]', error);
-    return NextResponse.json(
-      { success: false, message: "Internal Server Error" },
-      { status: 500 }
-    );
-  }
-}
-2. The Enterprise Fetch Wrapper (Client-Side)
-Calling fetch directly in every component leads to code duplication and inconsistent error handling. Professional teams create a centralized API Client wrapper.
-
-Here is a production-grade utility for fetching data, handling Authorization headers, and parsing errors automatically:
-
-
-// lib/api-client.ts
-
-// Define standard API Error structure
-export class ApiError extends Error {
-  constructor(
-    public status: number,
-    public message: string,
-    public details?: any
-  ) {
-    super(message);
-    this.name = 'ApiError';
-  }
-}
-
-interface FetchOptions extends RequestInit {
-  params?: Record<string, string>;
-}
-
-export async function fetchApi<T>(
-  endpoint: string, 
-  options: FetchOptions = {}
-): Promise<T> {
-  const { params, headers, ...customOptions } = options;
-  
-  // Construct URL with query parameters
-  const url = new URL(endpoint, process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000');
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      url.searchParams.append(key, value);
-    });
-  }
-
-  // Execute fetch with merged headers (e.g., Auth token)
-  const response = await fetch(url.toString(), {
-    headers: {
-      'Content-Type': 'application/json',
-      // 'Authorization': `Bearer ${process.env.API_TOKEN}`,
-      ...headers,
-    },
-    ...customOptions,
-  });
-
-  const data = await response.json().catch(() => null);
-
-  // Centralized Error Handling
-  if (!response.ok) {
-    throw new ApiError(
-      response.status,
-      data?.message || 'An unexpected error occurred',
-      data?.errors
-    );
-  }
-
-  return data as T;
-}
-Integrating API Client with React Components
-Now, let's see how a frontend developer uses the fetchApi wrapper inside a modern React component with proper loading and error states.
-
-Note: For complex data fetching, caching, and revalidation, companies highly recommend using libraries like TanStack Query (React Query) or SWR.
-
-
-// components/UserRegistration.tsx
-'use client';
-
-import { useState } from 'react';
-import { fetchApi, ApiError } from '@/lib/api-client';
-
-interface UserResponse {
-  success: boolean;
-  data: { name: string; email: string };
-}
-
-export default function UserRegistration() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-
-    const formData = new FormData(e.currentTarget);
-    const payload = {
-      name: formData.get('name') as string,
-      email: formData.get('email') as string,
-    };
-
-    try {
-      // Using our Enterprise Fetch Wrapper
-      const response = await fetchApi<UserResponse>('/api/users', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      });
-
-      alert(`User ${response.data.name} registered successfully!`);
-      
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(`Error ${err.status}: ${err.message}`);
-      } else {
-        setError('A network error occurred. Please try again.');
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <form onSubmit={handleRegister} className="space-y-4 max-w-md">
-      <div>
-        <input 
-          name="name" 
-          placeholder="Full Name" 
-          required 
-          className="border p-2 w-full rounded"
-        />
-      </div>
-      <div>
-        <input 
-          name="email" 
-          type="email" 
-          placeholder="Email Address" 
-          required 
-          className="border p-2 w-full rounded"
-        />
-      </div>
-      
-      {error && <div className="text-red-500 text-sm p-2 bg-red-50 rounded">{error}</div>}
-      
-      <button 
-        type="submit" 
-        disabled={isLoading}
-        className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
-      >
-        {isLoading ? 'Registering...' : 'Register User'}
-      </button>
-    </form>
-  );
-}
-</file>
-
 <file path="content/docs/testing-debugging/debugging-tools.mdx">
 ---
 title: "Debugging Tools"
@@ -3277,277 +3066,6 @@ afterEach(() => {
 - [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/)
 - [MSW Documentation](https://mswjs.io/docs/)
 - [Jest DOM Matchers](https://github.com/testing-library/jest-dom)
-</file>
-
-<file path="content/docs/testing-debugging/unit-testing.mdx">
----
-title: "Unit Testing (Production-Grade)"
-category: "testing-debugging"
-summary: "Master enterprise-level unit testing using Jest and React Testing Library. Learn to mock dependencies and write resilient tests."
-readingTime: 25
----
-
-## Introduction
-
-In professional environments, testing is not optional. A single bug pushed to production can cost companies thousands of dollars. Enterprise teams don't use `console.log()` to test their code; they use automated testing frameworks like **Jest** and **React Testing Library (RTL)**.
-
-The golden rule of modern testing, coined by Kent C. Dodds, is: 
-> *"The more your tests resemble the way your software is used, the more confidence they can give you."*
-
-In this guide, we will look at production-grade testing patterns used in large open-source projects.
-
----
-
-## 1. Testing Utility Functions (Business Logic)
-
-Utility functions contain the core business logic of your app. They are pure functions and should be tested thoroughly against all edge cases.
-
-Here is an example of testing a currency formatting function:
-
-```typescript
-// utils/currency.ts
-export function formatCurrency(amount: number, currencyCode: string = 'USD'): string {
-  if (amount < 0) throw new Error("Amount cannot be negative");
-  
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currencyCode,
-  }).format(amount);
-}
-
-,,,,
-And here is the production-grade test file:
-
-// utils/__tests__/currency.test.ts
-import { formatCurrency } from '../currency';
-
-describe('formatCurrency Utility', () => {
-  it('should format USD correctly', () => {
-    const result = formatCurrency(1250.5);
-    expect(result).toBe('$1,250.50');
-  });
-
-  it('should format EUR correctly', () => {
-    const result = formatCurrency(1250.5, 'EUR');
-    // The exact space character might differ, so we use string matching
-    expect(result).toMatch(/€1,250.50/);
-  });
-
-  it('should format zero correctly', () => {
-    const result = formatCurrency(0);
-    expect(result).toBe('$0.00');
-  });
-
-  it('should throw an error for negative amounts', () => {
-    // When testing for errors, wrap the function call inside an anonymous function
-    expect(() => formatCurrency(-100)).toThrow("Amount cannot be negative");
-  });
-});
-
-,,,
-Testing React Components (UI)
-When testing React components, we don't test the implementation details (like state variables). Instead, we test what the user sees and interacts with.
-
-Here is a standard Button component:
-
-
-// components/SubmitButton.tsx
-'use client';
-
-interface SubmitButtonProps {
-  onClick: () => void;
-  isLoading?: boolean;
-  children: React.ReactNode;
-}
-
-export default function SubmitButton({ onClick, isLoading, children }: SubmitButtonProps) {
-  return (
-    <button 
-      onClick={onClick} 
-      disabled={isLoading}
-      className={`px-4 py-2 bg-blue-600 text-white rounded ${isLoading ? 'opacity-50' : ''}`}
-    >
-      {isLoading ? 'Processing...' : children}
-    </button>
-  );
-}
-
-Here is how you write an interactive test for it using React Testing Library:
-
-
-// components/__tests__/SubmitButton.test.tsx
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import SubmitButton from '../SubmitButton';
-
-describe('SubmitButton Component', () => {
-  it('should render the children text correctly', () => {
-    render(<SubmitButton onClick="{()"> {}}>Save Data</SubmitButton>);
-    
-    // We query by Role, which ensures our component is accessible
-    const button = screen.getByRole('button', { name: /save data/i });
-    expect(button).toBeInTheDocument();
-    expect(button).not.toBeDisabled();
-  });
-
-  it('should show loading state and disable the button', () => {
-    render(<SubmitButton onClick="{()"> {}} isLoading={true}>Save Data</SubmitButton>);
-    
-    const button = screen.getByRole('button', { name: /processing/i });
-    expect(button).toBeInTheDocument();
-    expect(button).toBeDisabled();
-  });
-
-  it('should fire the onClick handler exactly once when clicked', async () => {
-    // 1. Setup a mock function (spy)
-    const mockOnClick = jest.fn();
-    
-    // 2. Render the component
-    render(<SubmitButton onClick="{mockOnClick}">Save Data</SubmitButton>);
-    
-    // 3. Simulate real user interaction
-    const button = screen.getByRole('button', { name: /save data/i });
-    await userEvent.click(button);
-    
-    // 4. Assert the result
-    expect(mockOnClick).toHaveBeenCalledTimes(1);
-  });
-});
-
-,,,,
-Mocking External API Calls (Advanced)
-In a real app, your components will fetch data from an API. During tests, we must never hit the real API. It makes tests slow, flaky, and dependent on network status. Instead, we use "Mocks".
-
-// services/__tests__/userService.test.ts
-import { fetchUserData } from '../userService';
-
-// 1. Mock the global fetch function
-global.fetch = jest.fn();
-
-describe('UserService - fetchUserData', () => {
-  beforeEach(() => {
-    // Clear mocks before every test to ensure isolation
-    jest.clearAllMocks();
-  });
-
-  it('should return user data on successful API call', async () => {
-    // 2. Define the fake data we want our mock API to return
-    const mockUser = { id: 1, name: 'Alice', role: 'admin' };
-    
-    // 3. Force fetch to return a successful Promise with our fake data
-    (fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockUser,
-    });
-
-    // 4. Call the actual function
-    const result = await fetchUserData(1);
-
-    // 5. Verify the behavior
-    expect(result).toEqual(mockUser);
-    expect(fetch).toHaveBeenCalledWith('[https://api.example.com/users/1](https://api.example.com/users/1)');
-    expect(fetch).toHaveBeenCalledTimes(1);
-  });
-
-  it('should throw an error when the API fails', async () => {
-    (fetch as jest.Mock).mockResolvedValueOnce({
-      ok: false,
-      status: 404,
-    });
-
-    await expect(fetchUserData(999)).rejects.toThrow("User not found");
-  });
-});
-
-Test Behavior, Not Implementation: Focus on inputs and outputs. Don't write tests that break just because you renamed a state variable.
-
-Isolate Tests: Use beforeEach and afterEach to reset mocks and clean up the DOM. One test should never affect another.
-
-Query by Accessibility (A11y): Prefer getByRole over getByTestId or getByClassName. It ensures your app works for screen readers too.
-
-Further Reading
-Jest Official Documentation
-
-React Testing Library
-
-Common Testing Mistakes by Kent C. Dodds
-</file>
-
-<file path="content/docs/version-control/branching.mdx">
----
-title: "Branching Strategies (Production-Grade)"
-category: "version-control"
-summary: "Master enterprise-level Git branching. Learn Trunk-Based Development vs. GitFlow and how to manage parallel feature development safely."
-readingTime: 20
----
-
-## Introduction
-
-In enterprise environments, branching is the backbone of parallel development. How you branch determines how fast you can ship code and how often you get stuck in merge conflicts.
-
----
-
-## 1. The Strategy: Trunk-Based Development
-
-High-performing teams (like those at Google and Facebook) prefer **Trunk-Based Development** over complex GitFlow. It keeps branches short-lived (1-2 days) and forces frequent merges to `main`.
-
-```bash
-# Workflow for a developer
-git checkout main
-git pull origin main
-
-# Create a short-lived branch
-git checkout -b feat/add-search-bar
-
-# Work, commit, and sync with main frequently
-git add .
-git commit -m "feat(search): add search input component"
-git rebase origin/main 
-
-# Push and merge to main immediately
-git push -u origin feat/add-search-bar
-
-Summary & Best Practices
-Short-lived branches: Merge to main within 24-48 hours.
-
-Rebase frequently: Stay synced with main to avoid massive "merge hell" later.
-
-Feature Flags: Use feature flags to hide incomplete code in main rather than keeping long-lived branches.
-
-Further Reading
-Trunk Based Development
-
-Git Branching Strategy Guide
-
-2. Advanced Merge WorkflowWhen working in teams, you often need to coordinate between multiple features. Use this workflow to integrate work safely.Bash# Team lead sets up feature coordination
-
-# Create team feature branch (for integration testing)
-git checkout develop
-git pull origin develop
-git checkout -b feature/team-project
-git push -u origin feature/team-project
-
-# Team member: Works on authentication
-git checkout feature/team-project
-git checkout -b feature/auth-service
-
-# ... implements authentication ...
-git add src/auth/
-git commit -m "feat: add JWT authentication service"
-git push -u origin feature/auth-service
-
-# Team lead: Integration and final merge
-git checkout feature/team-project
-git pull origin feature/team-project
-
-# Run integration tests
-npm run test:integration
-
-# If all tests pass, merge to develop
-git checkout develop
-git merge --no-ff feature/team-project
-git push origin develop
-Summary & Best PracticesShort-lived branches: Merge to main within 24-48 hours.  Rebase frequently: Stay synced with main to avoid massive "merge hell" later.  Feature Flags: Use feature flags to hide incomplete code in main rather than keeping long-lived branches.  Further ReadingTrunk Based Development  Git Branching Strategy Guide
 </file>
 
 <file path="content/docs/version-control/git-basics.mdx">
@@ -10025,6 +9543,488 @@ Modifications to this file are automatically discarded.
   font-family: helvetica, arial, sans-serif;
 }
 </style><h1>JavaScript disabled</h1><p>Please <a href="https://www.enable-javascript.com/">enable JavaScript</a> in your browser and reload the page to proceed.</p></div></div></noscript></body></html>
+</file>
+
+<file path="content/docs/api-integration/rest.mdx">
+---
+title: "REST APIs Integration (Production-Grade)"
+category: "api-integration"
+summary: "Master enterprise-level REST API integration. Learn advanced fetch patterns, Next.js Route Handlers, error handling, and data validation using Zod."
+readingTime: 25
+---
+
+## Introduction
+
+In enterprise applications, interacting with REST APIs goes beyond a simple `fetch()` call. Production-grade API integration requires strict type safety, robust error handling, security (like hiding API keys), and efficient caching. 
+
+In this guide, we will explore how top-tier companies structure their API integrations using modern Next.js (App Router) features and industry-standard practices.
+
+---
+
+## 1. Building a Production-Ready API Route (Server-Side)
+
+In Next.js, we use **Route Handlers** to build backend endpoints securely. Never trust client data; always validate it. Industry standard is to use validation libraries like `Zod`.
+
+Here is a real-world example of a secure API endpoint that creates a user, similar to patterns found in large open-source projects like **Cal.com**:
+
+```typescript
+// app/api/users/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+
+// 1. Define strict validation schema using Zod
+const userSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  email: z.string().email("Invalid email format"),
+});
+
+export async function POST(request: NextRequest) {
+  try {
+    // 2. Parse and validate the incoming request body
+    const body = await request.json();
+    const validatedData = userSchema.parse(body);
+
+    // 3. Connect to Database (Mock example)
+    // const newUser = await prisma.user.create({ data: validatedData });
+    
+    // 4. Return success response with proper status code
+    return NextResponse.json(
+      { success: true, data: validatedData },
+      { status: 201 }
+    );
+
+  } catch (error) {
+    // 5. Professional Error Handling
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { success: false, message: "Validation failed", errors: error.errors },
+        { status: 400 }
+      );
+    }
+
+    console.error('[API_USER_POST_ERROR]', error);
+    return NextResponse.json(
+      { success: false, message: "Internal Server Error" },
+      { status: 500 }
+    );
+  }
+}
+2. The Enterprise Fetch Wrapper (Client-Side)
+Calling fetch directly in every component leads to code duplication and inconsistent error handling. Professional teams create a centralized API Client wrapper.
+
+Here is a production-grade utility for fetching data, handling Authorization headers, and parsing errors automatically:
+
+
+// lib/api-client.ts
+
+// Define standard API Error structure
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    public message: string,
+    public details?: any
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+interface FetchOptions extends RequestInit {
+  params?: Record<string, string>;
+}
+
+export async function fetchApi<T>(
+  endpoint: string, 
+  options: FetchOptions = {}
+): Promise<T> {
+  const { params, headers, ...customOptions } = options;
+  
+  // Construct URL with query parameters
+  const url = new URL(endpoint, process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000');
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      url.searchParams.append(key, value);
+    });
+  }
+
+  // Execute fetch with merged headers (e.g., Auth token)
+  const response = await fetch(url.toString(), {
+    headers: {
+      'Content-Type': 'application/json',
+      // 'Authorization': `Bearer ${process.env.API_TOKEN}`,
+      ...headers,
+    },
+    ...customOptions,
+  });
+
+  const data = await response.json().catch(() => null);
+
+  // Centralized Error Handling
+  if (!response.ok) {
+    throw new ApiError(
+      response.status,
+      data?.message || 'An unexpected error occurred',
+      data?.errors
+    );
+  }
+
+  return data as T;
+}
+Integrating API Client with React Components
+Now, let's see how a frontend developer uses the fetchApi wrapper inside a modern React component with proper loading and error states.
+
+Note: For complex data fetching, caching, and revalidation, companies highly recommend using libraries like TanStack Query (React Query) or SWR.
+
+
+// components/UserRegistration.tsx
+'use client';
+
+import { useState } from 'react';
+import { fetchApi, ApiError } from '@/lib/api-client';
+
+interface UserResponse {
+  success: boolean;
+  data: { name: string; email: string };
+}
+
+export default function UserRegistration() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+
+    const formData = new FormData(e.currentTarget);
+    const payload = {
+      name: formData.get('name') as string,
+      email: formData.get('email') as string,
+    };
+
+    try {
+      // Using our Enterprise Fetch Wrapper
+      const response = await fetchApi<UserResponse>('/api/users', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+
+      alert(`User ${response.data.name} registered successfully!`);
+      
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(`Error ${err.status}: ${err.message}`);
+      } else {
+        setError('A network error occurred. Please try again.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleRegister} className="space-y-4 max-w-md">
+      <div>
+        <input 
+          name="name" 
+          placeholder="Full Name" 
+          required 
+          className="border p-2 w-full rounded"
+        />
+      </div>
+      <div>
+        <input 
+          name="email" 
+          type="email" 
+          placeholder="Email Address" 
+          required 
+          className="border p-2 w-full rounded"
+        />
+      </div>
+      
+      {error && <div className="text-red-500 text-sm p-2 bg-red-50 rounded">{error}</div>}
+      
+      <button 
+        type="submit" 
+        disabled={isLoading}
+        className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+      >
+        {isLoading ? 'Registering...' : 'Register User'}
+      </button>
+    </form>
+  );
+}
+</file>
+
+<file path="content/docs/testing-debugging/unit-testing.mdx">
+---
+title: "Unit Testing (Production-Grade)"
+category: "testing-debugging"
+summary: "Master enterprise-level unit testing using Jest and React Testing Library. Learn to mock dependencies and write resilient tests."
+readingTime: 25
+---
+
+## Introduction
+
+In professional environments, testing is not optional. A single bug pushed to production can cost companies thousands of dollars. Enterprise teams don't use `console.log()` to test their code; they use automated testing frameworks like **Jest** and **React Testing Library (RTL)**.
+
+The golden rule of modern testing, coined by Kent C. Dodds, is: 
+> *"The more your tests resemble the way your software is used, the more confidence they can give you."*
+
+In this guide, we will look at production-grade testing patterns used in large open-source projects.
+
+---
+
+## 1. Testing Utility Functions (Business Logic)
+
+Utility functions contain the core business logic of your app. They are pure functions and should be tested thoroughly against all edge cases.
+
+Here is an example of testing a currency formatting function:
+
+```typescript
+// utils/currency.ts
+export function formatCurrency(amount: number, currencyCode: string = 'USD'): string {
+  if (amount < 0) throw new Error("Amount cannot be negative");
+  
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currencyCode,
+  }).format(amount);
+}
+
+,,,,
+And here is the production-grade test file:
+
+// utils/__tests__/currency.test.ts
+import { formatCurrency } from '../currency';
+
+describe('formatCurrency Utility', () => {
+  it('should format USD correctly', () => {
+    const result = formatCurrency(1250.5);
+    expect(result).toBe('$1,250.50');
+  });
+
+  it('should format EUR correctly', () => {
+    const result = formatCurrency(1250.5, 'EUR');
+    // The exact space character might differ, so we use string matching
+    expect(result).toMatch(/€1,250.50/);
+  });
+
+  it('should format zero correctly', () => {
+    const result = formatCurrency(0);
+    expect(result).toBe('$0.00');
+  });
+
+  it('should throw an error for negative amounts', () => {
+    // When testing for errors, wrap the function call inside an anonymous function
+    expect(() => formatCurrency(-100)).toThrow("Amount cannot be negative");
+  });
+});
+
+,,,
+Testing React Components (UI)
+When testing React components, we don't test the implementation details (like state variables). Instead, we test what the user sees and interacts with.
+
+Here is a standard Button component:
+
+
+// components/SubmitButton.tsx
+'use client';
+
+interface SubmitButtonProps {
+  onClick: () => void;
+  isLoading?: boolean;
+  children: React.ReactNode;
+}
+
+export default function SubmitButton({ onClick, isLoading, children }: SubmitButtonProps) {
+  return (
+    <button 
+      onClick={onClick} 
+      disabled={isLoading}
+      className={`px-4 py-2 bg-blue-600 text-white rounded ${isLoading ? 'opacity-50' : ''}`}
+    >
+      {isLoading ? 'Processing...' : children}
+    </button>
+  );
+}
+
+Here is how you write an interactive test for it using React Testing Library:
+
+
+// components/__tests__/SubmitButton.test.tsx
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import SubmitButton from '../SubmitButton';
+
+describe('SubmitButton Component', () => {
+  it('should render the children text correctly', () => {
+    render(<SubmitButton onClick="{()"> {}}>Save Data</SubmitButton>);
+    
+    // We query by Role, which ensures our component is accessible
+    const button = screen.getByRole('button', { name: /save data/i });
+    expect(button).toBeInTheDocument();
+    expect(button).not.toBeDisabled();
+  });
+
+  it('should show loading state and disable the button', () => {
+    render(<SubmitButton onClick="{()"> {}} isLoading={true}>Save Data</SubmitButton>);
+    
+    const button = screen.getByRole('button', { name: /processing/i });
+    expect(button).toBeInTheDocument();
+    expect(button).toBeDisabled();
+  });
+
+  it('should fire the onClick handler exactly once when clicked', async () => {
+    // 1. Setup a mock function (spy)
+    const mockOnClick = jest.fn();
+    
+    // 2. Render the component
+    render(<SubmitButton onClick="{mockOnClick}">Save Data</SubmitButton>);
+    
+    // 3. Simulate real user interaction
+    const button = screen.getByRole('button', { name: /save data/i });
+    await userEvent.click(button);
+    
+    // 4. Assert the result
+    expect(mockOnClick).toHaveBeenCalledTimes(1);
+  });
+});
+
+,,,,
+Mocking External API Calls (Advanced)
+In a real app, your components will fetch data from an API. During tests, we must never hit the real API. It makes tests slow, flaky, and dependent on network status. Instead, we use "Mocks".
+
+// services/__tests__/userService.test.ts
+import { fetchUserData } from '../userService';
+
+// 1. Mock the global fetch function
+global.fetch = jest.fn();
+
+describe('UserService - fetchUserData', () => {
+  beforeEach(() => {
+    // Clear mocks before every test to ensure isolation
+    jest.clearAllMocks();
+  });
+
+  it('should return user data on successful API call', async () => {
+    // 2. Define the fake data we want our mock API to return
+    const mockUser = { id: 1, name: 'Alice', role: 'admin' };
+    
+    // 3. Force fetch to return a successful Promise with our fake data
+    (fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockUser,
+    });
+
+    // 4. Call the actual function
+    const result = await fetchUserData(1);
+
+    // 5. Verify the behavior
+    expect(result).toEqual(mockUser);
+    expect(fetch).toHaveBeenCalledWith('[https://api.example.com/users/1](https://api.example.com/users/1)');
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('should throw an error when the API fails', async () => {
+    (fetch as jest.Mock).mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+    });
+
+    await expect(fetchUserData(999)).rejects.toThrow("User not found");
+  });
+});
+
+Test Behavior, Not Implementation: Focus on inputs and outputs. Don't write tests that break just because you renamed a state variable.
+
+Isolate Tests: Use beforeEach and afterEach to reset mocks and clean up the DOM. One test should never affect another.
+
+Query by Accessibility (A11y): Prefer getByRole over getByTestId or getByClassName. It ensures your app works for screen readers too.
+
+Further Reading
+Jest Official Documentation
+
+React Testing Library
+
+Common Testing Mistakes by Kent C. Dodds
+</file>
+
+<file path="content/docs/version-control/branching.mdx">
+---
+title: "Branching Strategies (Production-Grade)"
+category: "version-control"
+summary: "Master enterprise-level Git branching. Learn Trunk-Based Development vs. GitFlow and how to manage parallel feature development safely."
+readingTime: 20
+---
+
+## Introduction
+
+In enterprise environments, branching is the backbone of parallel development. How you branch determines how fast you can ship code and how often you get stuck in merge conflicts.
+
+---
+
+## 1. The Strategy: Trunk-Based Development
+
+High-performing teams (like those at Google and Facebook) prefer **Trunk-Based Development** over complex GitFlow. It keeps branches short-lived (1-2 days) and forces frequent merges to `main`.
+
+```bash
+# Workflow for a developer
+git checkout main
+git pull origin main
+
+# Create a short-lived branch
+git checkout -b feat/add-search-bar
+
+# Work, commit, and sync with main frequently
+git add .
+git commit -m "feat(search): add search input component"
+git rebase origin/main 
+
+# Push and merge to main immediately
+git push -u origin feat/add-search-bar
+
+Summary & Best Practices
+Short-lived branches: Merge to main within 24-48 hours.
+
+Rebase frequently: Stay synced with main to avoid massive "merge hell" later.
+
+Feature Flags: Use feature flags to hide incomplete code in main rather than keeping long-lived branches.
+
+Further Reading
+Trunk Based Development
+
+Git Branching Strategy Guide
+
+2. Advanced Merge WorkflowWhen working in teams, you often need to coordinate between multiple features. Use this workflow to integrate work safely.Bash# Team lead sets up feature coordination
+
+# Create team feature branch (for integration testing)
+git checkout develop
+git pull origin develop
+git checkout -b feature/team-project
+git push -u origin feature/team-project
+
+# Team member: Works on authentication
+git checkout feature/team-project
+git checkout -b feature/auth-service
+
+# ... implements authentication ...
+git add src/auth/
+git commit -m "feat: add JWT authentication service"
+git push -u origin feature/auth-service
+
+# Team lead: Integration and final merge
+git checkout feature/team-project
+git pull origin feature/team-project
+
+# Run integration tests
+npm run test:integration
+
+# If all tests pass, merge to develop
+git checkout develop
+git merge --no-ff feature/team-project
+git push origin develop
+Summary & Best PracticesShort-lived branches: Merge to main within 24-48 hours.  Rebase frequently: Stay synced with main to avoid massive "merge hell" later.  Feature Flags: Use feature flags to hide incomplete code in main rather than keeping long-lived branches.  Further ReadingTrunk Based Development  Git Branching Strategy Guide
 </file>
 
 <file path="content/docs/algorithms.md">
