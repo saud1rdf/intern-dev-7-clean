@@ -1,97 +1,38 @@
 ---
 title: "Unit Testing (Production-Grade)"
-category: "testing-debugging"
+category: "Testing & Debugging"
 summary: "Master enterprise-level unit testing using Jest and React Testing Library. Learn to mock dependencies and write resilient tests."
 readingTime: 25
 ---
 
-## Introduction
+# Unit Testing (Production-Grade)
 
+## Overview & The Why (لماذا هذا المفهوم حيوي؟)
 In professional environments, testing is not optional. A single bug pushed to production can cost companies thousands of dollars. Enterprise teams don't use `console.log()` to test their code; they use automated testing frameworks like **Jest** and **React Testing Library (RTL)**.
 
-The golden rule of modern testing, coined by Kent C. Dodds, is: 
-> *"The more your tests resemble the way your software is used, the more confidence they can give you."*
+## Key Concepts (المفاهيم الأساسية)
+- **Test Behavior, Not Implementation**: Focus on inputs and outputs. Don't write tests that break just because you renamed a variable.
+- **Isolate Tests**: Use `beforeEach` and `afterEach` to reset mocks and clean up the DOM. One test should never affect another.
+- **Query by Accessibility (A11y)**: Prioritize `getByRole` over `getByTestId` to ensure your app works for screen readers.
 
-In this guide, we will look at production-grade testing patterns used in large open-source projects.
+## Production-Grade Code (الشيفرة البرمجية الإنتاجية)
 
----
-
-## 1. Testing Utility Functions (Business Logic)
-
-Utility functions contain the core business logic of your app. They are pure functions and should be tested thoroughly against all edge cases.
-
-Here is an example of testing a currency formatting function:
-
+### 1. Testing Utility Functions
 ```typescript
-// utils/currency.ts
-export function formatCurrency(amount: number, currencyCode: string = 'USD'): string {
-  if (amount < 0) throw new Error("Amount cannot be negative");
-  
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currencyCode,
-  }).format(amount);
-}
-
-,,,,
-And here is the production-grade test file:
-
 // utils/__tests__/currency.test.ts
 import { formatCurrency } from '../currency';
 
 describe('formatCurrency Utility', () => {
   it('should format USD correctly', () => {
-    const result = formatCurrency(1250.5);
-    expect(result).toBe('$1,250.50');
-  });
-
-  it('should format EUR correctly', () => {
-    const result = formatCurrency(1250.5, 'EUR');
-    // The exact space character might differ, so we use string matching
-    expect(result).toMatch(/€1,250.50/);
-  });
-
-  it('should format zero correctly', () => {
-    const result = formatCurrency(0);
-    expect(result).toBe('$0.00');
+    expect(formatCurrency(1250.5)).toBe('$1,250.50');
   });
 
   it('should throw an error for negative amounts', () => {
-    // When testing for errors, wrap the function call inside an anonymous function
     expect(() => formatCurrency(-100)).toThrow("Amount cannot be negative");
   });
 });
 
-,,,
-Testing React Components (UI)
-When testing React components, we don't test the implementation details (like state variables). Instead, we test what the user sees and interacts with.
-
-Here is a standard Button component:
-
-
-// components/SubmitButton.tsx
-'use client';
-
-interface SubmitButtonProps {
-  onClick: () => void;
-  isLoading?: boolean;
-  children: React.ReactNode;
-}
-
-export default function SubmitButton({ onClick, isLoading, children }: SubmitButtonProps) {
-  return (
-    <button 
-      onClick={onClick} 
-      disabled={isLoading}
-      className={`px-4 py-2 bg-blue-600 text-white rounded ${isLoading ? 'opacity-50' : ''}`}
-    >
-      {isLoading ? 'Processing...' : children}
-    </button>
-  );
-}
-
-Here is how you write an interactive test for it using React Testing Library:
-
+2. Testing React Components
 
 // components/__tests__/SubmitButton.test.tsx
 import { render, screen } from '@testing-library/react';
@@ -99,93 +40,13 @@ import userEvent from '@testing-library/user-event';
 import SubmitButton from '../SubmitButton';
 
 describe('SubmitButton Component', () => {
-  it('should render the children text correctly', () => {
-    render(<SubmitButton onClick="{()"> {}}>Save Data</SubmitButton>);
-    
-    // We query by Role, which ensures our component is accessible
-    const button = screen.getByRole('button', { name: /save data/i });
-    expect(button).toBeInTheDocument();
-    expect(button).not.toBeDisabled();
-  });
-
-  it('should show loading state and disable the button', () => {
-    render(<SubmitButton onClick="{()"> {}} isLoading={true}>Save Data</SubmitButton>);
-    
-    const button = screen.getByRole('button', { name: /processing/i });
-    expect(button).toBeInTheDocument();
-    expect(button).toBeDisabled();
-  });
-
-  it('should fire the onClick handler exactly once when clicked', async () => {
-    // 1. Setup a mock function (spy)
+  it('should fire the onClick handler when clicked', async () => {
     const mockOnClick = jest.fn();
-    
-    // 2. Render the component
     render(<SubmitButton onClick="{mockOnClick}">Save Data</SubmitButton>);
     
-    // 3. Simulate real user interaction
     const button = screen.getByRole('button', { name: /save data/i });
     await userEvent.click(button);
     
-    // 4. Assert the result
     expect(mockOnClick).toHaveBeenCalledTimes(1);
   });
 });
-
-,,,,
-Mocking External API Calls (Advanced)
-In a real app, your components will fetch data from an API. During tests, we must never hit the real API. It makes tests slow, flaky, and dependent on network status. Instead, we use "Mocks".
-
-// services/__tests__/userService.test.ts
-import { fetchUserData } from '../userService';
-
-// 1. Mock the global fetch function
-global.fetch = jest.fn();
-
-describe('UserService - fetchUserData', () => {
-  beforeEach(() => {
-    // Clear mocks before every test to ensure isolation
-    jest.clearAllMocks();
-  });
-
-  it('should return user data on successful API call', async () => {
-    // 2. Define the fake data we want our mock API to return
-    const mockUser = { id: 1, name: 'Alice', role: 'admin' };
-    
-    // 3. Force fetch to return a successful Promise with our fake data
-    (fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockUser,
-    });
-
-    // 4. Call the actual function
-    const result = await fetchUserData(1);
-
-    // 5. Verify the behavior
-    expect(result).toEqual(mockUser);
-    expect(fetch).toHaveBeenCalledWith('[https://api.example.com/users/1](https://api.example.com/users/1)');
-    expect(fetch).toHaveBeenCalledTimes(1);
-  });
-
-  it('should throw an error when the API fails', async () => {
-    (fetch as jest.Mock).mockResolvedValueOnce({
-      ok: false,
-      status: 404,
-    });
-
-    await expect(fetchUserData(999)).rejects.toThrow("User not found");
-  });
-});
-
-Test Behavior, Not Implementation: Focus on inputs and outputs. Don't write tests that break just because you renamed a state variable.
-
-Isolate Tests: Use beforeEach and afterEach to reset mocks and clean up the DOM. One test should never affect another.
-
-Query by Accessibility (A11y): Prefer getByRole over getByTestId or getByClassName. It ensures your app works for screen readers too.
-
-Further Reading
-Jest Official Documentation
-
-React Testing Library
-
-Common Testing Mistakes by Kent C. Dodds

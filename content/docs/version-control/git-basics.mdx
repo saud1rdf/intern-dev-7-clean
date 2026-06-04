@@ -1,419 +1,166 @@
+title: "Git Basics & Branching Strategies"
+category: "Version Control"
+summary: "Understand the core logic of distributed version control systems, standard branching mechanisms, three-way merge conflict resolutions, and automated SemVer release strategies."
+readingTime: 12
 ---
-title: "Git Basics"
-category: "version-control"
-summary: "Master Git fundamentals including repositories, commits, branches, and essential commands for version control."
-readingTime: 20
+
+# Git Basics & Branching Strategies
+
+## Overview & The Why (لماذا هذا المفهوم حيوي؟)
+In modern, high-availability enterprise environments, systems must track modifications with absolute mathematical certainty, auditability, and historical integrity. Version control is not merely a backup tool; it is the fundamental ledger of software state.
+
+Without a rigorous and auditable history:
+1. **Regression Profiling (git bisect)**: Isolating production bugs under load becomes a manual, slow search. Utilizing proper git mechanics permits binary searches on the commit graph to detect error commits in O(log N) iterations.
+2. **Deterministic Releases**: Automations (Semantic Versioning) cannot auto-generate Changelogs or compute precise semver increments if commit messages are unstructured or loose (squashing is helpful but structured headers are essential).
+3. **Reproducibility**: Compliance requirements mandate an untainted DAG (Directed Acyclic Graph) of commit signatures matching deployed container hashes.
+
 ---
 
-## Introduction
-
-Git is a distributed version control system created by Linus Torvalds in 2005. It has become the industry standard for tracking changes in source code during software development. Unlike centralized version control systems, Git allows every developer to have a complete copy of the repository history, enabling offline work, faster operations, and robust branching strategies.
-
-Understanding Git is fundamental for every software developer because version control is essential for collaboration, code backup, feature development, and project management. Git's flexibility and powerful features support workflows ranging from simple solo projects to large open-source collaborations with thousands of contributors.
-
-## When to Use Git
-
-Git is essential in virtually every software development scenario.
-
-### Code Version Tracking
-
-Git tracks every change made to your codebase, allowing you to see the complete history of modifications, who made them, and why. This is invaluable for understanding code evolution and troubleshooting issues.
-
-### Collaboration
-
-When multiple developers work on the same codebase, Git enables parallel development without interfering with each other's work. Features like branching and merging allow teams to work on features independently before combining their changes.
-
-### Backup and Recovery
-
-Git serves as a time machine for your code. If something breaks, you can easily revert to a previous working state. The distributed nature means every team member has a full backup of the repository.
-
-### Experimentation
-
-Git's branching capabilities allow you to experiment with new features or changes without affecting the main codebase. If experiments fail, you can simply discard the branch.
-
-## Key Concepts
-
-### Repository Initialization and Cloning
-
-```bash
-# Create a new Git repository in an existing directory
-cd my-project
-git init
-
-# Create a bare repository (for sharing)
-git init --bare
-
-# Clone an existing repository
-git clone https://github.com/username/repository.git
-
-# Clone with a specific directory name
-git clone https://github.com/username/repository.git my-project-name
-
-# Clone a specific branch
-git clone --branch develop https://github.com/username/repository.git
-
-# Clone with shallow history (faster)
-git clone --depth 1 https://github.com/username/repository.git
-```
-
-### Staging and Committing
-
-```bash
-# Check the status of your working directory
-git status
-
-# Stage specific files
-git add filename.js
-git add file1.txt file2.txt
-
-# Stage all changes
-git add .
-
-# Stage all changes with interactive selection
-git add -p
-
-# View staged changes
-git diff --cached
-
-# View all changes (staged and unstaged)
-git diff
-
-# Commit staged changes
-git commit -m "Add user authentication feature"
-
-# Commit with a detailed message
-git commit -m "Add user authentication feature
-
-This commit implements:
-- User registration with email validation
-- Login with JWT token generation
-- Password reset functionality
-- Session management
-
-Closes #42"
-
-# Amend the last commit (modify or add files)
-git commit --amend -m "Updated commit message"
-
-# Add files to the last commit without changing message
-git add forgotten-file.txt
-git commit --amend --no-edit
-
-# Change the last commit's author
-git commit --amend --author="New Name <newemail@example.com>"
-```
-
-### Viewing History
-
-```bash
-# View commit history
-git log
-
-# View compact history (one line per commit)
-git log --oneline
-
-# View history with graph
-git log --graph --oneline
-
-# View history for a specific file
-git log --follow filename.txt
-
-# View history with stats
-git log --stat
-
-# View history with diffs
-git log -p
-
-# View history for a specific author
-git log --author="John Doe"
-
-# View history for a date range
-git log --since="2024-01-01" --until="2024-12-31"
-
-# View history with search
-git log --grep="feature" --all
-
-# View the last N commits
-git log -5
-git log --max-count=10
-
-# View all branches in log
-git log --all --decorate --graph
-```
-
-### Undoing Changes
-
-```bash
-# Unstage a file (keep changes in working directory)
-git reset HEAD filename.txt
-git restore --staged filename.txt
-
-# Discard changes in working directory
-git checkout -- filename.txt
-git restore filename.txt
-
-# Discard all changes (WARNING: cannot undo)
-git checkout -- .
-git restore .
-
-# Undo the last commit (keep changes staged)
-git reset --soft HEAD~1
-
-# Undo the last commit (keep changes unstaged)
-git reset HEAD~1
-
-# Undo the last commit (discard all changes)
-git reset --hard HEAD~1
-
-# Undo specific commit (create new commit that undoes changes)
-git revert <commit-hash>
-
-# Undo the last N commits
-git revert --no-commit HEAD~3
-git revert --continue
-
-# Restore a deleted file
-git checkout -- filename.txt
-
-# Find a lost commit
-git reflog
-git checkout <commit-hash>
-
-# Create a new branch from a lost commit
-git branch recovery-branch <commit-hash>
-```
-
-### Working with Remotes
-
-```bash
-# List remote repositories
-git remote -v
-
-# Add a remote repository
-git remote add origin https://github.com/username/repository.git
-
-# Change remote URL
-git remote set-url origin https://github.com/username/new-repository.git
-
-# Rename remote
-git remote rename origin upstream
-
-# Remove remote
-git remote remove origin
-
-# Fetch changes from remote (without merging)
-git fetch origin
-
-# Fetch all remotes
-git fetch --all
-
-# Pull changes (fetch + merge)
-git pull origin main
-
-# Pull with rebase instead of merge
-git pull --rebase origin main
-
-# Push changes to remote
-git push origin main
-
-# Push to a new branch
-git push -u origin feature-branch
-
-# Push tags
-git push origin v1.0.0
-git push origin --delete v1.0.0
-
-# Delete remote branch
-git push origin --delete feature-branch
-
-# Force push (use with caution)
-git push --force origin main
-git push --force-with-lease origin main
-```
-
-### Tagging
-
-```bash
-# List tags
-git tag
-
-# Create an annotated tag
-git tag -a v1.0.0 -m "Release version 1.0.0"
-
-# Create a lightweight tag
-git tag v1.0.0
-
-# Tag a specific commit
-git tag -a v1.0.0 <commit-hash>
-
-# Tag with a GPG signature
-git tag -s v1.0.0 -m "Signed release"
-
-# View tag details
-git show v1.0.0
-
-# Delete tag locally
-git tag -d v1.0.0
-
-# Delete tag remotely
-git push origin --delete v1.0.0
-
-# Push all tags
-git push origin --tags
-```
-
-## Full Example: Feature Development Workflow
-
-```bash
-# 1. Start with an up-to-date main branch
-git checkout main
-git pull origin main
-
-# 2. Create a new feature branch
-git checkout -b feature/user-registration
-
-# 3. Make your changes
-# ... edit files ...
-
-# 4. Stage and commit changes
-git add .
-git commit -m "Add user registration form component
-
-- Created registration form with validation
-- Added password strength indicator
-- Implemented form submission handling
-
-Refs #123"
-
-# 5. Make more changes
-git add src/components/validation.ts
-git commit -m "Add email and password validation utilities
-
-- Implemented email format validation
-- Added password complexity requirements
-- Created reusable validation functions"
-
-# 6. Push branch to remote
-git push -u origin feature/user-registration
-
-# 7. Continue working on the feature
-git add src/api/auth.ts
-git commit -m "Implement registration API endpoint
-
-- Created POST /api/register endpoint
-- Added database user creation
-- Implemented error handling"
-
-# 8. Sync with main branch (rebase)
-git fetch origin
+## Key Concepts (المفاهيم الأساسية)
+
+- **The Git Object Database**: In Git, all contents are stored as content-addressable objects under three main structural classes:
+  - **Blobs**: Bare file content representation, excluding metadata or path hashes.
+  - **Trees**: Directional directories mapping filenames to nested trees or direct blobs.
+  - **Commits**: Cryptographically signed nodes identifying author stamps, timestamps, parent hashes, and pointers to root directory trees.
+- **DAG (Directed Acyclic Graph)**: Branches are not isolated directories; they are loose references (pointer files containing a single SHA-1 hash) shifting along historical commit vertices on an immutable graph.
+- **Trunk-Based Development**: Instead of maintaining highly concurrent, long-lived feature branches which yield extreme integration blockages (merge conflicts/friction), high-velocity teams rely on short-lived branches (1-2 days) merged frequently into the primary trunk (`main`), protected by feature flags to decouple releases from deployments.
+- **Conventional Commits**: A structured commit format (`<type>(<scope>): <description>`) that serves as programmatic metadata.
+
+---
+
+## Production-Grade Code (الشيفرة البرمجية الإنتاجية)
+
+### 1. Robust Three-way Merge conflict and Configuration (`.gitconfig`)
+The industry standard is to configure three-way merges with `diff3`, which displays the common base ancestor alongside modified segments to let engineers resolve merges with perfect technical evidence.
+
+```ini
+# ~/.gitconfig or .git/config
+[user]
+    name = Distinguished Technical Writer
+    email = documentation-lead@enterprise.com
+
+[core]
+    autocrlf = input
+    editor = code --wait
+    ignorecase = false
+
+[merge]
+    # Highlight original common ancestor content on conflict regions
+    conflictstyle = diff3
+    keepBackup = false
+
+[pull]
+    # Enforce rebase-first merges locally to deliver clean linear trees
+    rebase = true
+
+[alias]
+    # Interactive, color-coded topological commit layout
+    lg = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --date=relative
+    st = status -sb
+    amend = commit --amend --no-edit
+2. Guarding Commit Standards via Git Hooks (commitlint.config.json)
+Using husky and commitlint enforces high-quality semantic commits at the workstation stage:
+code
+JSON
+
+{
+  "extends": ["@commitlint/config-conventional"],
+  "rules": {
+    "type-enum": [
+      2,
+      "always",
+      [
+        "feat",
+        "fix",
+        "docs",
+        "style",
+        "refactor",
+        "perf",
+        "test",
+        "build",
+        "ci",
+        "chore",
+        "revert"
+      ]
+    ],
+    "subject-case": [2, "always", "sentence-case"],
+    "subject-empty": [2, "never"],
+    "subject-max-length": [2, "always", 72]
+  }
+}
+3. Automated Release Pipeline (.github/workflows/pipeline.yml)
+Compile and parse commit history using automated GitHub Actions to deploy releases precisely matching SemVer coordinates:
+code
+Yaml
+
+name: Continuous Release Process
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release:
+    name: Automatic Release compilation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Checkout Code Node
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Verified Dependencies
+        run: npm ci
+
+      - name: Verify Clean Build and Tests
+        run: |
+          npm run build
+          npm run test -- --coverage
+
+      - name: Run Semantic Release Gateway
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npx semantic-release
+
+CLI Reference Table (جدول المراجع والأوامر)
+Git Command
+Functional Enterprise Context
+Failure Recovery Path
+git checkout -b <name>
+Synthesizes and switches focus to a new branch ref pointing to HEAD.
+Delete draft ref local safely via git branch -D <name>.
 git rebase origin/main
+Relocates local commits on top of current main.
+In event of conflict, abort cleanly via git rebase --abort.
+git merge --no-ff <name>
+Integrates a branch, forcing creation of a discrete merge commit.
+Roll back full merge safely via git reset --hard HEAD~1.
+git cherry-pick <hash>
+Integrates exactly one commit node onto the current active branch.
+Reset tracking branch using git cherry-pick --abort.
 
-# 9. Resolve conflicts if any
-# ... edit conflicting files ...
-git add .
-git rebase --continue
+Best Practices (أفضل الممارسات التقنية)
+	1	Never Rebase Shared History: Rewriting or squashing public remote history damages workflows and forces coworkers into manual branch re-alignment. Only rebase local branches.
+	2	Use Atomic Commits: Keep every commit focused on a single logical change. Mixing formatting shifts, bugfixes, and code changes in one commit limits bisection capabilities.
+	3	Leverage Force-with-lease: When uploading rebased features, use git push --force-with-lease rather than normal force. This checks that no coworkers have written intermediate updates to the remote.
 
-# 10. Update remote with rebased changes
-git push --force-with-lease origin feature/user-registration
-
-# 11. After review, merge to main
-git checkout main
-git pull origin main
-git merge --no-ff feature/user-registration
-
-# Write a descriptive merge commit
-git commit -m "Merge feature/user-registration
-
-User registration feature including:
-- Registration form with client-side validation
-- Email and password validation utilities
-- Registration API endpoint
-
-Reviewed-by: @teammate
-Approved-by: @reviewer"
-
-# 12. Clean up feature branch
-git branch -d feature/user-registration
-git push origin --delete feature/user-registration
-```
-
-## Common Mistakes
-
-### Committing to Main Branch
-
-```bash
-# ❌ WRONG - Working directly on main
-git checkout main
-git add .
-git commit -m "WIP: lots of changes"
-# ... continues committing to main ...
-
-# ✅ CORRECT - Use feature branches
-git checkout -b feature/my-feature
-# ... make commits on feature branch ...
-git checkout main
-```
-
-### Not Using .gitignore
-
-```bash
-# ❌ WRONG - Committing all files including build artifacts
-git add .
-# Commits node_modules, .env, build/, dist/
-
-# ✅ CORRECT - Create .gitignore
-# .gitignore
-node_modules/
-.env
-.env.local
-build/
-dist/
-*.log
-.DS_Store
-.idea/
-.vscode/
-*.swp
-*.swo
-```
-
-### Force Pushing to Shared Branches
-
-```bash
-# ❌ WRONG - Force pushing to main or shared branches
-git push --force origin main
-# This can overwrite others' commits!
-
-# ✅ CORRECT - Never force push to shared branches
-# Use rebase locally, then merge
-# Or use force-with-lease (safer)
-git push --force-with-lease origin feature-branch
-```
-
-### Large Commits
-
-```bash
-# ❌ WRONG - Giant commit with many unrelated changes
-git add .
-git commit -m "Lots of changes: fixed bug, added feature, updated styles"
-
-# ✅ CORRECT - Atomic commits (one purpose per commit)
-git commit -m "Fix: correct validation error message"
-git commit -m "Feat: add user profile page"
-git commit -m "Style: update button colors"
-```
-
-## Exercises
-
-1. **Repository Setup**: Initialize a new Git repository, create a .gitignore file, make your first commit, and push to GitHub.
-
-2. **Branch Management Practice**: Create multiple branches for different features, switch between them, merge them, and resolve conflicts.
-
-3. **History Exploration**: Use git log, git blame, and git bisect to understand a codebase's history and find when a bug was introduced.
-
-4. **Undo Scenarios**: Practice various undo operations including git reset, git revert, and git checkout to understand when to use each.
-
-## Sources
-
-- [Git Official Documentation](https://git-scm.com/doc)
-- [Git Book](https://git-scm.com/book/en/v2)
-- [Git Internals](https://git-scm.com/book/en/v2/Git-Internals)
+Deep Reading & References
+	1	Git Internals Deep Dive: https://git-scm.com/book/en/v2/Git-Internals
+	2	Conventional Commits Standard: https://www.conventionalcommits.org/
+	3	Semantic Release Engine Specs: https://github.com/semantic-release/semantic-release
+	4	Atlassian Git Workflows Guide: https://www.atlassian.com/git/tutorials/comparing-workflows
+	5	Git Bisect Performance and Troubleshooting: https://git-scm.com/docs/git-bisect
+code
+Code

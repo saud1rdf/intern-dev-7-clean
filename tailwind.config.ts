@@ -1,4 +1,5 @@
 import type { Config } from 'tailwindcss'
+import typography from '@tailwindcss/typography'
 
 const config: Config = {
   content: [
@@ -27,16 +28,10 @@ const config: Config = {
         'arabic': ['Cairo', 'Arial', 'sans-serif'],
         'english': ['Inter', 'system-ui', 'sans-serif'],
       },
-      // La propiedad 'direction' no es una propiedad estándar de Tailwind CSS para aplicar directamente en la configuración.
-      // Si necesitas RTL/LTR, deberías aplicarlo a través de clases CSS o lógica de componentes.
-      // direction: {
-      //   'rtl': 'rtl',
-      //   'ltr': 'ltr',
-      // },
     },
   },
   plugins: [
-    require('@tailwindcss/typography'),
+    typography,
   ],
 }
-export default config
+export default config;

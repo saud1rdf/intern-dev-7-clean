@@ -1,208 +1,80 @@
----
-title: "REST APIs Integration (Production-Grade)"
-category: "api-integration"
-summary: "Master enterprise-level REST API integration. Learn advanced fetch patterns, Next.js Route Handlers, error handling, and data validation using Zod."
-readingTime: 25
----
-
-## Introduction
-
-In enterprise applications, interacting with REST APIs goes beyond a simple `fetch()` call. Production-grade API integration requires strict type safety, robust error handling, security (like hiding API keys), and efficient caching. 
-
-In this guide, we will explore how top-tier companies structure their API integrations using modern Next.js (App Router) features and industry-standard practices.
-
+title: "REST API Integration & Defensive Validation"
+category: "API Integration"
+summary: "Build type-safe defensive API clients. Master Zod runtime schema verification, server proxy integration with retry backoffs, and strict cookie headers."
+readingTime: 15
 ---
 
-## 1. Building a Production-Ready API Route (Server-Side)
+# REST API Integration & Defensive Validation
 
-In Next.js, we use **Route Handlers** to build backend endpoints securely. Never trust client data; always validate it. Industry standard is to use validation libraries like `Zod`.
+## Overview & The Why (لماذا هذا المفهوم حيوي؟)
+In modern web architectures, API integrations are the critical point of contact between your frontend and the network. Frontend architectures that rely on loose types like `any` are vulnerable to **Schema Drift**—where backend changes break your UI without warning. Professional teams mitigate this by validating data at the network boundary using schemas (Zod).
 
-Here is a real-world example of a secure API endpoint that creates a user, similar to patterns found in large open-source projects like **Cal.com**:
+## Key Concepts (المفاهيم الأساسية)
+- **Defensive Client Patterns**: Validate payload structures before they reach your state managers.
+- **Server API Proxy Routes**: Query third-party services via secure Server-Side Node.js proxies to hide credentials.
+- **Exponential Backoff**: Implement retry logic to handle transient network failures gracefully.
 
+## Production-Grade Code (الشيفرة البرمجية الإنتاجية)
+
+### 1. Resilient API Fetch Wrapper (`lib/api-client.ts`)
 ```typescript
-// app/api/users/route.ts
-import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
-// 1. Define strict validation schema using Zod
-const userSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Invalid email format"),
-});
-
-export async function POST(request: NextRequest) {
-  try {
-    // 2. Parse and validate the incoming request body
-    const body = await request.json();
-    const validatedData = userSchema.parse(body);
-
-    // 3. Connect to Database (Mock example)
-    // const newUser = await prisma.user.create({ data: validatedData });
-    
-    // 4. Return success response with proper status code
-    return NextResponse.json(
-      { success: true, data: validatedData },
-      { status: 201 }
-    );
-
-  } catch (error) {
-    // 5. Professional Error Handling
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { success: false, message: "Validation failed", errors: error.errors },
-        { status: 400 }
-      );
-    }
-
-    console.error('[API_USER_POST_ERROR]', error);
-    return NextResponse.json(
-      { success: false, message: "Internal Server Error" },
-      { status: 500 }
-    );
-  }
-}
-2. The Enterprise Fetch Wrapper (Client-Side)
-Calling fetch directly in every component leads to code duplication and inconsistent error handling. Professional teams create a centralized API Client wrapper.
-
-Here is a production-grade utility for fetching data, handling Authorization headers, and parsing errors automatically:
-
-
-// lib/api-client.ts
-
-// Define standard API Error structure
-export class ApiError extends Error {
-  constructor(
-    public status: number,
-    public message: string,
-    public details?: any
-  ) {
-    super(message);
-    this.name = 'ApiError';
-  }
-}
-
-interface FetchOptions extends RequestInit {
-  params?: Record<string, string>;
-}
-
-export async function fetchApi<T>(
-  endpoint: string, 
-  options: FetchOptions = {}
-): Promise<T> {
-  const { params, headers, ...customOptions } = options;
+export async function defensiveFetch<TSchema extends z.ZodTypeAny>(
+  url: string,
+  schema: TSchema,
+  options: RequestInit = {}
+): Promise<z.infer<TSchema>> {
+  const response = await fetch(url, options);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
   
-  // Construct URL with query parameters
-  const url = new URL(endpoint, process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000');
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      url.searchParams.append(key, value);
-    });
+  const rawData = await response.json();
+  const validationResult = schema.safeParse(rawData);
+  
+  if (!validationResult.success) {
+    console.error('[SCHEMA_DRIFT]', validationResult.error.format());
+    throw new Error('Integrity validation failed');
   }
+  return validationResult.data;
+}
+API Reference TableMethodPurposeBest PracticeGETRetrieve resourcesAlways paginatePOSTCreate resourceValidate schemaPATCHPartial updateIdempotent designBest PracticesNever use any for API responses.Implement global timeouts for all fetch requests.
+---
 
-  // Execute fetch with merged headers (e.g., Auth token)
-  const response = await fetch(url.toString(), {
-    headers: {
-      'Content-Type': 'application/json',
-      // 'Authorization': `Bearer ${process.env.API_TOKEN}`,
-      ...headers,
+### 3. `content/docs/api-integration/graphql.mdx`
+```markdown
+---
+title: "GraphQL Integration with Apollo"
+category: "API Integration"
+summary: "Master enterprise GraphQL integrations. Implement normalized cache configurations and type-safe query generation."
+readingTime: 15
+---
+
+# GraphQL Integration with Apollo Client
+
+## Overview & The Why (لماذا هذا المفهوم حيوي؟)
+GraphQL allows clients to request exact data shapes. In large systems, this prevents over-fetching. However, unoptimized GraphQL can lead to **N+1 Query Problems** where a single request triggers dozens of database hits. We solve this using normalized caches and batch loaders.
+
+## Key Concepts (المفاهيم الأساسية)
+- **Normalized Client Cache**: Storing records uniquely by ID to prevent stale visual states.
+- **Type-Safe Queries (Codegen)**: Generating TypeScript types from GraphQL AST to guarantee safety.
+
+## Production-Grade Code (الشيفرة البرمجية الإنتاجية)
+
+### 1. Apollo Client Config (`lib/apollo-client.ts`)
+```typescript
+import { ApolloClient, InMemoryCache } from '@apollo/client';
+
+export const apolloClient = new ApolloClient({
+  uri: process.env.NEXT_PUBLIC_GRAPHQL_API_URL,
+  cache: new InMemoryCache({
+    typePolicies: {
+      Query: {
+        fields: {
+          users: {
+            merge(existing = [], incoming) { return [...existing, ...incoming]; },
+          },
+        },
+      },
     },
-    ...customOptions,
-  });
-
-  const data = await response.json().catch(() => null);
-
-  // Centralized Error Handling
-  if (!response.ok) {
-    throw new ApiError(
-      response.status,
-      data?.message || 'An unexpected error occurred',
-      data?.errors
-    );
-  }
-
-  return data as T;
-}
-Integrating API Client with React Components
-Now, let's see how a frontend developer uses the fetchApi wrapper inside a modern React component with proper loading and error states.
-
-Note: For complex data fetching, caching, and revalidation, companies highly recommend using libraries like TanStack Query (React Query) or SWR.
-
-
-// components/UserRegistration.tsx
-'use client';
-
-import { useState } from 'react';
-import { fetchApi, ApiError } from '@/lib/api-client';
-
-interface UserResponse {
-  success: boolean;
-  data: { name: string; email: string };
-}
-
-export default function UserRegistration() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-
-    const formData = new FormData(e.currentTarget);
-    const payload = {
-      name: formData.get('name') as string,
-      email: formData.get('email') as string,
-    };
-
-    try {
-      // Using our Enterprise Fetch Wrapper
-      const response = await fetchApi<UserResponse>('/api/users', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      });
-
-      alert(`User ${response.data.name} registered successfully!`);
-      
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(`Error ${err.status}: ${err.message}`);
-      } else {
-        setError('A network error occurred. Please try again.');
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <form onSubmit={handleRegister} className="space-y-4 max-w-md">
-      <div>
-        <input 
-          name="name" 
-          placeholder="Full Name" 
-          required 
-          className="border p-2 w-full rounded"
-        />
-      </div>
-      <div>
-        <input 
-          name="email" 
-          type="email" 
-          placeholder="Email Address" 
-          required 
-          className="border p-2 w-full rounded"
-        />
-      </div>
-      
-      {error && <div className="text-red-500 text-sm p-2 bg-red-50 rounded">{error}</div>}
-      
-      <button 
-        type="submit" 
-        disabled={isLoading}
-        className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
-      >
-        {isLoading ? 'Registering...' : 'Register User'}
-      </button>
-    </form>
-  );
-}
+  }),
+});
