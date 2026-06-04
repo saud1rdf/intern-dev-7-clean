@@ -5,7 +5,7 @@ import TableOfContents from '@/components/docs/TableOfContents';
 import DocContent from './DocContent';
 
 interface PageProps {
-  params: Promise<{ slug: string[] }>;
+  params: { slug: string[] };
 }
 
 // Disable static generation for this page to avoid React version conflicts
@@ -28,7 +28,7 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: PageProps) {
-  const { slug } = await params;
+  const { slug } = params;
   const doc = getDocBySlug(slug);
   
   if (!doc) {
@@ -44,7 +44,7 @@ export async function generateMetadata({ params }: PageProps) {
 }
 
 export default async function DocPage({ params }: PageProps) {
-  const { slug } = await params;
+  const { slug } = params;
   
   // Validate slug length
   if (slug.length < 2) {
