@@ -19,9 +19,9 @@ export async function generateStaticParams() {
       });
     }
   }
-  
   return params;
 }
+
 
 export async function generateMetadata(props: PageProps) {
   const params = await props.params;
