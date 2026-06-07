@@ -8,9 +8,6 @@ interface PageProps {
   params: { slug: string[] };
 }
 
-
-
-
 export async function generateStaticParams() {
   const meta = getSidebarMeta();
   const params: { slug: string[] }[] = [];
@@ -42,10 +39,9 @@ export async function generateMetadata({ params }: PageProps) {
   };
 }
 
-export default async function DocPage({ params }: PageProps) {
+export default function DocPage({ params }: PageProps) {
   const { slug } = params;
   
-  // Validate slug length
   if (slug.length < 2) {
     notFound();
   }
@@ -81,24 +77,23 @@ export default async function DocPage({ params }: PageProps) {
             </span>
           </nav>
           
-          {/* Article */}
-          <article className="prose prose-neutral max-w-none dark:prose-invert prose-headings:scroll-mt-24 prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline dark:prose-a:text-blue-400 prose-pre:bg-gray-900 prose-pre:border prose-pre:border-gray-800">
+          {/* Article Header */}
+          <header className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
               {doc.frontmatter.title}
             </h1>
-            
-            <p className="text-lg text-gray-600 dark:text-gray-400">
+            <p className="mt-2 text-lg text-gray-600 dark:text-gray-400">
               {doc.frontmatter.summary}
             </p>
-            
-            <div className="my-4 flex items-center gap-4 text-sm text-gray-500">
+            <div className="mt-4 flex items-center gap-4 text-sm text-gray-500">
               <span>{doc.frontmatter.readingTime} min read</span>
             </div>
-            
-            <hr className="my-8 border-gray-200 dark:border-gray-800" />
-            
-            <DocContent content={doc.content} />
-          </article>
+            <hr className="mt-8 border-gray-200 dark:border-gray-800" />
+          </header>
+
+          {/* Render the MDX Content properly */}
+          <DocContent content={doc.content} />
+          
         </div>
       </main>
       
