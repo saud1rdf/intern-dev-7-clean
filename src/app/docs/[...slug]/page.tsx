@@ -8,9 +8,8 @@ interface PageProps {
   params: { slug: string[] };
 }
 
-// Disable static generation for this page to avoid React version conflicts
-export const dynamic = 'force-dynamic';
-export const dynamicParams = true;
+
+
 
 export async function generateStaticParams() {
   const meta = getSidebarMeta();
