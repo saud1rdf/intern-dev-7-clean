@@ -39,9 +39,10 @@ export async function generateMetadata({ params }: PageProps) {
   };
 }
 
-export default function DocPage({ params }: PageProps) {
+export default async function DocPage({ params }: PageProps) {
   const { slug } = params;
   
+  // Validate slug length
   if (slug.length < 2) {
     notFound();
   }
@@ -56,14 +57,11 @@ export default function DocPage({ params }: PageProps) {
   
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
-      {/* Sidebar */}
       <DocsSidebar />
-      
-      {/* Main content */}
       <main className="lg:pl-64">
         <div className="mx-auto max-w-3xl px-6 py-8 lg:px-8">
           {/* Breadcrumb */}
-          <nav className="mb-6 flex items-center text-sm text-gray-500">
+          <nav className="mb-6 flex items-center text-sm text-gray-500 font-sans">
             <a href="/docs" className="hover:text-blue-600">
               Docs
             </a>
@@ -77,23 +75,25 @@ export default function DocPage({ params }: PageProps) {
             </span>
           </nav>
           
-          {/* Article Header */}
-          <header className="mb-8">
+          {/* Article with clean slate style typography */}
+          <article className="prose prose-neutral max-w-none dark:prose-invert prose-headings:scroll-mt-24 prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline dark:prose-a:text-blue-400 prose-pre:bg-gray-900 prose-pre:border prose-pre:border-gray-800">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
               {doc.frontmatter.title}
             </h1>
-            <p className="mt-2 text-lg text-gray-600 dark:text-gray-400">
+            
+            <p className="text-lg text-gray-600 dark:text-gray-400 mt-2">
               {doc.frontmatter.summary}
             </p>
-            <div className="mt-4 flex items-center gap-4 text-sm text-gray-500">
+            
+            <div className="my-4 flex items-center gap-4 text-sm text-gray-500">
               <span>{doc.frontmatter.readingTime} min read</span>
             </div>
-            <hr className="mt-8 border-gray-200 dark:border-gray-800" />
-          </header>
-
-          {/* Render the MDX Content properly */}
-          <DocContent content={doc.content} />
-          
+            
+            <hr className="my-8 border-gray-200 dark:border-gray-800" />
+            
+            {/* Flawless Server Component Integration */}
+            <DocContent content={doc.content} />
+          </article>
         </div>
       </main>
       
