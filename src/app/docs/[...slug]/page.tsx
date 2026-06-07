@@ -5,7 +5,7 @@ import TableOfContents from '@/components/docs/TableOfContents';
 import DocContent from './DocContent';
 
 interface PageProps {
-  params: { slug: string[] };
+  params: Promise<{ slug: string[] }>;
 }
 
 export async function generateStaticParams() {
@@ -23,7 +23,8 @@ export async function generateStaticParams() {
   return params;
 }
 
-export async function generateMetadata({ params }: PageProps) {
+export async function generateMetadata(props: PageProps) {
+  const params = await props.params;
   const { slug } = params;
   const doc = getDocBySlug(slug);
   
@@ -39,10 +40,10 @@ export async function generateMetadata({ params }: PageProps) {
   };
 }
 
-export default async function DocPage({ params }: PageProps) {
+export default async function DocPage(props: PageProps) {
+  const params = await props.params;
   const { slug } = params;
   
-  // Validate slug length
   if (slug.length < 2) {
     notFound();
   }
@@ -60,7 +61,6 @@ export default async function DocPage({ params }: PageProps) {
       <DocsSidebar />
       <main className="lg:pl-64">
         <div className="mx-auto max-w-3xl px-6 py-8 lg:px-8">
-          {/* Breadcrumb */}
           <nav className="mb-6 flex items-center text-sm text-gray-500 font-sans">
             <a href="/docs" className="hover:text-blue-600">
               Docs
@@ -75,30 +75,23 @@ export default async function DocPage({ params }: PageProps) {
             </span>
           </nav>
           
-          {/* Article with clean slate style typography */}
           <article className="prose prose-neutral max-w-none dark:prose-invert prose-headings:scroll-mt-24 prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline dark:prose-a:text-blue-400 prose-pre:bg-gray-900 prose-pre:border prose-pre:border-gray-800">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
               {doc.frontmatter.title}
             </h1>
-            
-            <p className="text-lg text-gray-600 dark:text-gray-400 mt-2">
+            <p className="mt-2 text-lg text-gray-600 dark:text-gray-400">
               {doc.frontmatter.summary}
             </p>
-            
-            <div className="my-4 flex items-center gap-4 text-sm text-gray-500">
+            <div className="mt-4 flex items-center gap-4 text-sm text-gray-500">
               <span>{doc.frontmatter.readingTime} min read</span>
             </div>
-            
             <hr className="my-8 border-gray-200 dark:border-gray-800" />
             
-            {/* Flawless Server Component Integration */}
             <DocContent content={doc.content} />
           </article>
         </div>
       </main>
-      
-      {/* Table of Contents */}
       <TableOfContents headings={headings} />
     </div>
   );
-}
+} 
