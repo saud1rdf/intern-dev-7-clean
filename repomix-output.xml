@@ -11558,66 +11558,6 @@ export async function POST(request: NextRequest) {
 }
 </file>
 
-<file path="src/app/docs/[...slug]/DocContent.tsx">
-'use client';
-
-import { MDXRemote } from 'next-mdx-remote/rsc';
-import remarkGfm from 'remark-gfm';
-
-interface DocContentProps {
-  content: string;
-}
-
-const components = {
-  pre: (props: React.HTMLAttributes<HTMLPreElement>) => (
-    <pre {...props} className="overflow-x-auto rounded-lg bg-gray-900 p-4 my-6 text-sm leading-relaxed text-gray-100 shadow-lg" />
-  ),
-  code: (props: React.HTMLAttributes<HTMLElement>) => {
-    const isInline = !props.className;
-    if (isInline) {
-      return (
-        <code className="rounded bg-gray-100 px-1.5 py-0.5 text-sm font-mono text-blue-600 dark:bg-gray-800 dark:text-blue-400" {...props} />
-      );
-    }
-    return <code className={props.className} {...props} />;
-  },
-  h2: (props: React.HTMLAttributes<HTMLHeadingElement>) => {
-    const text = String(props.children || '');
-    const slug = text.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+$/, '');
-    return <h2 id={slug} className="mt-10 mb-4 scroll-mt-24 text-2xl font-bold text-gray-900 dark:text-gray-100 border-b pb-2" {...props} />;
-  },
-  h3: (props: React.HTMLAttributes<HTMLHeadingElement>) => {
-    const text = String(props.children || '');
-    const slug = text.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+$/, '');
-    return <h3 id={slug} className="mt-8 mb-3 scroll-mt-24 text-xl font-semibold text-gray-900 dark:text-gray-100" {...props} />;
-  },
-  a: (props: React.AnchorHTMLAttributes<HTMLAnchorElement>) => {
-    const isExternal = props.href?.startsWith('http');
-    if (isExternal) {
-      return <a {...props} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 dark:text-blue-400 underline decoration-blue-300 underline-offset-2" />;
-    }
-    return <a {...props} className="text-blue-600 hover:text-blue-800 dark:text-blue-400 underline decoration-blue-300 underline-offset-2" />;
-  },
-};
-
-export default function DocContent({ content }: DocContentProps) {
-  return (
-    // هنا السر السحري (كلاس prose) الذي سيرتب الشرح ويفصله عن الكود بشكل جميل
-    <article className="prose prose-slate max-w-none dark:prose-invert prose-headings:font-bold prose-a:text-blue-600 prose-img:rounded-xl">
-      <MDXRemote
-        source={content}
-        components={components}
-        options={{
-          mdxOptions: {
-            remarkPlugins: [remarkGfm],
-          },
-        }}
-      />
-    </article>
-  );
-}
-</file>
-
 <file path="src/app/docs/[slug]/page.tsx">
 // This file is deprecated - use [...slug]/page.tsx instead
 import { redirect } from 'next/navigation';
@@ -13598,89 +13538,6 @@ export default defineConfig({
 })
 </file>
 
-<file path="content/docs/api-integration/rest.mdx">
-title: "REST API Integration & Defensive Validation"
-category: "API Integration"
-summary: "Build type-safe defensive API clients. Master Zod runtime schema verification, server proxy integration with retry backoffs, and strict cookie headers."
-readingTime: 15
----
-
-# REST API Integration & Defensive Validation
-
-## Overview & The Why (لماذا هذا المفهوم حيوي؟)
-In modern web architectures, API integrations are the critical point of contact between your frontend and the network. Frontend architectures that rely on loose types like `any` are vulnerable to **Schema Drift**—where backend changes break your UI without warning. Professional teams mitigate this by validating data at the network boundary using schemas (Zod).
-
-## Key Concepts (المفاهيم الأساسية)
-- **Defensive Client Patterns**: Validate payload structures before they reach your state managers.
-- **Server API Proxy Routes**: Query third-party services via secure Server-Side Node.js proxies to hide credentials.
-- **Exponential Backoff**: Implement retry logic to handle transient network failures gracefully.
-
-## Production-Grade Code (الشيفرة البرمجية الإنتاجية)
-
-### 1. Resilient API Fetch Wrapper (`lib/api-client.ts`)
-```typescript
-import { z } from 'zod';
-
-export async function defensiveFetch<TSchema extends z.ZodTypeAny>(
-  url: string,
-  schema: TSchema,
-  options: RequestInit = {}
-): Promise<z.infer<TSchema>> {
-  const response = await fetch(url, options);
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  
-  const rawData = await response.json();
-  const validationResult = schema.safeParse(rawData);
-  
-  if (!validationResult.success) {
-    console.error('[SCHEMA_DRIFT]', validationResult.error.format());
-    throw new Error('Integrity validation failed');
-  }
-  return validationResult.data;
-}
-API Reference TableMethodPurposeBest PracticeGETRetrieve resourcesAlways paginatePOSTCreate resourceValidate schemaPATCHPartial updateIdempotent designBest PracticesNever use any for API responses.Implement global timeouts for all fetch requests.
----
-
-### 3. `content/docs/api-integration/graphql.mdx`
-```markdown
----
-title: "GraphQL Integration with Apollo"
-category: "API Integration"
-summary: "Master enterprise GraphQL integrations. Implement normalized cache configurations and type-safe query generation."
-readingTime: 15
----
-
-# GraphQL Integration with Apollo Client
-
-## Overview & The Why (لماذا هذا المفهوم حيوي؟)
-GraphQL allows clients to request exact data shapes. In large systems, this prevents over-fetching. However, unoptimized GraphQL can lead to **N+1 Query Problems** where a single request triggers dozens of database hits. We solve this using normalized caches and batch loaders.
-
-## Key Concepts (المفاهيم الأساسية)
-- **Normalized Client Cache**: Storing records uniquely by ID to prevent stale visual states.
-- **Type-Safe Queries (Codegen)**: Generating TypeScript types from GraphQL AST to guarantee safety.
-
-## Production-Grade Code (الشيفرة البرمجية الإنتاجية)
-
-### 1. Apollo Client Config (`lib/apollo-client.ts`)
-```typescript
-import { ApolloClient, InMemoryCache } from '@apollo/client';
-
-export const apolloClient = new ApolloClient({
-  uri: process.env.NEXT_PUBLIC_GRAPHQL_API_URL,
-  cache: new InMemoryCache({
-    typePolicies: {
-      Query: {
-        fields: {
-          users: {
-            merge(existing = [], incoming) { return [...existing, ...incoming]; },
-          },
-        },
-      },
-    },
-  }),
-});
-</file>
-
 <file path="content/docs/testing-debugging/unit-testing.mdx">
 ---
 title: "Unit Testing (Production-Grade)"
@@ -14941,110 +14798,47 @@ export default function DocsPage() {
 }
 </file>
 
-<file path="src/app/docs/[...slug]/page.tsx">
-import { notFound } from 'next/navigation';
-import { getDocBySlug, getSidebarMeta, extractHeadings } from '@/lib/docs';
-import DocsSidebar from '@/components/docs/DocsSidebar';
-import TableOfContents from '@/components/docs/TableOfContents';
-import DocContent from './DocContent';
+<file path="content/docs/api-integration/rest.mdx">
+---
+title: "REST API Integration & Defensive Validation"
+category: "API Integration"
+summary: "Build type-safe defensive API clients. Master Zod runtime schema verification, server proxy integration with retry backoffs, and strict cookie headers."
+readingTime: 15
+---
 
-interface PageProps {
-  params: { slug: string[] };
-}
+# REST API Integration & Defensive Validation
 
-export async function generateStaticParams() {
-  const meta = getSidebarMeta();
-  const params: { slug: string[] }[] = [];
+## Overview & The Why (لماذا هذا المفهوم حيوي؟)
+In modern web architectures, API integrations are the critical point of contact between your frontend and the network. Frontend architectures that rely on loose types like `any` are vulnerable to **Schema Drift**—where backend changes break your UI without warning. Professional teams mitigate this by validating data at the network boundary using schemas (Zod).
+
+## Key Concepts (المفاهيم الأساسية)
+- **Defensive Client Patterns**: Validate payload structures before they reach your state managers.
+- **Server API Proxy Routes**: Query third-party services via secure Server-Side Node.js proxies to hide credentials.
+- **Exponential Backoff**: Implement retry logic to handle transient network failures gracefully.
+
+## Production-Grade Code (الشيفرة البرمجية الإنتاجية)
+
+### 1. Resilient API Fetch Wrapper (`lib/api-client.ts`)
+
+```typescript
+import { z } from 'zod';
+
+export async function defensiveFetch<TSchema extends z.ZodTypeAny>(
+  url: string,
+  schema: TSchema,
+  options: RequestInit = {}
+): Promise<z.infer<TSchema>> {
+  const response = await fetch(url, options);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
   
-  for (const category of meta) {
-    for (const page of category.pages) {
-      params.push({
-        slug: [category.slug, page.slug],
-      });
-    }
+  const rawData = await response.json();
+  const validationResult = schema.safeParse(rawData);
+  
+  if (!validationResult.success) {
+    console.error('[SCHEMA_DRIFT]', validationResult.error.format());
+    throw new Error('Integrity validation failed');
   }
-  
-  return params;
-}
-
-export async function generateMetadata({ params }: PageProps) {
-  const { slug } = params;
-  const doc = getDocBySlug(slug);
-  
-  if (!doc) {
-    return {
-      title: 'Documentation Not Found',
-    };
-  }
-  
-  return {
-    title: `${doc.frontmatter.title} | intern.dev Docs`,
-    description: doc.frontmatter.summary,
-  };
-}
-
-export default function DocPage({ params }: PageProps) {
-  const { slug } = params;
-  
-  if (slug.length < 2) {
-    notFound();
-  }
-  
-  const doc = getDocBySlug(slug);
-  
-  if (!doc) {
-    notFound();
-  }
-  
-  const headings = extractHeadings(doc.content);
-  
-  return (
-    <div className="min-h-screen bg-white dark:bg-gray-950">
-      {/* Sidebar */}
-      <DocsSidebar />
-      
-      {/* Main content */}
-      <main className="lg:pl-64">
-        <div className="mx-auto max-w-3xl px-6 py-8 lg:px-8">
-          {/* Breadcrumb */}
-          <nav className="mb-6 flex items-center text-sm text-gray-500">
-            <a href="/docs" className="hover:text-blue-600">
-              Docs
-            </a>
-            <span className="mx-2">/</span>
-            <span className="capitalize text-gray-900 dark:text-gray-200">
-              {slug[0].replace(/-/g, ' ')}
-            </span>
-            <span className="mx-2">/</span>
-            <span className="text-gray-900 dark:text-gray-200">
-              {doc.frontmatter.title}
-            </span>
-          </nav>
-          
-          {/* Article Header */}
-          <header className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-              {doc.frontmatter.title}
-            </h1>
-            <p className="mt-2 text-lg text-gray-600 dark:text-gray-400">
-              {doc.frontmatter.summary}
-            </p>
-            <div className="mt-4 flex items-center gap-4 text-sm text-gray-500">
-              <span>{doc.frontmatter.readingTime} min read</span>
-            </div>
-            <hr className="mt-8 border-gray-200 dark:border-gray-800" />
-          </header>
-
-          {/* Render the MDX Content properly */}
-          <DocContent content={doc.content} />
-          
-        </div>
-      </main>
-      
-      {/* Table of Contents */}
-      <TableOfContents headings={headings} />
-    </div>
-  );
+  return validationResult.data;
 }
 </file>
 
@@ -15349,38 +15143,6 @@ export default function MissionsPage() {
 }
 </file>
 
-<file path="tsconfig.json">
-{
-  "compilerOptions": {
-    "target": "es5",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "preserve",
-    "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./src/*"],
-      "@/content/*": ["./content/*"]
-    }
-  },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
-}
-</file>
-
 <file path="content/tasks/HOW_TO_ADD_CONTENT.md">
 # دليل إضافة المحتوى - How to Add Content
 
@@ -15535,6 +15297,50 @@ Describe the real-world context of the task. What problem are we trying to solve
 
 - رابط أو مرجع مفيد - Useful link or reference
 - رابط أو مرجع مفيد آخر - Another useful link or reference
+</file>
+
+<file path="src/app/docs/[...slug]/DocContent.tsx">
+import { MDXRemote } from 'next-mdx-remote/rsc';
+import remarkGfm from 'remark-gfm';
+
+interface DocContentProps {
+  content: string;
+}
+
+const components = {
+  pre: (props: any) => (
+    <pre 
+      {...props} 
+      className="overflow-x-auto rounded-lg bg-gray-900 p-4 my-6 text-sm leading-relaxed text-gray-100 shadow-lg border border-gray-800" 
+    />
+  ),
+  code: (props: any) => {
+    const isInline = !props.className;
+    if (isInline) {
+      return (
+        <code 
+          className="rounded bg-gray-100 px-1.5 py-0.5 text-sm font-mono text-blue-600 dark:bg-gray-800 dark:text-blue-400" 
+          {...props} 
+        />
+      );
+    }
+    return <code className={props.className} {...props} />;
+  },
+};
+
+export default function DocContent({ content }: DocContentProps) {
+  return (
+    <MDXRemote
+      source={content}
+      components={components}
+      options={{
+        mdxOptions: {
+          remarkPlugins: [remarkGfm],
+        },
+      }}
+    />
+  );
+}
 </file>
 
 <file path="CONTENT_GUIDE_AR.md">
@@ -15799,6 +15605,38 @@ const config: Config = {
   ],
 }
 export default config;
+</file>
+
+<file path="tsconfig.json">
+{
+  "compilerOptions": {
+    "target": "es5",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@/content/*": ["./content/*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}
 </file>
 
 <file path="VERIFICATION_GUIDE.md">
@@ -16077,25 +15915,6 @@ content/tasks/
 - الموقع موجود على: **https://intern-dev-7-clean.vercel.app/docs**
 </file>
 
-<file path="src/app/docs/missions/[id]/page.tsx">
-import fs from "fs";
-import path from "path";
-
-export default function MissionPage({
-  params,
-}: {
-  params: { id: string };
-}) {
-  const id = params.id;
-
-  return (
-    <div style={{ padding: 20 }}>
-      <h1>Mission ID: {id}</h1>
-    </div>
-  );
-}
-</file>
-
 <file path="src/app/docs/types.ts">
 // src/app/docs/types.ts
 
@@ -16119,6 +15938,128 @@ export type Topic = {
     }[];
   };
 };
+</file>
+
+<file path="src/app/docs/[...slug]/page.tsx">
+import { notFound } from 'next/navigation';
+import { getDocBySlug, getSidebarMeta, extractHeadings } from '@/lib/docs';
+import DocsSidebar from '@/components/docs/DocsSidebar';
+import TableOfContents from '@/components/docs/TableOfContents';
+import DocContent from './DocContent';
+
+interface PageProps {
+  params: Promise<{ slug: string[] }>;
+}
+
+export async function generateStaticParams() {
+  const meta = getSidebarMeta();
+  const params: { slug: string[] }[] = [];
+  
+  for (const category of meta) {
+    for (const page of category.pages) {
+      params.push({
+        slug: [category.slug, page.slug],
+      });
+    }
+  }
+  return params;
+}
+
+
+export async function generateMetadata(props: PageProps) {
+  const params = await props.params;
+  const { slug } = params;
+  const doc = getDocBySlug(slug);
+  
+  if (!doc) {
+    return {
+      title: 'Documentation Not Found',
+    };
+  }
+  
+  return {
+    title: `${doc.frontmatter.title} | intern.dev Docs`,
+    description: doc.frontmatter.summary,
+  };
+}
+
+export default async function DocPage(props: PageProps) {
+  const params = await props.params;
+  const { slug } = params;
+  
+  if (slug.length < 2) {
+    notFound();
+  }
+  
+  const doc = getDocBySlug(slug);
+  
+  if (!doc) {
+    notFound();
+  }
+  
+  const headings = extractHeadings(doc.content);
+  
+  return (
+    <div className="min-h-screen bg-white dark:bg-gray-950">
+      <DocsSidebar />
+      <main className="lg:pl-64">
+        <div className="mx-auto max-w-3xl px-6 py-8 lg:px-8">
+          <nav className="mb-6 flex items-center text-sm text-gray-500 font-sans">
+            <a href="/docs" className="hover:text-blue-600">
+              Docs
+            </a>
+            <span className="mx-2">/</span>
+            <span className="capitalize text-gray-900 dark:text-gray-200">
+              {slug[0].replace(/-/g, ' ')}
+            </span>
+            <span className="mx-2">/</span>
+            <span className="text-gray-900 dark:text-gray-200">
+              {doc.frontmatter.title}
+            </span>
+          </nav>
+          
+          <article className="prose prose-neutral max-w-none dark:prose-invert prose-headings:scroll-mt-24 prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline dark:prose-a:text-blue-400 prose-pre:bg-gray-900 prose-pre:border prose-pre:border-gray-800">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+              {doc.frontmatter.title}
+            </h1>
+            <p className="mt-2 text-lg text-gray-600 dark:text-gray-400">
+              {doc.frontmatter.summary}
+            </p>
+            <div className="mt-4 flex items-center gap-4 text-sm text-gray-500">
+              <span>{doc.frontmatter.readingTime} min read</span>
+            </div>
+            <hr className="my-8 border-gray-200 dark:border-gray-800" />
+            
+            <DocContent content={doc.content} />
+          </article>
+        </div>
+      </main>
+      <TableOfContents headings={headings} />
+    </div>
+  );
+}
+</file>
+
+<file path="src/app/docs/missions/[id]/page.tsx">
+import fs from "fs";
+import path from "path";
+
+// 1. غيّر واجهة الـ params لتكون Promise
+interface PageProps {
+  params: Promise<{ id: string }>;
+}
+
+// 2. تأكد أن الدالة async وأضف await للـ params
+export default async function MissionPage(props: PageProps) {
+  const params = await props.params;
+  const id = params.id;
+
+  return (
+    <div style={{ padding: 20 }}>
+      <h1>Mission ID: {id}</h1>
+    </div>
+  );
+}
 </file>
 
 <file path="src/app/docs/page.tsx">
