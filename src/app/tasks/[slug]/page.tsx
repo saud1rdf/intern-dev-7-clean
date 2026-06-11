@@ -21,12 +21,12 @@ function getTaskContent(slug: string): string | null {
   return fs.readFileSync(filePath, "utf8");
 }
 
-export default function TaskPage({
-  params,
-}: {
-  params: { slug: string };
-}) {
-  const { slug } = params;
+interface PageProps {
+  params: Promise<{ slug: string }>;
+}
+
+export default async function TaskPage(props: PageProps) {
+  const { slug } = await props.params;
   const content = getTaskContent(slug);
 
   if (!content) {

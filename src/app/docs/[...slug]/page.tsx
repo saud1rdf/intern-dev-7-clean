@@ -1,5 +1,5 @@
 import { notFound, redirect } from 'next/navigation';
-import { getDocBySlug, getSidebarMeta, extractHeadings } from '@/lib/docs';
+import { getDocBySlug, extractHeadings } from '@/lib/docs';
 import { parseCategoryArticles, categoryFileExists } from '@/lib/articleParser';
 import { getCategoryBySlug } from '@/lib/categories';
 import DocsSidebar from '@/components/docs/DocsSidebar';
@@ -30,9 +30,6 @@ interface PageProps {
 }
 
 export async function generateStaticParams() {
-  const meta = getSidebarMeta();
-  const params: { slug: string[] }[] = [];
-
   const categorySlugs = [
     'web-development',
     'api-integration',
@@ -42,20 +39,9 @@ export async function generateStaticParams() {
     'data-structures',
   ];
 
-  for (const slug of categorySlugs) {
-    if (categoryFileExists(slug)) {
-      params.push({ slug: [slug] });
-    }
-  }
-
-  for (const category of meta) {
-    for (const page of category.pages) {
-      params.push({
-        slug: [category.slug, page.slug],
-      });
-    }
-  }
-  return params;
+  return categorySlugs
+    .filter((slug) => categoryFileExists(slug))
+    .map((slug) => ({ slug: [slug] }));
 }
 
 export async function generateMetadata(props: PageProps) {
