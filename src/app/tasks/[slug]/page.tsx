@@ -25,6 +25,21 @@ interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
+export async function generateStaticParams() {
+  const tasksDir = path.join(process.cwd(), "content", "tasks");
+  
+  if (!fs.existsSync(tasksDir)) return [];
+
+  const files = fs.readdirSync(tasksDir);
+  return files
+    .filter((file) => file.endsWith(".md") || file.endsWith(".mdx"))
+    .map((file) => ({
+      slug: file.replace(/\.mdx?$/, ""),
+    }));
+}
+
+
+
 export default async function TaskPage(props: PageProps) {
   const { slug } = await props.params;
   const content = getTaskContent(slug);
