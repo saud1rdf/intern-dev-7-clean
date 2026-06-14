@@ -21,6 +21,7 @@ export const docsMeta: DocsMeta = [
       { title: "HTML", slug: "html" },
       { title: "CSS", slug: "css" },
       { title: "JavaScript", slug: "javascript" },
+      { title: "TypeScript Fundamentals", slug: "typescript-fundamentals" },
     ],
   },
   {
@@ -30,6 +31,7 @@ export const docsMeta: DocsMeta = [
       { title: "REST APIs", slug: "rest" },
       { title: "GraphQL", slug: "graphql" },
       { title: "Postman", slug: "postman" },
+      { title: "Docker & Containerization", slug: "docker-containerization" },
     ],
   },
   {
@@ -51,4 +53,14 @@ export const docsMeta: DocsMeta = [
       { title: "Debugging Tools", slug: "debugging-tools" },
     ],
   },
+  {
+    title: "Data Structures",
+    slug: "data-structures",
+    pages: [
+      {
+        title: "SQL & Query Builders (Prisma)",
+        slug: "sql-query-builders",
+      },
+    ],
+  }
 ];

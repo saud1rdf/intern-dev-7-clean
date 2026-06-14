@@ -1,0 +1,47 @@
+---
+title: "TypeScript Fundamentals"
+category: "web-development"
+summary: "Master rigorous static typing mechanisms in TypeScript. Learn primitive boundaries, structural typing, strict compile-time safety, and union discrimination."
+readingTime: 20
+---
+
+# TypeScript Fundamentals & Everyday Types
+
+## 1. Overview
+TypeScript adds critical compile-time restrictions over JavaScript, ensuring that data contracts are honored before code executes. In enterprise systems, treating variables dynamically leads to fatal, untraceable errors in runtime memory.
+
+## 2. Step-by-step Breakdown
+1. **Primitives**: Declare explicit value shapes (e.g. `string`, `number`, `boolean`).
+2. **Object Types**: Annotate objects to forbid non-existent property manipulation.
+3. **Optional Properties**: Utilize the `?` token to indicate optionality.
+4. **Union Types**: Permit multiple acceptable types seamlessly.
+5. **Type Aliases & Interfaces**: Abstract complex signatures into scalable names.
+
+## 3. Code Example
+
+```typescript
+// 1. Primitive Declarations and Array Typedefs
+const targetEnvironment: string = "production";
+const operationalPorts: number[] = [8080, 8443, 3000];
+
+// 2. Object Signatures with Optional properties
+interface ServiceConfiguration {
+  hostId: string;
+  maxRetries: number;
+  secureMode?: boolean; // Optional property
+}
+
+function initializeService(config: ServiceConfiguration) {
+  const protocol = config.secureMode ? "https://" : "http://";
+  console.log(`Connecting to ${protocol}${config.hostId}`);
+}
+
+// 3. Union Types and Strict Type Narrowing
+function processMetricInput(metric: number | string) {
+  if (typeof metric === "number") {
+    console.log(`Computed integer square: ${metric ** 2}`);
+  } else {
+    console.log(`Logging unparsed text: ${metric.toUpperCase()}`);
+  }
+}
+
