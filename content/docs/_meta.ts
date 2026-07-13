@@ -22,6 +22,7 @@ export const docsMeta: DocsMeta = [
       { title: "CSS", slug: "css" },
       { title: "JavaScript", slug: "javascript" },
       { title: "TypeScript Fundamentals", slug: "typescript-fundamentals" },
+      { title: "Node.js Env Variables", slug: "nodejs-env-variables" }
     ],
   },
   {
@@ -29,8 +30,7 @@ export const docsMeta: DocsMeta = [
     slug: "api-integration",
     pages: [
       { title: "REST APIs", slug: "rest" },
-      { title: "GraphQL", slug: "graphql" },
-      { title: "Postman", slug: "postman" },
+{ title: "Postman", slug: "postman" },
       { title: "Docker & Containerization", slug: "docker-containerization" },
     ],
   },
@@ -42,6 +42,7 @@ export const docsMeta: DocsMeta = [
       { title: "GitHub Workflow", slug: "github-workflow" },
       { title: "Branching", slug: "branching" },
       { title: "Merge Conflicts", slug: "merge-conflicts" },
+      { title: "GitHub Actions CI/CD", slug: "github-actions-cicd" }
     ],
   },
   {
@@ -51,6 +52,7 @@ export const docsMeta: DocsMeta = [
       { title: "Unit Testing", slug: "unit-testing" },
       { title: "Integration Testing", slug: "integration-testing" },
       { title: "Debugging Tools", slug: "debugging-tools" },
+      { title: "Node.js Error Handling", slug: "nodejs-error-handling" }
     ],
   },
   {

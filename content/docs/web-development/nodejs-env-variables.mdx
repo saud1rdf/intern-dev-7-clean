@@ -1,0 +1,45 @@
+---
+title: "Node.js Environment Variables"
+category: "web-development"
+summary: "Learn how to securely access and manage environment variables in Node.js using process.env and the new built-in .env file support."
+readingTime: 15
+---
+
+# How to read environment variables from Node.js
+
+The `process` core module of Node.js provides the `env` property which hosts all the environment variables that were set at the moment the process was started.
+
+The below code runs `app.js` and sets `USER_ID` and `USER_KEY`.
+
+```bash
+USER_ID=239482 USER_KEY=foobar node app.js
+That will pass the user USER_ID as 239482 and the USER_KEY as foobar. This is suitable for testing, however for production, you will probably be configuring some bash scripts to export variables.
+
+Note: process does not need to be imported, it is a global object in Node.js.
+
+Here is an example that accesses the USER_ID and USER_KEY environment variables, which we set in the above code.
+
+JavaScript
+console.log(process.env.USER_ID); // "239482"
+console.log(process.env.USER_KEY); // "foobar"
+In the same way you can access any custom environment variable you set.  
+
+Experimental support for .env files (Node.js 20+)  
+Node.js 20 introduced experimental support for .env files.  
+
+Now, you can use the --env-file flag to specify an environment file when running your Node.js application. Here's an example .env file and how to access its variables using process.env.  
+
+First, create your .env file:  
+
+Code snippet
+# .env file
+PASSWORD=nodejs
+Then, run your application with the flag:  
+
+Bash
+node --env-file=.env app.js
+Inside your app.js, you can access it normally:
+
+JavaScript
+console.log(process.env.PASSWORD); // "nodejs"
+This built-in support reduces the need for external packages like dotenv for basic environment variable management.

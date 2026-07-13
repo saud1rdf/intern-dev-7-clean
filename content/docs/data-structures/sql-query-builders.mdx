@@ -1,0 +1,153 @@
+---
+title: "Comparing SQL, Query Builders, and ORMs"
+category: "data-structures"
+summary: "Explore the different ways to interact with databases in Node.js. Compare Raw SQL, Query Builders (like Knex), and modern ORMs (like Prisma)."
+readingTime: 25
+---
+
+# Comparing SQL, Query Builders, and ORMs
+
+When building backend applications, interacting with a database is a fundamental requirement. Developers typically choose between three main approaches: Raw SQL, Query Builders, and Object-Relational Mappers (ORMs).
+
+## Raw SQL
+
+Using raw SQL gives you full control over the queries executed against your database. You write SQL statements directly and send them to the database using a driver such as `pg`.
+
+### Advantages
+
+- Full control over every query.
+- Maximum performance.
+- Works with any SQL feature.
+
+### Disadvantages
+
+- More boilerplate code.
+- Easier to introduce SQL injection if queries are not parameterized.
+- No automatic type safety.
+
+```typescript
+import { Client } from "pg";
+
+const client = new Client({
+  connectionString: process.env.DATABASE_URL,
+});
+
+await client.connect();
+
+const result = await client.query(
+  "SELECT id, name, email FROM users WHERE email = $1",
+  ["alice@example.com"]
+);
+
+console.log(result.rows[0]);
+```
+
+## Query Builders
+
+A Query Builder provides a JavaScript API for constructing SQL queries instead of writing SQL strings manually. Libraries such as Knex.js still generate SQL behind the scenes.
+
+### Advantages
+
+- Cleaner syntax.
+- Easier to build dynamic queries.
+- Database independent.
+
+### Disadvantages
+
+- You still need to understand SQL concepts.
+- Less type safety than modern ORMs.
+
+```typescript
+import knex from "knex";
+
+const db = knex({
+  client: "pg",
+  connection: process.env.DATABASE_URL,
+});
+
+const user = await db("users")
+  .select("id", "name", "email")
+  .where("email", "alice@example.com")
+  .first();
+
+console.log(user);
+```
+
+## ORMs (Object Relational Mappers)
+
+ORMs allow developers to interact with databases using objects instead of SQL statements. Prisma is one of the most popular TypeScript ORMs because it generates a fully typed client.
+
+### Prisma Schema
+
+```prisma
+model User {
+  id    Int    @id @default(autoincrement())
+  email String @unique
+  name  String?
+  posts Post[]
+}
+
+model Post {
+  id       Int    @id @default(autoincrement())
+  title    String
+  authorId Int
+  author   User   @relation(fields: [authorId], references: [id])
+}
+```
+
+### Prisma Client
+
+```typescript
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
+
+async function main() {
+  const user = await prisma.user.create({
+    data: {
+      name: "Alice",
+      email: "alice@example.com",
+      posts: {
+        create: [
+          {
+            title: "Understanding Prisma ORM",
+          },
+        ],
+      },
+    },
+  });
+
+  const fetchedUser = await prisma.user.findUnique({
+    where: {
+      email: "alice@example.com",
+    },
+    include: {
+      posts: true,
+    },
+  });
+
+  console.log(fetchedUser);
+}
+
+main();
+```
+
+## Comparison
+
+| Feature | Raw SQL | Query Builder | Prisma ORM |
+| ------- | ------- | ------------- | ---------- |
+| Performance | Excellent | Excellent | Very Good |
+| Type Safety | No | Limited | Excellent |
+| Learning Curve | Medium | Medium | Easy |
+| Productivity | Low | Medium | High |
+| SQL Knowledge Required | High | Medium | Low |
+
+## When Should You Use Each?
+
+- Use **Raw SQL** for highly optimized or database-specific queries.
+- Use **Query Builders** when building dynamic SQL while keeping flexibility.
+- Use **Prisma ORM** for most modern TypeScript applications where productivity and type safety are important.
+
+## Summary
+
+Each approach has its place. Raw SQL provides maximum control, Query Builders improve readability while remaining close to SQL, and Prisma offers the best developer experience with automatic type safety, schema migrations, and powerful tooling.

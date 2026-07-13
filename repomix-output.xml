@@ -68,6 +68,7 @@ content/
       javascript.mdx
       nextjs.mdx
       react-basics.mdx
+      typescript-fundamentals.mdx
     _meta.ts
     algorithms.md
     algorithms.mdx
@@ -4760,61 +4761,53 @@ async function fetchData() {
 - [ES6 Features](https://es6.io/)
 </file>
 
-<file path="content/docs/_meta.ts">
-export type DocPageMeta = {
-  title: string;
-  slug: string;
-};
+<file path="content/docs/web-development/typescript-fundamentals.mdx">
+---
+title: "TypeScript Fundamentals"
+category: "web-development"
+summary: "Master rigorous static typing mechanisms in TypeScript. Learn primitive boundaries, structural typing, strict compile-time safety, and union discrimination."
+readingTime: 20
+---
 
-export type DocCategoryMeta = {
-  title: string;
-  slug: string;
-  pages: DocPageMeta[];
-};
+# TypeScript Fundamentals & Everyday Types
 
-export type DocsMeta = DocCategoryMeta[];
+## 1. Overview
+TypeScript adds critical compile-time restrictions over JavaScript, ensuring that data contracts are honored before code executes. In enterprise systems, treating variables dynamically leads to fatal, untraceable errors in runtime memory.
 
-export const docsMeta: DocsMeta = [
-  {
-    title: "Web Development",
-    slug: "web-development",
-    pages: [
-      { title: "React Basics", slug: "react-basics" },
-      { title: "Next.js", slug: "nextjs" },
-      { title: "HTML", slug: "html" },
-      { title: "CSS", slug: "css" },
-      { title: "JavaScript", slug: "javascript" },
-    ],
-  },
-  {
-    title: "API Integration",
-    slug: "api-integration",
-    pages: [
-      { title: "REST APIs", slug: "rest" },
-      { title: "GraphQL", slug: "graphql" },
-      { title: "Postman", slug: "postman" },
-    ],
-  },
-  {
-    title: "Version Control",
-    slug: "version-control",
-    pages: [
-      { title: "Git Basics", slug: "git-basics" },
-      { title: "GitHub Workflow", slug: "github-workflow" },
-      { title: "Branching", slug: "branching" },
-      { title: "Merge Conflicts", slug: "merge-conflicts" },
-    ],
-  },
-  {
-    title: "Testing & Debugging",
-    slug: "testing-debugging",
-    pages: [
-      { title: "Unit Testing", slug: "unit-testing" },
-      { title: "Integration Testing", slug: "integration-testing" },
-      { title: "Debugging Tools", slug: "debugging-tools" },
-    ],
-  },
-];
+## 2. Step-by-step Breakdown
+1. **Primitives**: Declare explicit value shapes (e.g. `string`, `number`, `boolean`).
+2. **Object Types**: Annotate objects to forbid non-existent property manipulation.
+3. **Optional Properties**: Utilize the `?` token to indicate optionality.
+4. **Union Types**: Permit multiple acceptable types seamlessly.
+5. **Type Aliases & Interfaces**: Abstract complex signatures into scalable names.
+
+## 3. Code Example
+
+```typescript
+// 1. Primitive Declarations and Array Typedefs
+const targetEnvironment: string = "production";
+const operationalPorts: number[] = [8080, 8443, 3000];
+
+// 2. Object Signatures with Optional properties
+interface ServiceConfiguration {
+  hostId: string;
+  maxRetries: number;
+  secureMode?: boolean; // Optional property
+}
+
+function initializeService(config: ServiceConfiguration) {
+  const protocol = config.secureMode ? "https://" : "http://";
+  console.log(`Connecting to ${protocol}${config.hostId}`);
+}
+
+// 3. Union Types and Strict Type Narrowing
+function processMetricInput(metric: number | string) {
+  if (typeof metric === "number") {
+    console.log(`Computed integer square: ${metric ** 2}`);
+  } else {
+    console.log(`Logging unparsed text: ${metric.toUpperCase()}`);
+  }
+}
 </file>
 
 <file path="content/tasks/advanced-git-merge-and-conflict-resolution.md">
@@ -8415,6 +8408,75 @@ Code
 
 
 ***
+</file>
+
+<file path="content/docs/_meta.ts">
+export type DocPageMeta = {
+  title: string;
+  slug: string;
+};
+
+export type DocCategoryMeta = {
+  title: string;
+  slug: string;
+  pages: DocPageMeta[];
+};
+
+export type DocsMeta = DocCategoryMeta[];
+
+export const docsMeta: DocsMeta = [
+  {
+    title: "Web Development",
+    slug: "web-development",
+    pages: [
+      { title: "React Basics", slug: "react-basics" },
+      { title: "Next.js", slug: "nextjs" },
+      { title: "HTML", slug: "html" },
+      { title: "CSS", slug: "css" },
+      { title: "JavaScript", slug: "javascript" },
+      { title: "TypeScript Fundamentals", slug: "typescript-fundamentals" },
+    ],
+  },
+  {
+    title: "API Integration",
+    slug: "api-integration",
+    pages: [
+      { title: "REST APIs", slug: "rest" },
+      { title: "GraphQL", slug: "graphql" },
+      { title: "Postman", slug: "postman" },
+      { title: "Docker & Containerization", slug: "docker-containerization" },
+    ],
+  },
+  {
+    title: "Version Control",
+    slug: "version-control",
+    pages: [
+      { title: "Git Basics", slug: "git-basics" },
+      { title: "GitHub Workflow", slug: "github-workflow" },
+      { title: "Branching", slug: "branching" },
+      { title: "Merge Conflicts", slug: "merge-conflicts" },
+    ],
+  },
+  {
+    title: "Testing & Debugging",
+    slug: "testing-debugging",
+    pages: [
+      { title: "Unit Testing", slug: "unit-testing" },
+      { title: "Integration Testing", slug: "integration-testing" },
+      { title: "Debugging Tools", slug: "debugging-tools" },
+    ],
+  },
+  {
+    title: "Data Structures",
+    slug: "data-structures",
+    pages: [
+      {
+        title: "SQL & Query Builders (Prisma)",
+        slug: "sql-query-builders",
+      },
+    ],
+  }
+];
 </file>
 
 <file path="content/docs/algorithms.md">

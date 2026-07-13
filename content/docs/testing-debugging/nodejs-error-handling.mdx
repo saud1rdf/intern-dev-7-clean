@@ -1,0 +1,79 @@
+---
+title: "Node.js Error Handling"
+category: "testing-debugging"
+summary: "Engineer structured exception topologies. Separate operational errors from fundamental code exceptions cleanly, and protect isolated event loop structures robustly."
+readingTime: 20
+---
+
+# Defensive Error Handling in Node.js
+
+## 1. Overview
+
+Because Node.js executes JavaScript on a single event loop, unhandled errors can terminate the application or leave it in an inconsistent state. Good error handling improves reliability, debugging, and user experience.
+
+## 2. Creating Custom Errors
+
+Creating custom error classes helps distinguish operational errors from programming bugs.
+
+```typescript
+export class OperationalError extends Error {
+  public responseCode: number;
+
+  constructor(message: string, responseCode = 500) {
+    super(message);
+    this.name = "OperationalError";
+    this.responseCode = responseCode;
+
+    Error.captureStackTrace(this, this.constructor);
+  }
+}
+3. Handling Errors with try/catch
+
+Use try/catch around asynchronous operations that may fail.
+
+import fs from "fs/promises";
+
+async function parseConfiguration(filePath: string) {
+  try {
+    const file = await fs.readFile(filePath, "utf-8");
+    return JSON.parse(file);
+  } catch (error: any) {
+    if (error.code === "ENOENT") {
+      throw new OperationalError(
+        `Configuration file not found: ${filePath}`,
+        404
+      );
+    }
+
+    if (error instanceof SyntaxError) {
+      throw new OperationalError(
+        "Configuration file contains invalid JSON.",
+        422
+      );
+    }
+
+    throw error;
+  }
+}
+4. Global Error Handlers
+
+Catch unexpected promise rejections and uncaught exceptions before the application crashes.
+
+process.on("unhandledRejection", (reason) => {
+  console.error("Unhandled Promise Rejection:", reason);
+  process.exit(1);
+});
+
+process.on("uncaughtException", (error) => {
+  console.error("Uncaught Exception:", error);
+  process.exit(1);
+});
+5. Best Practices
+Never ignore rejected promises.
+Log enough information for debugging.
+Return user-friendly messages instead of raw stack traces.
+Use custom error classes for expected failures.
+Restart the application after fatal errors.
+Summary
+
+Well-designed error handling makes Node.js applications easier to maintain and more reliable. Combining custom errors, local try/catch blocks, and global handlers provides a strong foundation for production applications.
