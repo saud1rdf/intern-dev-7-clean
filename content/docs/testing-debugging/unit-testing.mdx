@@ -1,52 +1,264 @@
 ---
-title: "Unit Testing (Production-Grade)"
-category: "Testing & Debugging"
-summary: "Master enterprise-level unit testing using Jest and React Testing Library. Learn to mock dependencies and write resilient tests."
-readingTime: 25
+title: "Unit, E2E Testing & Structured Logging"
+category: "testing-debugging"
+summary: "Learn application validation using Jest unit tests, React Testing Library, Playwright E2E testing, and structured logging."
+readingTime: 18
 ---
 
-# Unit Testing (Production-Grade)
+# Unit, E2E Testing & Structured Logging
 
-## Overview & The Why (لماذا هذا المفهوم حيوي؟)
-In professional environments, testing is not optional. A single bug pushed to production can cost companies thousands of dollars. Enterprise teams don't use `console.log()` to test their code; they use automated testing frameworks like **Jest** and **React Testing Library (RTL)**.
+## Overview
 
-## Key Concepts (المفاهيم الأساسية)
-- **Test Behavior, Not Implementation**: Focus on inputs and outputs. Don't write tests that break just because you renamed a variable.
-- **Isolate Tests**: Use `beforeEach` and `afterEach` to reset mocks and clean up the DOM. One test should never affect another.
-- **Query by Accessibility (A11y)**: Prioritize `getByRole` over `getByTestId` to ensure your app works for screen readers.
+Testing and monitoring are essential parts of reliable software systems.
 
-## Production-Grade Code (الشيفرة البرمجية الإنتاجية)
+Testing verifies that features work correctly before deployment, while logging and observability help developers understand problems after deployment.
 
-### 1. Testing Utility Functions
+Common production problems include:
+
+1. Bugs caused by untested code changes.
+2. UI regressions across different pages.
+3. Difficult debugging without structured logs.
+
+---
+
+# Key Concepts
+
+## Unit Testing
+
+Unit tests verify small isolated pieces of code.
+
+Examples:
+
+- Functions.
+- Business logic.
+- Data transformations.
+
+Tools:
+
+- Jest.
+- Vitest.
+
+---
+
+## React Component Testing
+
+React Testing Library focuses on testing user behavior instead of implementation details.
+
+Good:
+
 ```typescript
-// utils/__tests__/currency.test.ts
-import { formatCurrency } from '../currency';
+screen.getByRole("button");
 
-describe('formatCurrency Utility', () => {
-  it('should format USD correctly', () => {
-    expect(formatCurrency(1250.5)).toBe('$1,250.50');
-  });
+Avoid:
 
-  it('should throw an error for negative amounts', () => {
-    expect(() => formatCurrency(-100)).toThrow("Amount cannot be negative");
-  });
+document.querySelector(".button-class");
+End-to-End Testing
+
+E2E tests simulate real user actions in a browser.
+
+Tools:
+
+Playwright.
+Cypress.
+
+They verify:
+
+Navigation.
+Forms.
+Authentication flows.
+Browser behavior.
+Structured Logging
+
+Production applications should use structured logs instead of random console messages.
+
+Example:
+
+import pino from "pino";
+
+
+export const logger = pino({
+
+  level: "info",
+
+  base: {
+
+    service:
+      "user-onboarding",
+
+    environment:
+      process.env.NODE_ENV,
+
+  },
+
 });
 
-2. Testing React Components
 
-// components/__tests__/SubmitButton.test.tsx
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import SubmitButton from '../SubmitButton';
+export function createLogger(
+  traceId:string
+){
 
-describe('SubmitButton Component', () => {
-  it('should fire the onClick handler when clicked', async () => {
-    const mockOnClick = jest.fn();
-    render(<SubmitButton onClick="{mockOnClick}">Save Data</SubmitButton>);
-    
-    const button = screen.getByRole('button', { name: /save data/i });
-    await userEvent.click(button);
-    
-    expect(mockOnClick).toHaveBeenCalledTimes(1);
+  return logger.child({
+
+    traceId,
+
   });
+
+}
+Jest Unit Testing Example
+
+Example business function:
+
+export function calculateTotal(
+  price:number,
+  tax:number
+){
+
+  if(price < 0){
+
+    throw new Error(
+      "Invalid price"
+    );
+
+  }
+
+
+  return price + (price * tax);
+
+}
+
+Test:
+
+describe(
+  "calculateTotal",
+  ()=>{
+
+
+    it(
+      "calculates final price",
+      ()=>{
+
+
+        const result =
+          calculateTotal(
+            100,
+            0.15
+          );
+
+
+        expect(result)
+          .toBe(115);
+
+
+      }
+    );
+
+
+    it(
+      "rejects negative prices",
+      ()=>{
+
+
+        expect(
+          ()=>calculateTotal(
+            -10,
+            0.1
+          )
+        )
+        .toThrow(
+          "Invalid price"
+        );
+
+
+      }
+    );
+
+
+  }
+);
+Playwright E2E Example
+import {
+  test,
+  expect
+} from "@playwright/test";
+
+
+test(
+  "user login flow",
+  async ({page})=>{
+
+
+    await page.goto(
+      "/login"
+    );
+
+
+    await page
+      .getByLabel("Email")
+      .fill(
+        "user@example.com"
+      );
+
+
+    await page
+      .getByRole(
+        "button",
+        {
+          name:"Login"
+        }
+      )
+      .click();
+
+
+    await page.waitForURL(
+      "/dashboard"
+    );
+
+
+    await expect(
+      page
+    )
+    .toHaveTitle(
+      /Dashboard/
+    );
+
+
+  }
+);
+Testing Best Practices
+Query by Accessibility Roles
+
+Prefer:
+
+getByRole("button")
+
+because it tests accessibility and user behavior.
+
+Do Not Hide Errors
+
+Always log errors with enough information for debugging.
+
+Clear Mocks Between Tests
+
+Example:
+
+afterEach(()=>{
+
+  jest.clearAllMocks();
+
 });
+
+This prevents tests from affecting each other.
+
+Reference Tools
+Tool	Purpose
+Jest	Unit testing
+React Testing Library	Component testing
+Playwright	Browser automation
+Pino	Structured logging
+References
+Jest Documentation: https://jestjs.io/docs/getting-started
+React Testing Library: https://testing-library.com/docs/react-testing-library/api/
+Playwright: https://playwright.dev/docs/intro
+Pino Logger: https://getpino.io/
+OpenTelemetry: https://opentelemetry.io/docs/
+

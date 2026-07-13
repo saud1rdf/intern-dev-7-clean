@@ -1,141 +1,142 @@
 ---
-
 title: "React High-Performance State Architecture"
-
-category: "Web Development"
-
-summary: "Master enterprise React state management. Learn reconciliation optimization, context split patterns, custom stable hooks, and URL search parameter binding."
-
+category: "web-development"
+summary: "Master React state management. Learn optimization techniques, context patterns, custom hooks, and URL-based state handling."
 readingTime: 25
-
 ---
-
-
 
 # React High-Performance State Architecture
 
+## Overview
 
+React uses a virtual DOM system to efficiently update interfaces when state changes.
 
-## Overview & The Why (لماذا هذا المفهوم حيوي؟)
+However, poor state management can cause:
 
-React’s virtual DOM paradigm simplifies interface code by automatically computing view shifts based on state modifications. 
-
-
-
-However, in large-scale systems (like dashboards tracking real-time telemetry inputs), unoptimized state patterns lead to sluggish rendering and unstable codebases:
-
-1. **Cascading Re-Renders**: Storing massive, unseparated arrays inside high-level Context engines triggers full tree rebuilds across hundreds of components whenever a single attribute updates.
-
-2. **Lost Navigation States**: Relying exclusively on temporary client-side memory resets filters, tables, and pagination states whenever a user refreshes their browser. This breaks sharing capability.
-
-3. **Stale Closure Closures**: Incorrect setup of Hook dependency arrays causes variables to retain outdated scopes, producing subtle, hard-to-track bugs.
-
-
+1. Unnecessary component re-renders.
+2. Lost application state after page refresh.
+3. Difficult-to-debug hook dependency issues.
 
 ---
 
+# Key Concepts
 
+## Reconciliation Optimization
 
-## Key Concepts (المفاهيم الأساسية)
+React compares previous and new UI trees to determine what needs updating.
 
+Optimization techniques include:
 
-
-- **Reconciliation Optimization**: Controlling render trees selectively using tools like memoization, stable references, and proper memo boundaries.
-
-- **State Taxonomy Boundaries**: Isolating state into: Local UI State (isolated within a component), Shared Global State (cross-component panels), Server State (cached API data), and URL State (persistent coordinates).
-
-- **Split Context Pattern**: Splitting a Context Provider into separate State and Dispatch context arrays to completely prevent unnecessary component re-renders.
-
-- **Immutability Principle**: Ensuring React state is never mutated directly, as React relies on reference changes to trigger reconciliation safely.
-
-
+- React.memo
+- useMemo
+- useCallback
+- Proper component boundaries
 
 ---
 
+## State Categories
 
+React applications usually contain different types of state:
 
-## Production-Grade Code (الشيفرة البرمجية الإنتاجية)
+| State Type | Example Tools | Purpose |
+|---|---|---|
+| Local State | useState, useReducer | Component-specific data |
+| Global State | Context, Zustand, Redux | Shared application data |
+| Server State | TanStack Query, SWR | API data caching |
+| URL State | Search Params | Shareable navigation state |
 
+---
 
+# Split Context Pattern
 
-### 1. High-Performance Split Context Pattern (`providers/UnifiedStateProvider.tsx`)
-
-This pattern separates state context values from the dispatch context. This ensures that components only reading static states do not re-render when write handlers fire:
-
-
+Separating state and dispatch contexts prevents unnecessary re-renders.
 
 ```tsx
+"use client";
 
-'use client';
-
-
-
-import React, { createContext, useContext, useReducer } from 'react';
-
+import React, {
+  createContext,
+  useContext,
+  useReducer
+} from "react";
 
 
 interface AppState {
-
-  theme: 'light' | 'dark';
-
+  theme: "light" | "dark";
   sidebarOpen: boolean;
-
 }
 
 
-
 type Action =
-
-  | { type: 'TOGGLE_THEME' }
-
-  | { type: 'SET_SIDEBAR'; payload: boolean };
-
+  | {
+      type: "TOGGLE_THEME";
+    }
+  | {
+      type: "SET_SIDEBAR";
+      payload: boolean;
+    };
 
 
 const initialState: AppState = {
-
-  theme: 'light',
-
+  theme: "light",
   sidebarOpen: false,
-
 };
 
 
-
-// 1. Create separate contexts to isolate state from dispatcher triggers
-
-const StateContext = createContext<AppState | undefined>(undefined);
-
-const DispatchContext = createContext<React.Dispatch<Action> | undefined>(undefined);
+const StateContext =
+  createContext<AppState | undefined>(undefined);
 
 
+const DispatchContext =
+  createContext<React.Dispatch<Action> | undefined>(
+    undefined
+  );
 
-function stateReducer(state: AppState, action: Action): AppState {
 
-  switch (action.type) {
+function reducer(
+  state: AppState,
+  action: Action
+): AppState {
 
-    case 'TOGGLE_THEME':
+  switch(action.type) {
 
-      return { ...state, theme: state.theme === 'light' ? 'dark' : 'light' };
+    case "TOGGLE_THEME":
 
-    case 'SET_SIDEBAR':
+      return {
+        ...state,
+        theme:
+          state.theme === "light"
+            ? "dark"
+            : "light",
+      };
 
-      return { ...state, sidebarOpen: action.payload };
+
+    case "SET_SIDEBAR":
+
+      return {
+        ...state,
+        sidebarOpen: action.payload,
+      };
+
 
     default:
 
       return state;
-
   }
-
 }
 
 
+export function AppProvider({
+  children
+}: {
+  children: React.ReactNode;
+}) {
 
-export function UnifiedStateProvider({ children }: { children: React.ReactNode }) {
-
-  const [state, dispatch] = useReducer(stateReducer, initialState);
-
+  const [state, dispatch] =
+    useReducer(
+      reducer,
+      initialState
+    );
 
 
   return (
@@ -151,191 +152,126 @@ export function UnifiedStateProvider({ children }: { children: React.ReactNode }
     </StateContext.Provider>
 
   );
-
 }
+URL Query State Hook
 
+URL state allows users to share links while preserving filters and navigation.
 
+"use client";
 
-// 2. Export isolated hooks with boundaries
+import {
+  useRouter,
+  useSearchParams,
+  usePathname
+} from "next/navigation";
 
-export function useAppState() {
-
-  const context = useContext(StateContext);
-
-  if (!context) {
-
-    throw new Error('useAppState must be used within UnifiedStateProvider');
-
-  }
-
-  return context;
-
-}
-
-
-
-export function useAppDispatch() {
-
-  const context = useContext(DispatchContext);
-
-  if (!context) {
-
-    throw new Error('useAppDispatch must be used within UnifiedStateProvider');
-
-  }
-
-  return context;
-
-}
-
-2. High-Fidelity URL-bound Search parameters Hook (hooks/useURLQueryState.ts)
-
-Encases filter variables inside browser search parameters directly, enabling instant deep-linking and layout preservation:
-
-code
-
-TypeScript
-
-
-
-'use client';
-
-
-
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-
-import { useCallback, useMemo } from 'react';
-
+import {
+  useCallback,
+  useMemo
+} from "react";
 
 
 export function useURLQueryState<T extends string>(
-
-  paramName: string,
-
+  key: string,
   defaultValue: T
+): [T, (value:T)=>void] {
 
-): [T, (newValue: T) => void] {
 
   const router = useRouter();
 
-  const searchParams = useSearchParams();
+  const params = useSearchParams();
 
   const pathname = usePathname();
 
 
 
-  // Parse current coordinate safely
+  const value = useMemo(() => {
 
-  const activeValue = useMemo(() => {
+    return (
+      params.get(key) as T
+    ) || defaultValue;
 
-    return (searchParams.get(paramName) as T) || defaultValue;
-
-  }, [searchParams, paramName, defaultValue]);
-
-
-
-  const updateValue = useCallback((newValue: T) => {
-
-    const params = new URLSearchParams(searchParams.toString());
-
-    
-
-    if (newValue === defaultValue) {
-
-      params.delete(paramName);
-
-    } else {
-
-      params.set(paramName, newValue);
-
-    }
-
-    
-
-    // Smooth, non-blocking history push transition
-
-    router.push(`${pathname}?${params.toString()}`, { scroll: false });
-
-  }, [router, searchParams, pathname, paramName, defaultValue]);
+  }, [
+    params,
+    key,
+    defaultValue
+  ]);
 
 
 
-  return [activeValue, updateValue];
+  const updateValue =
+    useCallback(
+      (newValue:T)=>{
 
+        const updated =
+          new URLSearchParams(
+            params.toString()
+          );
+
+
+        if(newValue === defaultValue){
+
+          updated.delete(key);
+
+        } else {
+
+          updated.set(
+            key,
+            newValue
+          );
+
+        }
+
+
+        router.push(
+          `${pathname}?${updated}`,
+          {
+            scroll:false
+          }
+        );
+
+      },
+      [
+        router,
+        params,
+        pathname,
+        key,
+        defaultValue
+      ]
+    );
+
+
+  return [
+    value,
+    updateValue
+  ];
 }
+Best Practices
+Never Mutate State Directly
 
+Bad:
 
+state.items.push(item);
 
-State Taxonomy Matrix Table (جدول إدارة مستويات الحالة)
+Good:
 
-State Category
+setItems([
+  ...items,
+  item
+]);
+Keep State as Low as Possible
 
-Recommended Tech Stack
+Store state close to the components that need it.
 
-Ownership Range
+Avoid placing every piece of data inside global providers.
 
-Target Synchronization Pipeline
+Optimize Context Values
 
-Local State
+Use memoization when passing large objects through Context.
 
-useState, useReducer
+References
+React State Management: https://react.dev/learn/managing-state
+React Context Documentation: https://react.dev/reference/react/useContext
+TanStack Query: https://tanstack.com/query/latest
+Next.js Search Params: https://nextjs.org/docs/app/api-reference/functions/use-search-params
 
-Component isolated only.
-
-Remains inside browser active memory frame.
-
-Global UI State
-
-Context API, Zustand, Redux
-
-Multi-panel UI coordination
-
-Clean store dispatcher triggers.
-
-Server State
-
-SWR, TanStack Query
-
-Client database mirror cache
-
-Optimized automated invalidation polling.
-
-URL State
-
-Next.js searchParams, router
-
-Unified global address
-
-Instant shareable deep-linking routes.
-
-
-
-Best Practices (أفضل الممارسات التقنية)
-
-	1	Never Mutate States Directly: Mutating objects directly (e.g. state.items.push(x)) breaks reference comparison. Always configure states in React using immutable copies like [...state.items, x].
-
-	2	Keep States as Low as Possible: Store state data only at the lowest common ancestor of the components that depend on it, instead of pushing everything to top providers.
-
-	3	Memoize Context Values strictly: Wrap composite context values in useMemo to prevent rendering drops in down-tree child components.
-
-
-
-Deep Reading & References
-
-	1	React State Management Best Practices: https://react.dev/learn/managing-state
-
-	2	Reconciliation algorithms and Diffing guidelines: https://react.dev/learn/preserving-and-resetting-state
-
-	3	TanStack Client-side state synchronization caching: https://tanstack.com/query/latest
-
-	4	Context performance optimization and split structures: https://react.dev/reference/react/useContext
-
-	5	NextJS SearchParams dynamic routing guides: https://nextjs.org/docs/app/api-reference/functions/use-search-params
-
-code
-
-Code
-
-
-
-***

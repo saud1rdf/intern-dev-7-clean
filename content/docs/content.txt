@@ -21,7 +21,7 @@ Without a rigorous and auditable history:
 
 ---
 
-## Key Concepts (المفاهيم الأساسية)
+## Key Concepts (ا#لمفاهيم الأساسية)
 
 - **The Git Object Database**: In Git, all contents are stored as content-addressable objects under three main structural classes:
   - **Blobs**: Bare file content representation, excluding metadata or path hashes.

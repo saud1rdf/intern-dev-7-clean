@@ -1,41 +1,185 @@
 ---
 title: "REST API Integration & Defensive Validation"
-category: "API Integration"
-summary: "Build type-safe defensive API clients. Master Zod runtime schema verification, server proxy integration with retry backoffs, and strict cookie headers."
+category: "api-integration"
+summary: "Build type-safe defensive API clients using runtime validation, secure API routes, retry strategies, and safe request handling."
 readingTime: 15
 ---
 
 # REST API Integration & Defensive Validation
 
-## Overview & The Why (لماذا هذا المفهوم حيوي؟)
-In modern web architectures, API integrations are the critical point of contact between your frontend and the network. Frontend architectures that rely on loose types like `any` are vulnerable to **Schema Drift**—where backend changes break your UI without warning. Professional teams mitigate this by validating data at the network boundary using schemas (Zod).
+## Overview
 
-## Key Concepts (المفاهيم الأساسية)
-- **Defensive Client Patterns**: Validate payload structures before they reach your state managers.
-- **Server API Proxy Routes**: Query third-party services via secure Server-Side Node.js proxies to hide credentials.
-- **Exponential Backoff**: Implement retry logic to handle transient network failures gracefully.
+APIs are the communication layer between frontend applications and external services. A reliable API integration must handle invalid data, security risks, network failures, and changing response structures.
 
-## Production-Grade Code (الشيفرة البرمجية الإنتاجية)
+Common problems include:
 
-### 1. Resilient API Fetch Wrapper (`lib/api-client.ts`)
+1. Schema changes from external APIs.
+2. Exposing private API keys in frontend code.
+3. Network failures and temporary service outages.
+
+---
+
+## Key Concepts
+
+### Runtime Validation
+
+TypeScript checks types during development, but types disappear when the application runs.
+
+Runtime validation tools such as Zod verify that external data matches the expected structure.
+
+### API Proxy Routes
+
+Private API requests should pass through server-side routes instead of exposing sensitive credentials in the browser.
+
+### HTTP Methods
+
+Common REST operations:
+
+- GET: Retrieve data.
+- POST: Create new data.
+- PUT: Replace existing data.
+- PATCH: Update partial data.
+- DELETE: Remove data.
+
+---
+
+# Production API Client
+
+Example using Zod validation and retry handling:
 
 ```typescript
-import { z } from 'zod';
+import { z } from "zod";
 
-export async function defensiveFetch<TSchema extends z.ZodTypeAny>(
-  url: string,
-  schema: TSchema,
-  options: RequestInit = {}
-): Promise<z.infer<TSchema>> {
-  const response = await fetch(url, options);
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  
-  const rawData = await response.json();
-  const validationResult = schema.safeParse(rawData);
-  
-  if (!validationResult.success) {
-    console.error('[SCHEMA_DRIFT]', validationResult.error.format());
-    throw new Error('Integrity validation failed');
+export class APIClientError extends Error {
+  constructor(
+    public status: number,
+    public payload: unknown
+  ) {
+    super(`API request failed: ${status}`);
+    this.name = "APIClientError";
   }
-  return validationResult.data;
 }
+
+export async function defensiveFetch<T>(
+  url: string,
+  schema: z.ZodType<T>,
+  retries = 3
+): Promise<T> {
+
+  let attempt = 0;
+
+  while (attempt < retries) {
+    try {
+      const response = await fetch(url, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new APIClientError(
+          response.status,
+          await response.text()
+        );
+      }
+
+      const data = await response.json();
+
+      return schema.parse(data);
+
+    } catch (error) {
+
+      attempt++;
+
+      if (attempt >= retries) {
+        throw error;
+      }
+
+      await new Promise(resolve =>
+        setTimeout(resolve, 1000 * attempt)
+      );
+    }
+  }
+
+  throw new Error("Request failed");
+}
+Secure Next.js API Route
+
+Example server-side validation:
+
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+
+const userSchema = z.object({
+  name: z.string(),
+  email: z.string().email(),
+});
+
+
+export async function GET(request: NextRequest) {
+
+  try {
+
+    const users = [
+      {
+        name: "Alice",
+        email: "alice@example.com",
+      },
+    ];
+
+    const validatedUsers = z
+      .array(userSchema)
+      .parse(users);
+
+
+    return NextResponse.json({
+      success: true,
+      data: validatedUsers,
+    });
+
+
+  } catch (error) {
+
+    if (error instanceof z.ZodError) {
+
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Invalid response format",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Server error",
+      },
+      {
+        status: 500,
+      }
+    );
+  }
+}
+HTTP Response Codes
+Status	Meaning
+201	Resource created successfully
+400	Invalid request data
+401	Authentication required
+429	Too many requests
+Best Practices
+Never use any for API responses.
+Validate external data before using it.
+Keep API keys on the server.
+Always define request headers.
+Handle network failures gracefully.
+References
+Zod Documentation: https://zod.dev
+HTTP Standards: https://www.rfc-editor.org/rfc/rfc9110.html
+OWASP REST Security: https://cheatsheetseries.owasp.org/
+MDN Fetch API: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API
+

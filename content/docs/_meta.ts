@@ -64,5 +64,5 @@ export const docsMeta: DocsMeta = [
         slug: "sql-query-builders",
       },
     ],
-  }
+  }content.txt
 ];

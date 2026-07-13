@@ -1,99 +1,129 @@
+---
 title: "Git Basics & Branching Strategies"
-category: "Version Control"
-summary: "Understand the core logic of distributed version control systems, standard branching mechanisms, three-way merge conflict resolutions, and automated SemVer release strategies."
+category: "version-control"
+summary: "Understand the core logic of distributed version control systems, standard branching mechanisms, merge conflict resolutions, and release strategies."
 readingTime: 12
 ---
 
 # Git Basics & Branching Strategies
 
-## Overview & The Why (لماذا هذا المفهوم حيوي؟)
-In modern, high-availability enterprise environments, systems must track modifications with absolute mathematical certainty, auditability, and historical integrity. Version control is not merely a backup tool; it is the fundamental ledger of software state.
+## Overview
 
-Without a rigorous and auditable history:
-1. **Regression Profiling (git bisect)**: Isolating production bugs under load becomes a manual, slow search. Utilizing proper git mechanics permits binary searches on the commit graph to detect error commits in O(log N) iterations.
-2. **Deterministic Releases**: Automations (Semantic Versioning) cannot auto-generate Changelogs or compute precise semver increments if commit messages are unstructured or loose (squashing is helpful but structured headers are essential).
-3. **Reproducibility**: Compliance requirements mandate an untainted DAG (Directed Acyclic Graph) of commit signatures matching deployed container hashes.
+Git is a distributed version control system that helps developers track changes, collaborate safely, and maintain a complete history of software development.
 
----
+Version control allows teams to:
 
-## Key Concepts (المفاهيم الأساسية)
-
-- **The Git Object Database**: In Git, all contents are stored as content-addressable objects under three main structural classes:
-  - **Blobs**: Bare file content representation, excluding metadata or path hashes.
-  - **Trees**: Directional directories mapping filenames to nested trees or direct blobs.
-  - **Commits**: Cryptographically signed nodes identifying author stamps, timestamps, parent hashes, and pointers to root directory trees.
-- **DAG (Directed Acyclic Graph)**: Branches are not isolated directories; they are loose references (pointer files containing a single SHA-1 hash) shifting along historical commit vertices on an immutable graph.
-- **Trunk-Based Development**: Instead of maintaining highly concurrent, long-lived feature branches which yield extreme integration blockages (merge conflicts/friction), high-velocity teams rely on short-lived branches (1-2 days) merged frequently into the primary trunk (`main`), protected by feature flags to decouple releases from deployments.
-- **Conventional Commits**: A structured commit format (`<type>(<scope>): <description>`) that serves as programmatic metadata.
+1. Track changes and identify when bugs were introduced.
+2. Restore previous working versions.
+3. Collaborate using branches and pull requests.
+4. Automate releases and deployments.
 
 ---
 
-## Production-Grade Code (الشيفرة البرمجية الإنتاجية)
+## Key Concepts
 
-### 1. Robust Three-way Merge conflict and Configuration (`.gitconfig`)
-The industry standard is to configure three-way merges with `diff3`, which displays the common base ancestor alongside modified segments to let engineers resolve merges with perfect technical evidence.
+### Git Object Database
+
+Git stores data using three main object types:
+
+- **Blob**: Stores file content.
+- **Tree**: Stores directory structures and references to blobs.
+- **Commit**: Stores snapshots with author information, timestamps, and parent commits.
+
+### Branches
+
+A branch is a movable pointer to a commit. Developers use branches to create isolated environments for new features or fixes.
+
+Common workflow:
+
+
+main
+|
+├── feature-login
+|
+└── bugfix-payment
+
+
+### Trunk-Based Development
+
+Modern teams often use short-lived branches that are merged frequently into the main branch.
+
+Benefits:
+
+- Smaller changes.
+- Fewer merge conflicts.
+- Faster delivery.
+
+### Conventional Commits
+
+A structured commit format:
+
+
+<type>: <description>
+
+
+Examples:
+
+
+feat: add user authentication
+fix: resolve login bug
+docs: update API documentation
+
+
+---
+
+# Production Git Configuration
+
+## Three-Way Merge Configuration
+
+`.gitconfig`
 
 ```ini
-# ~/.gitconfig or .git/config
 [user]
-    name = Distinguished Technical Writer
-    email = documentation-lead@enterprise.com
+    name = Developer
+    email = developer@example.com
 
 [core]
-    autocrlf = input
     editor = code --wait
-    ignorecase = false
 
 [merge]
-    # Highlight original common ancestor content on conflict regions
     conflictstyle = diff3
-    keepBackup = false
 
 [pull]
-    # Enforce rebase-first merges locally to deliver clean linear trees
     rebase = true
 
 [alias]
-    # Interactive, color-coded topological commit layout
-    lg = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --date=relative
+    lg = log --graph --oneline --all
     st = status -sb
-    amend = commit --amend --no-edit
-2. Guarding Commit Standards via Git Hooks (commitlint.config.json)
-Using husky and commitlint enforces high-quality semantic commits at the workstation stage:
-code
-JSON
+Commit Message Validation
+
+Using commitlint helps enforce consistensages.
+
+commitlint.config.json
 
 {
-  "extends": ["@commitlint/config-conventional"],
+  "extends": [
+    "@commitlint/config-conventional"
+  ],
   "rules": {
-    "type-enum": [
+    "subject-empty": [
+      2,
+      "never"
+    ],
+    "subject-max-length": [
       2,
       "always",
-      [
-        "feat",
-        "fix",
-        "docs",
-        "style",
-        "refactor",
-        "perf",
-        "test",
-        "build",
-        "ci",
-        "chore",
-        "revert"
-      ]
-    ],
-    "subject-case": [2, "always", "sentence-case"],
-    "subject-empty": [2, "never"],
-    "subject-max-length": [2, "always", 72]
+      72
+    ]
   }
 }
-3. Automated Release Pipeline (.github/workflows/pipeline.yml)
-Compile and parse commit history using automated GitHub Actions to deploy releases precisely matching SemVer coordinates:
-code
-Yaml
+GitHub Actions Release Pipeline
 
-name: Continuous Release Process
+Example workflow:
+
+.github/workflows/release.yml
+
+name: Release Pipeline
 
 on:
   push:
@@ -102,65 +132,63 @@ on:
 
 jobs:
   release:
-    name: Automatic Release compilation
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      issues: write
-      pull-requests: write
-    steps:
-      - name: Checkout Code Node
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Setup Node Environment
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
 
-      - name: Install Verified Dependencies
+      - name: Install Dependencies
         run: npm ci
 
-      - name: Verify Clean Build and Tests
-        run: |
-          npm run build
-          npm run test -- --coverage
+      - name: Run Tests
+        run: npm test
 
-      - name: Run Semantic Release Gateway
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npx semantic-release
+      - name: Build Project
+        run: npm run build
+Useful Git Commands
+Command	Purpose
+git checkout -b branch-name	Create a new branch
+git rebase origin/main	Update branch history
+git merge branch-name	Merge branches
+git cherry-pick hash	Apply a specific commit
+git status	Check current changes
+git log	View commit history
+Best Practices
+Use Atomic Commits
 
-CLI Reference Table (جدول المراجع والأوامر)
-Git Command
-Functional Enterprise Context
-Failure Recovery Path
-git checkout -b <name>
-Synthesizes and switches focus to a new branch ref pointing to HEAD.
-Delete draft ref local safely via git branch -D <name>.
-git rebase origin/main
-Relocates local commits on top of current main.
-In event of conflict, abort cleanly via git rebase --abort.
-git merge --no-ff <name>
-Integrates a branch, forcing creation of a discrete merge commit.
-Roll back full merge safely via git reset --hard HEAD~1.
-git cherry-pick <hash>
-Integrates exactly one commit node onto the current active branch.
-Reset tracking branch using git cherry-pick --abort.
+Each commit should represent one logical change.
 
-Best Practices (أفضل الممارسات التقنية)
-	1	Never Rebase Shared History: Rewriting or squashing public remote history damages workflows and forces coworkers into manual branch re-alignment. Only rebase local branches.
-	2	Use Atomic Commits: Keep every commit focused on a single logical change. Mixing formatting shifts, bugfixes, and code changes in one commit limits bisection capabilities.
-	3	Leverage Force-with-lease: When uploading rebased features, use git push --force-with-lease rather than normal force. This checks that no coworkers have written intermediate updates to the remote.
+Good:
 
-Deep Reading & References
-	1	Git Internals Deep Dive: https://git-scm.com/book/en/v2/Git-Internals
-	2	Conventional Commits Standard: https://www.conventionalcommits.org/
-	3	Semantic Release Engine Specs: https://github.com/semantic-release/semantic-release
-	4	Atlassian Git Workflows Guide: https://www.atlassian.com/git/tutorials/comparing-workflows
-	5	Git Bisect Performance and Troubleshooting: https://git-scm.com/docs/git-bisect
-code
-Code
+fix: resolve payment validation error
+
+Bad:
+
+changed css, fixed bugs, updated database
+Avoid Rebasing Shared Branches
+
+Do not rewrite history that other developers are already using.
+
+Use Force With Lease
+
+Prefer:
+
+git push --force-with-lease
+
+instead of:
+
+git push --force
+
+because it protects other developers' changes.
+
+References
+Git Documentation: https://git-scm.com/doc
+Conventional Commits: https://www.conventionalcommits.org/
+Semantic Release: https://github.com/semantic-release/semantic-release
+
