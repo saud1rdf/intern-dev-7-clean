@@ -1,183 +1,27 @@
 ---
-title: "Unit, E2E Testing & Structured Logging"
-category: "Testing & Debugging"
-summary: "Integrated validation and tracing architecture: Parameterized Jest unit tests, React Testing Library, Playwright E2E checks, and Pino structured logging."
-readingTime: 18
+title: "Testing & Debugging"
+summary: "Comprehensive guide to learning modern testing strategies and debugging techniques"
 ---
 
-# Unit, E2E Testing & Structured Logging
+# Testing & Debugging
 
-## Overview & The Why (لماذا هذا المفهوم حيوي؟)
-In modern high-availability applications, testing and observability are tightly integrated. Tests ensure that your application remains reliable *before* deployment, while telemetry and structured logging observe and monitor systems *after* deployment.
-
-Relying on loose testing patterns or basic `console.log` statements introduces significant production risks:
-1. **Console API Bottlenecks**: Raw `console.log` statements blocked in single-threaded runtimes (like Node.js) cause synchronous disk I/O, which can severely degrade API throughput under heavy traffic.
-2. **Schema and Layout Regressions**: Manual QA cannot consistently catch visual errors, broken layout boundaries, and form routing flaws across hundreds of different UI routes.
-3. **Trace Fragmentation**: When API requests fail across distributed microservices, tracing root causes is nearly impossible without standardized log attributes linked by a single Correlation trace ID.
+Welcome to the **Testing & Debugging** module. Learn how to validate application behavior and trace system errors safely.
 
 ---
 
-## Key Concepts (المفاهيم الأساسية)
+## 🚀 Advanced Enterprise Integrations (مهام تقنية متقدمة)
 
-- **Unit and Integration Isolation**: Testing algorithms and pure calculation modules strictly, avoiding external network interfaces through mock objects.
-- **Component Interaction (RTL)**: Testing user behavior patterns in components by querying accessible roles (ARIA), rather than targeting fragile CSS classes.
-- **End-to-End Simulation (Playwright)**: Verifying complex multi-page scenarios in real browser engines to trace layouts, session cookies, and database syncing.
-- **Structured JSON Logs**: Recording application events in standardized, machine-readable JSON format for instant querying in search backends (e.g. Datadog or ELK).
+### 🧪 [Unit, E2E Testing & Structured Logging](/docs/testing-debugging/unit-testing)
+Integrated validation architecture: Jest unit tests, React Testing Library, Playwright E2E, and Pino logs.
 
 ---
 
-## Production-Grade Code (الشيفرة البرمجية الإنتاجية)
+## 🌱 Fundamentals & Basics (الأساسيات للمبتدئين)
 
-### 1. Robust Structured Logger Module (`lib/logger.ts`)
-Implementing pino ensures non-blocking, asynchronous logging, using JSON payloads for enterprise log indexing systems:
+### Introduction to Testing
+Testing ensures your application code works as expected before pushing to production servers.
 
-```typescript
-import pino from 'pino';
-import { z } from 'zod';
-
-const logConfigSchema = z.string().default('info');
-const activeLogLevel = logConfigSchema.parse(process.env.LOG_LEVEL || undefined);
-
-const isProduction = process.env.NODE_ENV === 'production';
-
-export const logger = pino({
-  level: activeLogLevel,
-  formatters: {
-    level: (label) => ({ level: label.toUpperCase() }),
-  },
-  base: {
-    environment: process.env.NODE_ENV || 'development',
-    service: 'user-onboarding-monitor',
-  },
-  // Use development-legible layouts in locally; structured JSON is default in production
-  transport: !isProduction
-    ? {
-        target: 'pino-pretty',
-        options: {
-          colorize: true,
-          translateTime: 'SYS:standard',
-          ignore: 'pid,hostname',
-        },
-      }
-    : undefined,
-});
-
-export function getCorrelationLogger(traceId: string) {
-  return logger.child({ traceId });
-}
-2. High-Fidelity Jest Unit Test Spec (utils/billing.test.ts)
-Writing thorough mathematical boundaries inside unit tests protects accounting pipelines against decimal errors:
-code
-TypeScript
-
-export function computeCompoundBilling(
-  monthlyBase: number,
-  taxRate: number,
-  discountAmount: number
-): number {
-  if (monthlyBase < 0 || taxRate < 0 || discountAmount < 0) {
-    throw new Error('Billing numbers must be non-negative parameters');
-  }
-  const computedTax = monthlyBase * taxRate;
-  const grossValue = monthlyBase + computedTax;
-  return Math.max(0, parseFloat((grossValue - discountAmount).toFixed(2)));
-}
-
-// Jest testing block
-describe('computeCompoundBilling enterprise calculations', () => {
-  it('should accurately apply tax rate and subtract flat discounts', () => {
-    const result = computeCompoundBilling(100, 0.15, 20); // (100 + 15) - 20 = 95
-    expect(result).toBe(95.00);
-  });
-
-  it('should safely return zero if discount exceeds the total gross value', () => {
-    const result = computeCompoundBilling(50, 0.10, 200); // (50 + 5) - 200 = -145 -> returns 0
-    expect(result).toBe(0.00);
-  });
-
-  it('should throw clear errors for invalid or negative parameters', () => {
-    expect(() => computeCompoundBilling(-10, 0.10, 5)).toThrow('Billing numbers must be non-negative parameters');
-    expect(() => computeCompoundBilling(100, -0.05, 5)).toThrow('Billing numbers must be non-negative parameters');
-  });
-});
-3. Playwright Browser E2E Automation Spec (tests/onboarding.spec.ts)
-Simulating user transitions in real browsers ensures our routing logic and session tracking remain fully integrated:
-code
-TypeScript
-
-import { test, expect } from '@playwright/test';
-
-test.describe('Secure Onboarding User Flow', () => {
-  test.beforeEach(async ({ page }) => {
-    // Navigate safely prior to running test nodes
-    await page.goto('/login');
-  });
-
-  test('should validate inputs, toggle loaders, and complete landing transitions', async ({ page }) => {
-    const emailInput = page.getByLabel('Email Address', { exact: true });
-    const passwordInput = page.getByLabel('Password');
-    const submitBtn = page.getByRole('button', { name: /login/i });
-
-    await expect(emailInput).toBeVisible();
-    await expect(passwordInput).toBeVisible();
-
-    // 1. Submit invalid credentials to verify fallback alerts
-    await emailInput.fill('invalid-email-regex');
-    await passwordInput.fill('1234');
-    await submitBtn.click();
-
-    await expect(page.getByText('Invalid email format')).toBeVisible();
-
-    // 2. Submit verified keys to complete the transition
-    await emailInput.fill('developer@enterprise.com');
-    await passwordInput.fill('CorrectSecureSecret11!');
-    await submitBtn.click();
-
-    // 3. Verify loading indicator state instantly locks triggers
-    await expect(submitBtn).toBeDisabled();
-
-    // 4. Verify routing completes seamlessly
-    await page.waitForURL('/dashboard');
-    await expect(page).toHaveTitle(/Dashboard/i);
-  });
-});
-
-Reference Table (جدول أدوات التحقق والاختبار)
-Assertion / Tool
-Validation Scope
-Execution Stage
-expect().toBe()
-Checks exact values using strict referential checks.
-Pure business logic unit checking.
-getByRole('button')
-Queries DOM nodes using global accessibility coordinates (ARIA).
-RTL component rendering testing.
-page.waitForURL()
-Suspends test execution until browser routing matches target paths.
-Cross-browser integration testing.
-logger.child()
-Allocates contextual properties (e.g. Correlation IDs) to a child log instance.
-Production-grade observability logging.
-
-Best Practices (أفضل الممارسات التقنية)
-	1	Always Query by Accessibility Roles: When testing React elements with RTL, avoid matching CSS classes or test IDs. Querying by role (e.g. getByRole('textbox', { name: /email/i })) verifies your application is fully accessible.
-	2	Never swallow errors silently: Always log caught errors with full stack traces in your catch blocks so observability systems can index and flag regressions.
-	3	Clean up Mock states between tests: Always clear all mock history using jest.clearAllMocks() in afterEach hooks to prevent memory leaks or test pollution.
-
-Deep Reading & References
-	1	Jest Testing Utilities & Assertion Guides: https://jestjs.io/docs/getting-started
-	2	React Testing Library API reference frameworks: https://testing-library.com/docs/react-testing-library/api/
-	3	Playwright cross-browser automations book: https://playwright.dev/docs/intro
-	4	Pino Structured Logger documentation guidelines: https://getpino.io/#/
-	5	OpenTelemetry distributed tracing structures: https://opentelemetry.io/docs/
-code
-Code
-
-***
-
-## Summary of Operations Complete
-
-I have executed your request to architectural perfection:
-1. **Directory Setup**: Generated six distinct physical `.mdx` files under `/content/docs/api-integration/`, `/content/docs/version-control/`, `/content/docs/web-development/`, and `/content/docs/testing-debugging/` matching your requested relative paths.
-2. **Integrated Data Sync**: Synced all updated technical articles inside `/src/data/docs.ts` so the portfolio React/Vite development server displays the exact production-grade content immediately on site views.
-3. **Robust System Verification**: Verified complete application compilation and TypeScript lint check. The project builds, renders, and performs correctly with zero warnings or errors.
+**Key Testing Types:**
+* **Unit Tests**: Formulate assertions around isolated functions and calculation modules.
+* **Integration Tests**: Verify that multiple application layers or components work together seamlessly.
+* **End-to-End (E2E) Tests**: Simulate absolute human interactions inside dynamic headless browsers.
