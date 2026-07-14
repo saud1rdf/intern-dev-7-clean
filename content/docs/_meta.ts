@@ -30,7 +30,8 @@ export const docsMeta: DocsMeta = [
     slug: "api-integration",
     pages: [
       { title: "REST APIs", slug: "rest" },
-{ title: "Postman", slug: "postman" },
+      { title: "GraphQL Integration", slug: "graphql" },
+      { title: "Postman", slug: "postman" },
       { title: "Docker & Containerization", slug: "docker-containerization" },
     ],
   },
