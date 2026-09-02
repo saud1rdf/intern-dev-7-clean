@@ -1,0 +1,216 @@
+---
+title: "Testing & Debugging"
+slug: "testing-debugging"
+category: "testing-debugging"
+description: "Master testing strategies from unit to E2E, debugging techniques, structured logging, and error handling for production applications"
+readingTime: 15
+---
+
+# Testing & Debugging
+
+Testing and debugging are not afterthoughts—they're integral to how professional developers write reliable software. The cost of fixing a bug increases exponentially the later it's discovered: $1 in development, $10 in testing, $100 in production, $1000+ after release.
+
+This section teaches you how to build a comprehensive testing strategy, debug effectively when things go wrong, and implement observability so you can understand your application in production.
+
+## Learning Path Overview
+
+### 🌱 Fundamentals (Start Here)
+
+| Topic | Description | Estimated Time |
+|-------|-------------|----------------|
+| [Unit Testing](/docs/testing-debugging/unit-testing) | Jest, React Testing Library, component testing, business logic validation | 18 min |
+| [Integration Testing](/docs/testing-debugging/integration-testing) | Testing service layers, database interactions, API contracts | 15 min |
+| [Debugging Tools](/docs/testing-debugging/debugging-tools) | Chrome DevTools, VS Code debugger, React DevTools, performance profiling | 20 min |
+| [Node.js Error Handling](/docs/testing-debugging/nodejs-error-handling) | Error classes, async error handling, graceful shutdown, operational vs programmer errors | 15 min |
+
+## The Testing Pyramid
+
+```
+                    ████
+                   ██████
+                  ████████     E2E Tests (Few)
+                 ██████████
+                ████████████   Integration Tests (Some)
+               ██████████████
+              ████████████████ Unit Tests (Many)
+             ██████████████████
+            ████████████████████
+           ██████████████████████
+          ████████████████████████
+```
+
+**Unit Tests** (70%) – Fast, isolated, test single functions/components  
+**Integration Tests** (20%) – Test module boundaries, API contracts, database  
+**E2E Tests** (10%) – Critical user journeys, real browser, expensive but high confidence
+
+## Testing Philosophy
+
+### Test Behavior, Not Implementation
+```typescript
+// ❌ BAD: Testing implementation details
+expect(component.state.isOpen).toBe(true);
+expect(wrapper.find('MyComponent').props().onClick).toHaveBeenCalled();
+
+// ✅ GOOD: Testing user-visible behavior
+expect(screen.getByRole('button', { name: /submit/i })).toBeEnabled();
+await userEvent.click(screen.getByRole('button', { name: /submit/i }));
+await waitFor(() => expect(screen.getByText(/success/i)).toBeInTheDocument());
+```
+
+### Testing Trophy (Modern Alternative)
+For modern applications, consider the **Testing Trophy**:
+- **Static Analysis** (TypeScript, ESLint) – Catches bugs before runtime
+- **Unit Tests** – Pure functions, utilities, complex logic
+- **Integration Tests** – Component trees, API routes, database
+- **E2E Tests** – Critical paths only (login, checkout, onboarding)
+
+## Debugging Methodology
+
+### Scientific Debugging Process
+1. **Reproduce** – Create minimal reproduction case
+2. **Isolate** – Narrow down the scope (binary search)
+3. **Hypothesize** – Form a theory about root cause
+4. **Test** – Verify hypothesis with targeted experiment
+5. **Fix** – Apply minimal, correct fix
+6. **Verify** – Confirm fix works, add regression test
+7. **Reflect** – Why did this happen? How to prevent?
+
+### Common Debugging Tools
+
+| Tool | Best For |
+|------|----------|
+| **Console.log / Debugger** | Quick inspection, simple flows |
+| **VS Code Debugger** | Breakpoints, call stack, variables, watch expressions |
+| **Chrome DevTools** | DOM, network, performance, memory, console |
+| **React DevTools** | Component tree, props, state, hooks, profiler |
+| **React Query DevTools** | Cache state, mutations, query invalidation |
+| **Pino/Winston Logs** | Production debugging, structured search |
+
+## Structured Logging
+
+### Why Structured Logs?
+```javascript
+// ❌ UNSTRUCTURED - Hard to search, parse, alert
+console.log('User 123 logged in from Chrome on Mac');
+console.error('Database connection failed: ECONNREFUSED');
+
+// ✅ STRUCTURED - Queryable, filterable, machine-readable
+logger.info({ userId: 123, browser: 'Chrome', os: 'Mac' }, 'User logged in');
+logger.error({ err: error, service: 'database', operation: 'connect' }, 'Connection failed');
+```
+
+### Log Levels
+| Level | Use Case |
+|-------|----------|
+| `trace` | Detailed flow debugging (very verbose) |
+| `debug` | Development debugging information |
+| `info` | General operational events |
+| `warn` | Potential issues, deprecated usage |
+| `error` | Handled errors, failed operations |
+| `fatal` | Unrecoverable, process will exit |
+
+### Essential Log Fields
+```json
+{
+  "timestamp": "2024-01-15T10:30:45.123Z",
+  "level": "error",
+  "service": "payment-api",
+  "traceId": "abc-123-def-456",
+  "spanId": "span-789",
+  "message": "Payment provider timeout",
+  "error": {
+    "name": "TimeoutError",
+    "message": "Request timed out after 30s",
+    "stack": "..."
+  },
+  "context": {
+    "userId": "user-123",
+    "orderId": "order-456",
+    "amount": 99.99
+  }
+}
+```
+
+## Error Handling Strategy
+
+### Error Classification
+```typescript
+// Operational errors – Expected, handle gracefully
+class OperationalError extends Error {
+  constructor(public readonly code: string, message: string, public readonly statusCode = 400) {
+    super(message);
+    this.name = 'OperationalError';
+  }
+}
+
+// Programmer errors – Bugs, crash and alert
+class ProgrammerError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ProgrammerError';
+  }
+}
+
+// Usage
+if (!user) throw new OperationalError('USER_NOT_FOUND', 'User does not exist', 404);
+if (typeof user.id !== 'string') throw new ProgrammerError('User ID must be string');
+```
+
+### Async Error Handling Pattern
+```typescript
+// Wrapper for consistent error handling
+async function safeAsync<T>(promise: Promise<T>): Promise<[T | null, Error | null]> {
+  try {
+    const data = await promise;
+    return [data, null];
+  } catch (error) {
+    return [null, error instanceof Error ? error : new Error(String(error))];
+  }
+}
+
+// Usage
+const [user, error] = await safeAsync(fetchUser(id));
+if (error) {
+  if (error instanceof OperationalError) {
+    return res.status(error.statusCode).json({ error: error.code });
+  }
+  logger.error({ err: error }, 'Unexpected error fetching user');
+  return res.status(500).json({ error: 'INTERNAL_ERROR' });
+}
+```
+
+## Prerequisites
+
+- JavaScript/TypeScript fundamentals
+- Node.js 20+ installed
+- Basic understanding of async/await
+- Familiarity with command line
+- VS Code or similar editor with debugger support
+
+## Practice Project
+
+Each topic includes hands-on exercises. Start with a simple Node.js project:
+```bash
+mkdir testing-practice && cd testing-practice
+npm init -y
+npm install -D jest @types/jest ts-jest typescript
+npm install -D @testing-library/react @testing-library/jest-dom
+npm install -D playwright @playwright/test
+npm install pino
+npx ts-jest config:init
+```
+
+## Next Steps
+
+Start with [Unit Testing](/docs/testing-debugging/unit-testing) to learn the fundamentals of writing fast, reliable tests. The patterns you learn there apply across all testing levels.
+
+---
+
+## Further Reading
+
+- [Testing Library Guiding Principles](https://testing-library.com/docs/guiding-principles) – Philosophy behind modern testing
+- [Kent C. Dodds Blog](https://kentcdodds.com/blog) – Deep dives on testing
+- [Playwright Documentation](https://playwright.dev/docs/intro) – Modern E2E testing
+- [Debugging Node.js](https://nodejs.org/en/docs/guides/debugging-getting-started/) – Official debugging guide
+- [Site Reliability Engineering Book](https://sre.google/books/) – Production observability at scale
+- [Observability Engineering](https://www.oreilly.com/library/view/observability-engineering/9781492076438/) – Logs, metrics, traces

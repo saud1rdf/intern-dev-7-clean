@@ -1,0 +1,215 @@
+---
+title: "Version Control & CI/CD"
+slug: "version-control"
+category: "version-control"
+description: "Learn Git, GitHub, and modern version control practices including branching, merging, CI/CD, and collaboration workflows"
+readingTime: 15
+---
+
+# Version Control (Git & GitHub)
+
+Version control is the backbone of collaborative software development. It enables teams to track changes, work in parallel, recover from mistakes, and deploy with confidence. Git, created by Linus Torvalds in 2005, has become the de facto standard for distributed version control.
+
+As an intern, mastering Git isn't optional—it's the primary tool you'll use every day. This section takes you from basic commands to advanced workflows used in production environments.
+
+## Learning Path Overview
+
+### 🌱 Fundamentals (Start Here)
+
+| Topic | Description | Estimated Time |
+|-------|-------------|----------------|
+| [Git Basics](/docs/version-control/git-basics) | Core concepts, staging, commits, branching strategies, conventional commits | 12 min |
+| [GitHub Workflow](/docs/version-control/github-workflow) | Forking, pull requests, code review, issue tracking, project boards | 15 min |
+
+### 🚀 Advanced Practices
+
+| Topic | Description | Estimated Time |
+|-------|-------------|----------------|
+| [Branching Strategies](/docs/version-control/branching) | Git Flow, Trunk-Based Development, release branches, hotfixes | 15 min |
+| [Merge Conflicts](/docs/version-control/merge-conflicts) | Resolution strategies, diff3, tooling, prevention techniques | 15 min |
+| [GitHub Actions CI/CD](/docs/version-control/github-actions-cicd) | Automated testing, building, deployment pipelines, secrets management | 20 min |
+
+## Why Version Control Matters
+
+```
+Without Git                    With Git
+─────────────────              ─────────────────
+Single point of failure       Distributed, redundant history
+Overwriting changes           Parallel development
+No audit trail                Complete change history
+Manual backups                Automatic snapshots
+"Works on my machine"         Reproducible environments
+```
+
+## Core Git Concepts
+
+### The Three Trees
+Git manages three "trees" in your repository:
+- **Working Directory** – Files you're currently editing
+- **Staging Area (Index)** – Prepared changes for the next commit
+- **Repository (HEAD)** – Committed history
+
+```bash
+# Typical workflow
+git add .           # Working Directory → Staging Area
+git commit -m "msg" # Staging Area → Repository
+```
+
+### Commit Anatomy
+A well-structured commit tells a story:
+```bash
+git commit -m "feat: add user authentication flow
+
+- Implement JWT token generation with 15min expiry
+- Add refresh token rotation for security
+- Include unit tests for auth middleware
+- Update API documentation with auth headers
+
+Closes #234"
+```
+
+### Branching Model for Teams
+Modern teams typically use **Trunk-Based Development**:
+```
+main ────────────────────────────────────────►
+  │    │    │    │    │    │    │
+  │    │    │    │    │    └─ hotfix/critical-bug (1 day)
+  │    │    │    │    └─ feature/payment (2 days)
+  │    │    │    └─ feature/dashboard (3 days)
+  │    │    └─ feature/login (1 day)
+  │    └─ feature/user-profile (2 days)
+  └─ feature/onboarding (3 days)
+```
+- Short-lived branches (hours to 2 days)
+- Frequent merges to main
+- Feature flags for incomplete work
+- CI runs on every push
+
+## Essential Commands Reference
+
+### Daily Workflow
+```bash
+# Start new work
+git checkout main
+git pull origin main
+git checkout -b feature/your-feature
+
+# Make changes
+git add -p              # Interactive staging
+git commit -m "type: description"
+
+# Stay updated
+git fetch origin
+git rebase origin/main  # Clean history
+
+# Share work
+git push -u origin feature/your-feature
+# Open Pull Request
+```
+
+### Inspection & Debugging
+```bash
+git status                    # Current state
+git log --oneline --graph     # Visual history
+git diff                      # Unstaged changes
+git diff --staged             # Staged changes
+git show HEAD~3               # Specific commit
+git blame file.ts             # Line-by-line history
+git bisect start              # Find regression commit
+```
+
+### Recovery & Cleanup
+```bash
+git restore file.ts           # Discard unstaged changes
+git restore --staged file.ts  # Unstage
+git commit --amend            # Fix last commit
+git reset --soft HEAD~1       # Uncommit, keep changes
+git reset --hard HEAD~1       # DANGER: Discard last commit
+git reflog                    # Recovery safety net
+git clean -fd                 # Remove untracked files
+```
+
+## GitHub Collaboration Workflow
+
+### Pull Request Best Practices
+1. **Small, focused PRs** – One logical change per PR
+2. **Descriptive titles** – `feat: add password reset` not `fixes`
+3. **Context in description** – Why, what, how to test
+4. **Self-review first** – Catch obvious issues before requesting review
+5. **Respond to all comments** – Address or discuss, don't ignore
+
+### Code Review Checklist
+- [ ] Does it solve the stated problem?
+- [ ] Are tests included and passing?
+- [ ] Is the code readable and maintainable?
+- [ ] Any security implications?
+- [ ] Performance considerations?
+- [ ] Documentation updated?
+- [ ] Breaking changes documented?
+
+## Configuration for Productivity
+
+### Recommended Global Config
+```bash
+# Identity
+git config --global user.name "Your Name"
+git config --global user.email "you@example.com"
+
+# Better defaults
+git config --global init.defaultBranch main
+git config --global pull.rebase true
+git config --global merge.conflictstyle diff3
+
+# Useful aliases
+git config --global alias.lg "log --graph --oneline --all --decorate"
+git config --global alias.st "status -sb"
+git config --global alias.co "checkout"
+git config --global alias.br "branch"
+git config --global alias.cm "commit -m"
+git config --global alias.undo "reset --soft HEAD~1"
+
+# Editor
+git config --global core.editor "code --wait"
+```
+
+### Commit Message Validation
+```bash
+# Install commitlint
+npm install -g @commitlint/cli @commitlint/config-conventional
+
+# Add to repo
+echo '{"extends": ["@commitlint/config-conventional"]}' > commitlint.config.json
+
+# Git hook (via husky)
+npx husky add .husky/commit-msg 'npx --no -- commitlint --edit "$1"'
+```
+
+## Prerequisites
+
+- Git installed (`git --version` should show 2.30+)
+- GitHub account
+- Basic terminal/command line comfort
+- Text editor configured for Git (VS Code works great out of the box)
+
+## Practice Repository
+
+Clone this repository to practice all exercises:
+```bash
+git clone https://github.com/your-org/git-practice.git
+cd git-practice
+# Follow exercises in each topic
+```
+
+## Next Steps
+
+Begin with [Git Basics](/docs/version-control/git-basics) to establish your foundation. Even if you know some commands, the article covers conventions and configurations that will save you hours of frustration later.
+
+---
+
+## Further Reading
+
+- [Pro Git Book (Free)](https://git-scm.com/book/en/v2) – Comprehensive reference
+- [GitHub Skills](https://skills.github.com/) – Interactive courses
+- [Oh Shit, Git!?!](https://ohshitgit.com/) – Recovery from common mistakes
+- [Atlassian Git Tutorials](https://www.atlassian.com/git/tutorials) – Visual guides
+- [Conventional Commits](https://www.conventionalcommits.org/) – Commit message standard

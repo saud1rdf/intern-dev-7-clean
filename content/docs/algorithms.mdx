@@ -1,31 +1,696 @@
+---
+title: "Algorithms"
+description: "Understand fundamental and advanced algorithms including sorting, searching, dynamic programming, graph algorithms, and complexity analysis"
+---
+
+# Algorithms: From Foundations to Production
+
+## Executive Summary
+
+Algorithms are the systematic procedures that underpin every software system—from the search bar autocomplete you use each morning to the route optimization that powers logistics networks. This article provides a comprehensive exploration of algorithmic thinking, moving from theoretical foundations through production-grade implementations to hands-on practice tasks.
+
+For software engineers and interns alike, algorithmic literacy is the difference between code that works and code that scales. The distinction between an O(n²) nested loop and an O(n log n) sort is the difference between an API that times out at 10,000 records and one that handles millions effortlessly.
+
+This article covers the essential algorithmic vocabulary (Big-O analysis), core algorithm families (sorting, searching, graph traversal, dynamic programming), and the problem-solving frameworks senior engineers use daily. Each section includes production-ready TypeScript implementations and concludes with six practical exercises designed for immediate application.
+
+**Reading time:** ~25 minutes
+**Prerequisites:** Basic programming (variables, loops, functions, recursion), comfort with JavaScript/TypeScript or Python, and fundamental mathematics (logarithms, summations, combinatorics).
 
 ---
 
-## 4️⃣ Algorithms  
-**المسار:**  
-`content/docs/algorithms.mdx`
+## Why Algorithms Matter in Production
 
-```mdx
+Many developers rely exclusively on built-in methods—`.sort()`, `.filter()`, `.find()`—and for most day-to-day work this is appropriate. However, understanding what occurs beneath these abstractions becomes critical when systems encounter scale, latency constraints, or novel constraints.
+
+| Scenario | Why Algorithmic Knowledge Is Essential |
+|----------|----------------------------------------|
+| **Large datasets** | Choosing O(n log n) over O(n²) determines whether a batch job completes in seconds or hours |
+| **Cursor-based pagination** | Efficient cursors require understanding of B-tree traversal and key ordering |
+| **LRU cache construction** | A production LRU cache combines a hash map with a doubly linked list for O(1) operations |
+| **Autocomplete and search** | Trie structures enable prefix lookup in O(k) time where k is the query length |
+| **Rate limiting** | Token bucket and sliding window algorithms protect services from traffic spikes |
+| **Database indexes** | Understanding B-tree vs. hash indexes directly impacts query performance |
+| **Technical interviews** | Algorithmic problem-solving is a standard evaluation criterion for most roles |
+
+The ability to reason about computational complexity allows engineers to make informed trade-offs, communicate precisely with colleagues, and anticipate bottlenecks before they manifest in production.
+
 ---
-title: Algorithms | الخوارزميات
-description: Problem solving and Big-O basics | أساسيات الخوارزميات للمتدربين
----
 
-# Algorithms | الخوارزميات
+## Complexity Analysis: The Language of Efficiency
 
-## English
-Algorithms are step-by-step solutions to problems.
+Big-O notation provides a standardized vocabulary for describing how an algorithm's resource consumption grows relative to input size. It abstracts away hardware differences, constant factors, and lower-order terms to focus on the dominant growth characteristic.
 
-### Big-O basics
-- O(1)
-- O(n)
-- O(n²)
+### Time Complexity Reference
 
-```js
-function countFreq(arr) {
-  const map = new Map();
-  for (const x of arr) {
-    map.set(x, (map.get(x) || 0) + 1);
+| Complexity | Classification | Representative Operation | Practical Limit (~1s) |
+|------------|---------------|-------------------------|-----------------------|
+| O(1) | Constant | Hash map lookup, array index access | Unbounded |
+| O(log n) | Logarithmic | Binary search, balanced BST lookup | ~10¹⁸ elements |
+| O(n) | Linear | Single-pass array scan | ~10⁸ elements |
+| O(n log n) | Linearithmic | MergeSort, QuickSort (average) | ~10⁶–10⁷ elements |
+| O(n²) | Quadratic | Nested iteration, BubbleSort | ~10⁴ elements |
+| O(n³) | Cubic | Triple-nested loops, Floyd-Warshall | ~10²–10³ elements |
+| O(2ⁿ) | Exponential | Subset enumeration, naive Fibonacci | ~20–25 elements |
+| O(n!) | Factorial | Permutation generation, brute-force TSP | ~10–11 elements |
+
+### Space Complexity
+
+Space complexity measures the auxiliary memory an algorithm requires beyond its input.
+
+- **Auxiliary space** — Extra memory allocated excluding the input itself
+- **In-place algorithms** — Require O(1) auxiliary space (e.g., QuickSort with in-place partitioning)
+- **Tail-call optimization** — Certain languages optimize tail-recursive calls to O(1) stack space
+
+### Analyzing Code: Worked Examples
+
+```typescript
+/** O(n²) — quadratic. Nested loops; doubling input quadruples the work. */
+function hasDuplicateNaive(items: number[]): boolean {
+  for (let i = 0; i < items.length; i++) {
+    for (let j = i + 1; j < items.length; j++) {
+      if (items[i] === items[j]) return true;
+    }
   }
-  return map;
+  return false;
 }
+
+/** O(n) — linear with O(n) auxiliary space. A Set makes membership O(1). */
+function hasDuplicateOptimal(items: number[]): boolean {
+  const seen = new Set<number>();
+  for (const item of items) {
+    if (seen.has(item)) return true;
+    seen.add(item);
+  }
+  return false;
+}
+```
+
+**Key takeaway:** The same operation (finding a duplicate) can be O(n²) or O(n), depending on the data structure chosen. Algorithmic awareness directly determines performance characteristics.
+
+---
+
+## Sorting Algorithms
+
+Sorting is one of the most studied problems in computer science. The choice of algorithm affects raw performance, cache behavior, stability, and memory consumption.
+
+### MergeSort — Guaranteed O(n log n), Stable
+
+MergeSort divides the array in half recursively, sorts each half, and merges the results. It guarantees O(n log n) performance regardless of input distribution and preserves the relative order of equal elements (stability).
+
+```typescript
+function merge<T>(
+  left: T[],
+  right: T[],
+  compareFn: (a: T, b: T) => number = (a, b) => (a < b ? -1 : a > b ? 1 : 0),
+): T[] {
+  const result: T[] = [];
+  let i = 0;
+  let j = 0;
+  while (i < left.length && j < right.length) {
+    result.push(compareFn(left[i], right[j]) <= 0 ? left[i++] : right[j++]);
+  }
+  while (i < left.length) result.push(left[i++]);
+  while (j < right.length) result.push(right[j++]);
+  return result;
+}
+
+/** MergeSort. Time: O(n log n) always. Space: O(n) auxiliary. Stable. */
+function mergeSort<T>(items: T[], compareFn?: (a: T, b: T) => number): T[] {
+  if (items.length <= 1) return items;
+  const mid = Math.floor(items.length / 2);
+  return merge(mergeSort(items.slice(0, mid), compareFn), mergeSort(items.slice(mid), compareFn), compareFn);
+}
+```
+
+### When to Use Each
+
+| Algorithm | Best For | Avoid When |
+|-----------|----------|------------|
+| **MergeSort** | Stable sort required, linked lists, external sorting | Memory is constrained |
+| **QuickSort** | General-purpose in-memory array sorting | Worst-case guarantees are critical |
+| **InsertionSort** | Small arrays (n < 50), nearly sorted data | Large random datasets |
+| **Built-in `.sort()`** | Production code (engines use TimSort) | You need fully documented sort behavior |
+
+> **Production note:** In TypeScript/JavaScript, always prefer `Array.prototype.sort()` in production. V8 and other engines implement TimSort, a hybrid of MergeSort and InsertionSort optimized for real-world data. MergeSort and QuickSort (implemented hands-on in [Task 1](#task-1-implement-and-benchmark-sorting-algorithms)) serve educational and interview purposes.
+
+---
+
+## Searching Algorithms
+
+### Binary Search — O(log n) Lookups on Sorted Data
+
+Binary search halves the search space with each comparison. A 1,000,000-element array requires at most ~20 comparisons.
+
+```typescript
+/**
+ * Classic binary search. Returns the index of `target` or -1.
+ * Time: O(log n), Space: O(1). Requires a sorted array.
+ */
+function binarySearch(sorted: number[], target: number): number {
+  let left = 0;
+  let right = sorted.length - 1;
+  while (left <= right) {
+    const mid = left + Math.floor((right - left) / 2); // Avoids integer overflow
+    if (sorted[mid] === target) return mid;
+    if (sorted[mid] < target) left = mid + 1;
+    else right = mid - 1;
+  }
+  return -1;
+}
+```
+
+**Common pitfalls:** (1) Off-by-one errors — use consistent boundary conventions; (2) overflow — compute `mid` as `left + Math.floor((right - left) / 2)`, never `(left + right) / 2`; (3) unsorted input — binary search requires sorted data.
+
+**Boundary variant:** The `lowerBound`/`upperBound` pattern (finding first/last occurrence) is covered hands-on in [Task 2](#task-2-binary-search-on-a-real-problem).
+
+---
+
+## Dynamic Programming
+
+Dynamic programming (DP) breaks a problem into overlapping subproblems, solves each once, and stores the results. It applies when a problem exhibits **optimal substructure** (the optimal solution contains optimal subproblem solutions) and **overlapping subproblems** (the same subproblems recur).
+
+```typescript
+/**
+ * Fibonacci — memoization (top-down). Time: O(n), Space: O(n).
+ * Naive recursion is O(2^n) because it recomputes the same values
+ * exponentially many times; a cache eliminates that waste.
+ */
+function fibonacciMemoized(n: number): number {
+  const memo = new Map<number, number>();
+  function fib(k: number): number {
+    if (k <= 1) return k;
+    if (memo.has(k)) return memo.get(k)!;
+    const result = fib(k - 1) + fib(k - 2);
+    memo.set(k, result);
+    return result;
+  }
+  return fib(n);
+}
+
+/**
+ * Minimum coins to make `amount`, or -1 if impossible (tabulation, bottom-up).
+ * Time: O(amount × coins.length), Space: O(amount)
+ * coinChange([1, 5, 10, 25], 30) → 2 (25 + 5)
+ */
+function coinChange(coins: number[], amount: number): number {
+  const dp = new Array<number>(amount + 1).fill(Infinity);
+  dp[0] = 0;
+  for (let i = 1; i <= amount; i++) {
+    for (const coin of coins) {
+      if (coin <= i && dp[i - coin] + 1 < dp[i]) {
+        dp[i] = dp[i - coin] + 1;
+      }
+    }
+  }
+  return dp[amount] === Infinity ? -1 : dp[amount];
+}
+```
+
+---
+
+## Graph Algorithms
+
+Graphs model relationships between entities — social networks, road maps, dependency chains, and organizational hierarchies. The adjacency list below uses O(V + E) space versus O(V²) for a matrix, making it the default for sparse graphs.
+
+```typescript
+type Graph = Map<string, string[]>;
+
+function buildGraph(edges: [string, string][]): Graph {
+  const graph: Graph = new Map();
+  for (const [from, to] of edges) {
+    if (!graph.has(from)) graph.set(from, []);
+    if (!graph.has(to)) graph.set(to, []);
+    graph.get(from)!.push(to);
+    graph.get(to)!.push(from); // Remove for directed graphs
+  }
+  return graph;
+}
+
+/** BFS traversal from `start`, returning the visit order.
+ *  Time: O(V + E), Space: O(V).
+ *  Note: array.shift() is O(n); swap in a proper queue in hot paths. */
+function bfs(graph: Graph, start: string): string[] {
+  const visited = new Set<string>([start]);
+  const queue: string[] = [start];
+  const order: string[] = [];
+  while (queue.length > 0) {
+    const vertex = queue.shift()!;
+    order.push(vertex);
+    for (const neighbor of graph.get(vertex) ?? []) {
+      if (!visited.has(neighbor)) {
+        visited.add(neighbor);
+        queue.push(neighbor);
+      }
+    }
+  }
+  return order;
+}
+```
+
+Because BFS visits vertices in increasing hop order, it yields the shortest path in unweighted graphs: track a distance alongside each queued vertex and return the distance of the first visit to the target.
+
+**Depth-First Search (DFS)** explores as far as possible along each branch before backtracking, using an explicit stack or recursion. It is the natural choice for cycle detection, topological sorting (see [Task 4](#task-4-build-a-dependency-resolver-with-topological-sort)), and exhaustive state exploration.
+
+---
+
+## Essential Problem-Solving Patterns
+
+Recognizing algorithmic patterns is the most valuable skill for solving novel problems efficiently.
+
+| Pattern | Key Insight | Representative Problems |
+|---------|-------------|------------------------|
+| **Two Pointers** | Sorted input → O(n) instead of O(n²) | Two Sum II, Container With Most Water |
+| **Sliding Window** | Contiguous subarray/substring problems | Max Average Subarray, Minimum Window Substring |
+| **Prefix Sums** | Precomputed cumulative sums → O(1) range queries | Subarray Sum Equals K |
+| **Fast/Slow Pointers** | Cycle detection without extra space | Linked List Cycle, Happy Number |
+| **BFS/DFS** | Systematic graph/tree traversal | Number of Islands, Course Schedule |
+| **Topological Sort** | Linear ordering respecting dependencies | Course Schedule II, Build Order |
+| **Dynamic Programming** | Optimal substructure + overlapping subproblems | Coin Change, Longest Common Subsequence |
+| **Greedy** | Local optimum leads to global optimum | Interval Scheduling, Jump Game |
+| **Binary Search on Answer** | Monotonic predicate over a search space | Koko Eating Bananas |
+| **Bit Manipulation** | O(1) space tricks with bitwise operators | Single Number, Power of Two |
+
+## Data Structures Quick Reference
+
+| Structure | Core Operations | Complexity | Primary Use Case |
+|-----------|-----------------|------------|------------------|
+| **Array** | Access, append | O(1) / O(1) amortized | Sequential data, cache-friendly iteration |
+| **Hash Map/Set** | Lookup, insert, delete | O(1) average | Counting, deduplication, caching |
+| **Stack** | Push, pop, peek | O(1) | Parentheses validation, DFS |
+| **Queue** | Enqueue, dequeue | O(1) | BFS, level-order traversal |
+| **Priority Queue** | Insert, extract-min/max | O(log n) | Dijkstra, Huffman, top-k |
+| **Tree / BST** | Search, insert, delete | O(log n) balanced | Ordered data, range queries |
+| **Trie** | Prefix search, insert | O(k), k = key length | Autocomplete, IP routing |
+| **Union-Find** | Union, find | O(α(n)) amortized | Connected components, Kruskal's MST |
+| **Segment Tree** | Range query, point update | O(log n) | Range sum/min/max, order statistics |
+
+---
+
+## Hands-On Practice
+
+The following tasks are designed for immediate application in a local development environment. All tasks use plain TypeScript and run directly with `npx tsx <file>` (no framework required). Create a scratch directory and work through the tasks in order.
+
+### Task 1: Implement and Benchmark Sorting Algorithms
+
+**Objective:** Implement MergeSort and QuickSort from scratch, then benchmark both against `Array.prototype.sort()` to observe real-world performance.
+
+1. Set up a scratch file: `mkdir -p src/algorithms && touch src/algorithms/sorting-benchmark.ts`
+
+2. Copy the MergeSort implementation from this article into the file, then add QuickSort:
+
+```typescript
+/** Partitions items[low..high] around a pivot; returns the pivot's index. */
+function partition(items: number[], low: number, high: number): number {
+  const mid = Math.floor((low + high) / 2); // Median-of-three pivot selection
+  if (items[low] > items[mid]) [items[low], items[mid]] = [items[mid], items[low]];
+  if (items[low] > items[high]) [items[low], items[high]] = [items[high], items[low]];
+  if (items[mid] > items[high]) [items[mid], items[high]] = [items[high], items[mid]];
+  [items[mid], items[high - 1]] = [items[high - 1], items[mid]];
+  const pivot = items[high - 1];
+  let i = low;
+  let j = high - 1;
+  while (true) {
+    do { i++; } while (items[i] < pivot);
+    do { j--; } while (items[j] > pivot);
+    if (i >= j) break;
+    [items[i], items[j]] = [items[j], items[i]];
+  }
+  [items[i], items[high - 1]] = [items[high - 1], items[i]];
+  return i;
+}
+
+/** QuickSort (median-of-three). Time: O(n log n) avg, O(n²) worst. Not stable. */
+function quickSort(items: number[], low = 0, high = items.length - 1): void {
+  if (low >= high) return;
+  // Two-element base case: partition() requires at least 3 elements
+  // to place the median-of-three pivot at high - 1.
+  if (high - low === 1) {
+    if (items[low] > items[high]) [items[low], items[high]] = [items[high], items[low]];
+    return;
+  }
+  const pivotIndex = partition(items, low, high);
+  quickSort(items, low, pivotIndex - 1);
+  quickSort(items, pivotIndex + 1, high);
+}
+```
+
+3. Add a benchmarking harness:
+
+```typescript
+function generateRandomArray(size: number): number[] {
+  return Array.from({ length: size }, () => Math.floor(Math.random() * size * 10));
+}
+
+function benchmark(label: string, fn: () => void, iterations = 5): void {
+  const times: number[] = [];
+  for (let i = 0; i < iterations; i++) {
+    const start = performance.now();
+    fn();
+    times.push(performance.now() - start);
+  }
+  const avg = times.reduce((a, b) => a + b, 0) / times.length;
+  console.log(`${label}: ${avg.toFixed(3)}ms (avg of ${iterations})`);
+}
+
+for (const size of [1_000, 10_000, 100_000]) {
+  console.log(`\n--- Array size: ${size.toLocaleString()} ---`);
+  const data = generateRandomArray(size);
+  benchmark("Built-in", () => [...data].sort((a, b) => a - b));
+  benchmark("MergeSort", () => mergeSort([...data]));
+  benchmark("QuickSort", () => quickSort([...data]));
+}
+```
+
+4. Run locally: `npx tsx src/algorithms/sorting-benchmark.ts` and record which algorithm wins at each size.
+
+**External resources:** [Visualgo — Sorting Animations](https://visualgo.net/en/sorting) · [Big-O Cheat Sheet](https://www.bigocheatsheet.com/) · [LeetCode #912 — Sort an Array](https://leetcode.com/problems/sort-an-array/)
+
+**Real-world application:** When processing CSV exports, log files, or database result sets, the sorting choice directly impacts memory and throughput. MergeSort is preferred for linked lists and external sorting; QuickSort excels for in-memory arrays.
+
+### Task 2: Binary Search on a Real Problem
+
+**Objective:** Solve the classic "first and last position" problem using the lower/upper-bound binary search pattern.
+
+1. Create the file: `touch src/algorithms/search-range.ts`
+
+2. Implement the solution:
+
+```typescript
+function searchRange(nums: number[], target: number): [number, number] {
+  function lowerBound(): number {
+    let left = 0, right = nums.length;
+    while (left < right) {
+      const mid = left + Math.floor((right - left) / 2);
+      if (nums[mid] < target) left = mid + 1;
+      else right = mid;
+    }
+    return left;
+  }
+  function upperBound(): number {
+    let left = 0, right = nums.length;
+    while (left < right) {
+      const mid = left + Math.floor((right - left) / 2);
+      if (nums[mid] <= target) left = mid + 1;
+      else right = mid;
+    }
+    return left;
+  }
+  const start = lowerBound();
+  const end = upperBound();
+  return start === end ? [-1, -1] : [start, end - 1];
+}
+
+console.log(searchRange([5, 7, 7, 8, 8, 10], 8)); // [3, 4]
+console.log(searchRange([5, 7, 7, 8, 8, 10], 6)); // [-1, -1]
+console.log(searchRange([], 0));                  // [-1, -1]
+```
+
+3. Run locally: `npx tsx src/algorithms/search-range.ts`
+
+**External resources:** [LeetCode #34 — Find First and Last Position...](https://leetcode.com/problems/find-first-and-last-position-of-element-in-sorted-array/) · [LeetCode #704 — Binary Search](https://leetcode.com/problems/binary-search/) · [Visualgo — Binary Search](https://visualgo.net/en/binarysearch)
+
+**Real-world application:** Binary search over sorted log timestamps for incident investigation, database index lookups, and range-based API filtering all rely on these boundary-search techniques.
+
+### Task 3: Build an LRU Cache
+
+**Objective:** Implement a production-quality LRU cache with O(1) `get` and `put` using a hash map combined with a doubly linked list.
+
+1. Create the file: `touch src/algorithms/lru-cache.ts`
+
+2. Implement the cache:
+
+```typescript
+class LRUNode<K, V> {
+  constructor(
+    public key: K,
+    public value: V,
+    public prev: LRUNode<K, V> | null = null,
+    public next: LRUNode<K, V> | null = null,
+  ) {}
+}
+
+class LRUCache<K, V> {
+  private map = new Map<K, LRUNode<K, V>>();
+  private head: LRUNode<K, V>;
+  private tail: LRUNode<K, V>;
+
+  constructor(private capacity: number) {
+    this.head = new LRUNode(null as K, null as V); // Sentinel nodes remove edge cases
+    this.tail = new LRUNode(null as K, null as V);
+    this.head.next = this.tail;
+    this.tail.prev = this.head;
+  }
+
+  get(key: K): V | undefined {
+    const node = this.map.get(key);
+    if (!node) return undefined;
+    this.moveToFront(node);
+    return node.value;
+  }
+
+  put(key: K, value: V): void {
+    if (this.map.has(key)) {
+      const existing = this.map.get(key)!;
+      existing.value = value;
+      this.moveToFront(existing);
+      return;
+    }
+    if (this.map.size >= this.capacity) this.evict();
+    const node = new LRUNode(key, value);
+    this.map.set(key, node);
+    this.addToFront(node);
+  }
+
+  private moveToFront(node: LRUNode<K, V>): void {
+    this.remove(node);
+    this.addToFront(node);
+  }
+  private addToFront(node: LRUNode<K, V>): void {
+    node.prev = this.head;
+    node.next = this.head.next;
+    this.head.next!.prev = node;
+    this.head.next = node;
+  }
+  private remove(node: LRUNode<K, V>): void {
+    node.prev!.next = node.next;
+    node.next!.prev = node.prev;
+  }
+  private evict(): void {
+    const lru = this.tail.prev!;
+    this.remove(lru);
+    this.map.delete(lru.key);
+  }
+}
+
+const cache = new LRUCache<string, object>(3);
+cache.put("user:1", { name: "Alice" });
+cache.put("user:2", { name: "Bob" });
+cache.put("user:3", { name: "Charlie" });
+cache.get("user:1"); // moved to front
+cache.put("user:4", { name: "Diana" }); // evicts user:2
+console.log(cache.get("user:2")); // undefined — confirm eviction
+```
+
+3. Run locally: `npx tsx src/algorithms/lru-cache.ts`
+
+**External resources:** [LeetCode #146 — LRU Cache](https://leetcode.com/problems/lru-cache/) · [Wikipedia — Cache Replacement Policies](https://en.wikipedia.org/wiki/Cache_replacement_policies) · [TypeScript Handbook — Classes](https://www.typescriptlang.org/docs/handbook/2/classes.html)
+
+**Real-world application:** LRU caches appear in browser HTTP caches, CDNs, database buffer pools, and OS page replacement. Any system with expensive lookups and repeated access patterns benefits.
+
+### Task 4: Build a Dependency Resolver with Topological Sort
+
+**Objective:** Implement a topological sort using DFS to resolve build dependencies, mirroring `make`, `npm`, and CI/CD pipeline ordering.
+
+1. Create the file: `touch src/algorithms/topological-sort.ts`
+
+2. Implement the resolver:
+
+```typescript
+/** Topological sort via DFS post-order. Time: O(V + E), Space: O(V). */
+function topologicalSort(graph: Map<string, string[]>): string[] {
+  const WHITE = 0, GRAY = 1, BLACK = 2; // unvisited / in progress / done
+  const color = new Map<string, number>();
+  for (const node of graph.keys()) color.set(node, WHITE);
+
+  const result: string[] = [];
+  function dfs(node: string): void {
+    color.set(node, GRAY);
+    for (const neighbor of graph.get(node) ?? []) {
+      const c = color.get(neighbor) ?? WHITE;
+      if (c === GRAY) throw new Error(`Cycle detected: ${node} → ${neighbor}`);
+      if (c === WHITE) dfs(neighbor);
+    }
+    color.set(node, BLACK);
+    result.unshift(node); // prepend for topological order
+  }
+
+  for (const node of graph.keys()) {
+    if (color.get(node) === WHITE) dfs(node);
+  }
+  return result;
+}
+
+const buildOrder = new Map<string, string[]>([
+  ["app.js", ["utils.js", "config.js"]],
+  ["utils.js", ["helpers.js"]],
+  ["config.js", ["env.js"]],
+  ["helpers.js", []],
+  ["env.js", []],
+]);
+console.log("Build order:", topologicalSort(buildOrder));
+// → ["app.js", "config.js", "env.js", "utils.js", "helpers.js"]
+// Every dependency appears after its dependents — a valid topological order.
+```
+
+3. Test cycle detection: add `["env.js", ["app.js"]]` and confirm the script throws.
+
+**External resources:** [LeetCode #207 — Course Schedule](https://leetcode.com/problems/course-schedule/) · [LeetCode #210 — Course Schedule II](https://leetcode.com/problems/course-schedule-ii/) · [Visualgo — Graph Traversal](https://visualgo.net/en/dfsbfs)
+
+**Real-world application:** Build systems (Webpack, Gradle), task schedulers (Airflow, Luigi), and package managers all rely on topological sorting to determine valid execution orderings.
+
+### Task 5: Two Pointers and Sliding Window
+
+**Objective:** Master two foundational array patterns by reducing O(n²) brute-force solutions to O(n) optimal ones.
+
+1. Create the file: `touch src/algorithms/patterns.ts`
+
+2. Implement both patterns:
+
+```typescript
+/** Two pointers: two numbers in a sorted array summing to `target`. O(n) time, O(1) space. */
+function twoSumSorted(nums: number[], target: number): [number, number] | null {
+  let left = 0;
+  let right = nums.length - 1;
+  while (left < right) {
+    const sum = nums[left] + nums[right];
+    if (sum === target) return [left, right];
+    if (sum < target) left++;
+    else right--;
+  }
+  return null;
+}
+
+/** Sliding window: max sum of any contiguous subarray of size k. O(n) time, O(1) space. */
+function maxSubarraySum(nums: number[], k: number): number {
+  if (nums.length < k) throw new Error("Array length must be >= k");
+  let windowSum = 0;
+  for (let i = 0; i < k; i++) windowSum += nums[i];
+  let maxSum = windowSum;
+  for (let i = k; i < nums.length; i++) {
+    windowSum += nums[i] - nums[i - k]; // add entering, drop leaving
+    maxSum = Math.max(maxSum, windowSum);
+  }
+  return maxSum;
+}
+
+console.log(twoSumSorted([2, 7, 11, 15], 9)); // [0, 1]
+console.log(maxSubarraySum([1, 4, 2, 10, 23, 3, 1, 0, 20], 4)); // 39
+```
+
+3. Run locally: `npx tsx src/algorithms/patterns.ts`
+
+**External resources:** [LeetCode #167 — Two Sum II (Sorted Array)](https://leetcode.com/problems/two-sum-ii-input-array-is-sorted/) · [LeetCode #209 — Minimum Size Subarray Sum](https://leetcode.com/problems/minimum-size-subarray-sum/) · [LeetCode #3 — Longest Substring Without Repeating Characters](https://leetcode.com/problems/longest-substring-without-repeating-characters/)
+
+**Real-world application:** Two pointers appear in merge operations on sorted streams, database joins, and interval merging. Sliding windows appear in rate limiting, rolling averages, and network packet analysis.
+
+### Task 6: Union-Find for Connected Components
+
+**Objective:** Implement Union-Find with path compression and union by rank, then count connected components in an undirected graph.
+
+1. Create the file: `touch src/algorithms/union-find.ts`
+
+2. Implement the data structure:
+
+```typescript
+class UnionFind {
+  private parent: number[];
+  private rank: number[];
+  private components: number;
+
+  constructor(n: number) {
+    this.parent = Array.from({ length: n }, (_, i) => i);
+    this.rank = new Array<number>(n).fill(0);
+    this.components = n;
+  }
+
+  /** Find with path compression: flattens trees for near-O(1) queries. */
+  find(x: number): number {
+    if (this.parent[x] !== x) this.parent[x] = this.find(this.parent[x]);
+    return this.parent[x];
+  }
+
+  /** Union by rank: attach the smaller tree under the larger one. */
+  union(x: number, y: number): boolean {
+    const rootX = this.find(x);
+    const rootY = this.find(y);
+    if (rootX === rootY) return false;
+    if (this.rank[rootX] < this.rank[rootY]) {
+      this.parent[rootX] = rootY;
+    } else if (this.rank[rootX] > this.rank[rootY]) {
+      this.parent[rootY] = rootX;
+    } else {
+      this.parent[rootY] = rootX;
+      this.rank[rootX]++;
+    }
+    this.components--;
+    return true;
+  }
+
+  getComponentCount(): number {
+    return this.components;
+  }
+}
+
+function countComponents(n: number, edges: [number, number][]): number {
+  const uf = new UnionFind(n);
+  for (const [u, v] of edges) uf.union(u, v);
+  return uf.getComponentCount();
+}
+
+console.log(countComponents(5, [[0, 1], [1, 2], [3, 4]])); // 2
+console.log(countComponents(5, [[0, 1], [1, 2], [2, 3], [3, 4]])); // 1
+```
+
+3. Run locally: `npx tsx src/algorithms/union-find.ts`
+
+**External resources:** [LeetCode #547 — Number of Provinces](https://leetcode.com/problems/number-of-provinces/) · [LeetCode #684 — Redundant Connection](https://leetcode.com/problems/redundant-connection/) · [CP-Algorithms — DSU](https://cp-algorithms.com/data_structures/disjoint_set_union.html) · [Visualgo — Disjoint Sets](https://visualgo.net/en/ufds)
+
+**Real-world application:** Union-Find is used in network connectivity analysis, image-processing connected-component labeling, Kruskal's minimum spanning tree, and social-network friend grouping.
+
+---
+
+## Recommended Study Path
+
+1. **Complexity Analysis & Big-O** — Establish the vocabulary for discussing efficiency
+2. **Arrays & Strings** — Two pointers, sliding window, prefix sums
+3. **Sorting & Searching** — Built-in methods vs. custom implementations, binary search variants
+4. **Linked Lists & Trees** — Pointer manipulation, recursive traversal
+5. **Stacks, Queues & Heaps** — Linear structures with constrained access
+6. **Hash Maps & Sets** — Constant-time lookups, frequency counting
+7. **Graphs** — BFS/DFS, shortest path, topological sort
+8. **Dynamic Programming** — Memoization → tabulation → space optimization
+9. **Advanced Topics** — Tries, segment trees, bit manipulation, computational geometry
+
+## Practice Platforms
+
+| Platform | Strength | Best For |
+|----------|----------|----------|
+| [LeetCode](https://leetcode.com/) | Extensive problem set with company tags | Interview preparation |
+| [NeetCode](https://neetcode.io/) | Curated lists with video explanations | Structured learning |
+| [Codeforces](https://codeforces.com/) | Competitive programming contests | Advanced practice |
+| [AtCoder](https://atcoder.jp/) | High-quality, educational problems | Algorithmic thinking |
+| [Advent of Code](https://adventofcode.com/) | Annual narrative puzzles | Seasonal practice and community |
+
+---
+
+## Further Reading
+
+- [Introduction to Algorithms, 4th Edition (CLRS)](https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/) — The definitive academic reference
+- [Algorithms, 4th Edition (Sedgewick)](https://algs4.cs.princeton.edu/home/) — Accessible explanations with Java implementations, free online
+- [CP-Algorithms](https://cp-algorithms.com/) — Comprehensive competitive programming wiki
+- [The Algorithm Design Manual (Skiena)](https://www.algorist.com/) — Practical, experience-driven algorithm design
+- [Algorithm Design (Kleinberg & Tardos)](https://www.cs.princeton.edu/~wayne/kleinberg-tardos/) — The methodology behind algorithm design
+
+---
+
+*This article is part of the engineering intern curriculum. After completing the hands-on tasks, proceed to the individual topic deep-dives linked in the learning path overview.*

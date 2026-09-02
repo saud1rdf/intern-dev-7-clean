@@ -1,21 +1,55 @@
 ---
-title: "JavaScript"
-category: "web-development"
+title: "JavaScript Essentials"
+slug: "javascript"
+category: "web-fundamentals"
 summary: "Master JavaScript fundamentals including variables, functions, objects, async programming, DOM manipulation, and modern ES6+ features."
 readingTime: 30
 ---
 
+# JavaScript Essentials
+
 ## Introduction
 
-JavaScript is the programming language of the web, enabling interactive and dynamic web experiences. Created by Brendan Eich in 1995 while he worked at Netscape, JavaScript has evolved from a simple scripting language to a powerful, versatile language used for web development, server-side applications, mobile apps, and even desktop applications.
+JavaScript is the programming language of the web, enabling interactive and dynamic web experiences. Created by Brendan Eich in 1995 while he worked at Netscape, JavaScript has evolved from a simple scripting language into a powerful, versatile language used for web development, server-side applications, mobile apps, and even desktop applications.
 
-Modern JavaScript, standardized as ECMAScript, provides robust features for building complex applications. The language has benefited from annual updates that introduce new syntax, APIs, and capabilities. Understanding JavaScript deeply is essential because it underpins virtually all modern web development, including frameworks like React, Vue, and Angular.
+Modern JavaScript, standardized as ECMAScript, provides robust features for building complex applications. The language benefits from annual updates that introduce new syntax, APIs, and capabilities. Understanding JavaScript deeply is essential because it underpins virtually all modern web development, including frameworks like React, Vue, and Angular.
 
-JavaScript's event-driven, non-blocking I/O model makes it efficient for building network applications and real-time services. The language's flexibility allows multiple programming paradigms including procedural, object-oriented, and functional programming styles. This versatility, combined with the vast npm ecosystem, makes JavaScript one of the most valuable skills for a developer.
+JavaScript's event-driven, non-blocking I/O model makes it efficient for building network applications and real-time services. The language's flexibility supports multiple programming paradigms—procedural, object-oriented, and functional. This versatility, combined with the vast npm ecosystem, makes JavaScript one of the most valuable skills for a developer.
+
+This article walks through the core building blocks of the language with production-quality examples, then shows you how to combine them into a complete application. Every section ends with executable code you can run locally, and the final section provides hands-on tasks mapped to official documentation.
+
+## Prerequisites
+
+Before diving in, make sure you have:
+
+- **Basic HTML knowledge** — enough to write a simple web page with a form and a list. If you need a refresher, read the [HTML5 Semantic Markup](https://developer.mozilla.org/en-US/docs/Web/HTML) guide first.
+- **A modern code editor** — VS Code (with the "Prettier" extension) or any equivalent.
+- **Node.js v18 or newer** — many examples use the built-in `fetch` API, which is globally available since Node 18. Verify with:
+
+  ```bash
+  node --version
+  ```
+
+- **A modern browser** — Chrome, Firefox, or Safari for the DOM sections. The browser DevTools console (`Cmd+Option+J` on macOS) is your best friend for experimentation.
+
+> You do not need a build toolchain. Every example in this article runs either in the browser or directly with `node`.
+
+## Learning Objectives
+
+By the end of this article you will be able to:
+
+- Declare variables with `const` and `let` and choose the correct data type for the job.
+- Write idiomatic functions using arrow syntax, default parameters, and rest parameters.
+- Model data with objects and arrays using modern, immutable update patterns.
+- Design entities with ES classes, inheritance, and private fields.
+- Handle asynchronous work with promises and `async`/`await`, including proper error handling.
+- Manipulate the DOM safely with event delegation and modern APIs.
+- Build a complete, persisted application (task manager) using a clean module separation.
+- Apply your skills in practical, locally runnable tasks linked to official docs.
 
 ## When to Use JavaScript
 
-JavaScript is the universal language of web development and is used in virtually every web application. Understanding when and how to apply JavaScript effectively is crucial for building interactive user experiences.
+JavaScript is the universal language of web development and appears in virtually every web application. Understanding when and how to apply it effectively is crucial for building interactive user experiences.
 
 ### Client-Side Interactivity
 
@@ -27,7 +61,7 @@ JavaScript provides direct access to the Document Object Model, allowing you to 
 
 ### Asynchronous Operations
 
-JavaScript's asynchronous capabilities through callbacks, promises, and async/await enable non-blocking operations for fetching data from APIs, reading files, and handling time-based events.
+JavaScript's asynchronous capabilities—callbacks, promises, and `async`/`await`—enable non-blocking operations for fetching data from APIs, reading files, and handling time-based events.
 
 ### Full-Stack Development
 
@@ -37,109 +71,115 @@ With Node.js, JavaScript runs on the server, enabling developers to use a single
 
 ### Variables and Data Types
 
-JavaScript has several ways to declare variables and multiple data types for storing different kinds of information.
+JavaScript offers several ways to declare variables and multiple data types for storing different kinds of information.
+
+**Declaration rules to follow daily:**
+
+- Prefer `const` by default. Reassign only when you must, using `let`.
+- Never use `var` in new code — it is function-scoped, hoisted, and a common source of bugs.
 
 ```javascript
 // Variable declarations
-const name = 'Alice';     // Constant - cannot be reassigned
-let age = 25;             // Block-scoped variable
-var oldStyle = 'avoid';   // Function-scoped (legacy)
+const appName = 'Task Manager'; // Constant - cannot be reassigned
+let activeTab = 'all';          // Block-scoped, reassignable
 
 // Primitive data types
-const string = 'Hello, World!';
-const number = 42;
+const text = 'Hello, World!';
+const count = 42;
 const bigInt = 9007199254740991n;
-const boolean = true;
-const undefinedValue = undefined;
-const nullValue = null;
-const symbol = Symbol('unique');
-const anotherBigInt = BigInt(12345678901234567890);
+const isActive = true;
+const missing = undefined;
+const empty = null;
+const uniqueId = Symbol('unique');
 
 // Type checking
-typeof 'hello'              // 'string'
-typeof 42                   // 'number'
-typeof true                 // 'boolean'
-typeof undefined            // 'undefined'
-typeof null                 // 'object' (historical quirk)
-typeof Symbol()             // 'symbol'
-typeof 42n                  // 'bigint'
+typeof 'hello';    // 'string'
+typeof 42;         // 'number'
+typeof true;       // 'boolean'
+typeof undefined;  // 'undefined'
+typeof null;       // 'object' (historical quirk, do not rely on it)
+typeof Symbol();   // 'symbol'
+typeof 42n;        // 'bigint'
 
-// Type conversion
-const num = '42';
-Number(num)                 // 42
-parseInt('42px')            // 42
-parseFloat('3.14')          // 3.14
-String(42)                  // '42'
-Boolean(1)                  // true
-!!'hello'                   // true
+// Explicit type conversion
+const numericString = '42';
+Number(numericString);   // 42  (use Number(), not the unary + operator, for readability)
+parseInt('42px', 10);    // 42  (always pass the radix)
+parseFloat('3.14');      // 3.14
+String(42);              // '42'
+Boolean('hello');        // true
 
-// Template literals
-const greeting = `Hello, ${name}!`;
-const multiLine = `
-  This is a
-  multi-line
-  string
+// Template literals - interpolation, multiline, and expressions
+const user = 'Alice';
+const greeting = `Hello, ${user}!`;
+const report = `
+  Report generated: ${new Date().toISOString()}
+  Active users: ${isActive ? 'yes' : 'no'}
 `;
 ```
 
 ### Functions
 
-Functions are reusable blocks of code that perform specific tasks. JavaScript supports multiple function types.
+Functions are reusable blocks of code that perform specific tasks. Modern JavaScript favors arrow functions for callbacks and short utilities, while function declarations remain excellent for named, hoisted top-level functions.
 
 ```javascript
-// Function declaration
+// Function declaration - hoisted, good for top-level APIs
 function greet(name) {
   return `Hello, ${name}!`;
 }
 
 // Function expression
-const multiply = function(a, b) {
+const multiply = function (a, b) {
   return a * b;
 };
 
 // Arrow functions (ES6+)
 const add = (a, b) => a + b;
-const square = x => x * x;
-const greetUser = name => `Hi, ${name}!`;
+const square = (value) => value * value;
+const greetUser = (name) => `Hi, ${name}!`;
 
 // Default parameters
 function createUser(name, role = 'user', active = true) {
   return { name, role, active };
 }
 
-// Rest parameters
+// Rest parameters collect remaining arguments into an array
 function sum(...numbers) {
-  return numbers.reduce((acc, num) => acc + num, 0);
+  return numbers.reduce((total, number) => total + number, 0);
 }
 
-// Destructuring in parameters
+// Destructuring in parameters - clean, self-documenting signatures
 function printUser({ name, email, role }) {
   console.log(`${name} (${role}): ${email}`);
 }
 
-// Higher-order functions
+// Higher-order functions - functions that return functions
 function createMultiplier(factor) {
-  return function(number) {
-    return number * factor;
-  };
+  return (number) => number * factor;
 }
 
-// Callback example
-const numbers = [1, 2, 3, 4, 5];
-const doubled = numbers.map(num => num * 2);
-const evens = numbers.filter(num => num % 2 === 0);
-const total = numbers.reduce((sum, num) => sum + num, 0);
+const double = createMultiplier(2);
+console.log(double(21)); // 42
 
-// Async functions
+// Array callbacks - the functional core of everyday JavaScript
+const numbers = [1, 2, 3, 4, 5];
+const doubled = numbers.map((number) => number * 2);
+const evens = numbers.filter((number) => number % 2 === 0);
+const total = numbers.reduce((sum, number) => sum + number, 0);
+
+// Async functions - always validate the response before reading the body
 async function fetchUser(id) {
   const response = await fetch(`/api/users/${id}`);
+  if (!response.ok) {
+    throw new Error(`Request failed: ${response.status} ${response.statusText}`);
+  }
   return response.json();
 }
 ```
 
 ### Objects and Arrays
 
-Objects and arrays are fundamental data structures in JavaScript for organizing and storing data.
+Objects and arrays are the fundamental data structures in JavaScript for organizing and storing data. **Treat them as immutable in your update paths** — create new values instead of mutating existing ones.
 
 ```javascript
 // Object creation and manipulation
@@ -147,158 +187,156 @@ const person = {
   name: 'John',
   age: 30,
   occupation: 'Developer',
-  'special-key': 'value', // Special characters need quotes
-  
-  // Method
+  'special-key': 'value', // Special characters require quotes
+
+  // Method shorthand
   greet() {
     return `Hi, I'm ${this.name}`;
   },
-  
-  // Computed property
+
+  // Computed property name
   ['key' + 'Name']: 'computed',
-  
+
   // Getter
   get info() {
     return `${this.name}, ${this.age} years old`;
-  }
+  },
 };
 
-// Accessing properties
-person.name                 // 'John'
-person['age']              // 30
-person.occupation = 'Designer'; // Update
-
-// Adding new properties
-person.location = 'NYC';
-person['country'] = 'USA';
+// Property access
+person.name; // 'John'
+person['age']; // 30
 
 // Object methods
-Object.keys(person)         // ['name', 'age', 'occupation', ...]
-Object.values(person)       // ['John', 30, 'Developer', ...]
-Object.entries(person)      // [['name', 'John'], ['age', 30], ...]
+Object.keys(person);   // ['name', 'age', 'occupation', ...]
+Object.values(person); // ['John', 30, 'Developer', ...]
+Object.entries(person); // [['name', 'John'], ['age', 30], ...]
 
-// Spread operator
+// Immutable updates with spread
 const clonedPerson = { ...person };
 const extendedPerson = { ...person, email: 'john@example.com' };
 
-// Destructuring
+// Destructuring with renaming
 const { name, age } = person;
-const { name: fullName } = person; // Rename
+const { name: fullName } = person; // rename in one step
 
 // Array operations
 const fruits = ['apple', 'banana', 'orange'];
-fruits[0]                    // 'apple'
-fruits.push('mango');        // Add to end
-fruits.pop();               // Remove from end
-fruits.unshift('grape');     // Add to start
-fruits.shift();             // Remove from start
-fruits.splice(1, 1, 'pear'); // Remove and insert
+fruits[0]; // 'apple' (reading is always safe)
+const fruitsWithMango = [...fruits, 'mango']; // immutable append
+const fruitsWithoutBanana = fruits.filter((fruit) => fruit !== 'banana');
 
-// Array destructuring
+// Array destructuring with rest
 const [first, second, ...rest] = fruits;
 
-// Array methods
-const numbers = [1, 2, 3, 4, 5];
-numbers.map(n => n * 2);           // [2, 4, 6, 8, 10]
-numbers.filter(n => n > 2);        // [3, 4, 5]
-numbers.find(n => n > 3);          // 4
-numbers.findIndex(n => n > 3);     // 3
-numbers.reduce((sum, n) => sum + n, 0); // 15
-numbers.includes(3);              // true
-numbers.some(n => n > 4);         // true
-numbers.every(n => n > 0);        // true
+// The essential array toolkit
+const values = [1, 2, 3, 4, 5];
+values.map((n) => n * 2);        // [2, 4, 6, 8, 10]
+values.filter((n) => n > 2);     // [3, 4, 5]
+values.find((n) => n > 3);       // 4
+values.findIndex((n) => n > 3);  // 3
+values.reduce((sum, n) => sum + n, 0); // 15
+values.includes(3);              // true
+values.some((n) => n > 4);       // true
+values.every((n) => n > 0);      // true
+
+// Sorting - copy first, then sort, to avoid mutating the original
+const sorted = [...values].sort((a, b) => a - b);
 ```
 
 ### Classes and Object-Oriented Programming
 
-JavaScript supports class-based object-oriented programming with inheritance and encapsulation.
+JavaScript supports class-based object-oriented programming with inheritance and encapsulation. Classes shine when you have state plus behavior that must stay together (see the full example below).
 
 ```javascript
-// Class definition
+// Base class
 class Animal {
   constructor(name) {
     this.name = name;
   }
-  
+
   speak() {
     console.log(`${this.name} makes a sound.`);
   }
-  
-  // Static method
+
+  // Static method - called on the class, not on instances
   static createAnonymous(species) {
     return new this(`Anonymous ${species}`);
   }
 }
 
-// Inheritance
+// Inheritance with method override
 class Dog extends Animal {
   constructor(name, breed) {
-    super(name); // Call parent constructor
+    super(name); // Call the parent constructor first
     this.breed = breed;
   }
-  
+
   speak() {
     console.log(`${this.name} barks!`);
   }
-  
+
   fetch() {
     console.log(`${this.name} fetches the ball!`);
   }
 }
 
-// Getters and Setters
+// Getters and setters with validation
 class Rectangle {
   constructor(width, height) {
     this._width = width;
     this._height = height;
   }
-  
+
   get area() {
     return this._width * this._height;
   }
-  
+
   set width(value) {
     if (value <= 0) throw new Error('Width must be positive');
     this._width = value;
   }
 }
 
-// Private fields (ES2022)
+// Private fields (ES2022) - truly inaccessible outside the class
 class Counter {
   #count = 0;
-  
+
   increment() {
-    this.#count++;
+    this.#count += 1;
   }
-  
+
   getCount() {
     return this.#count;
   }
 }
 
-// Using classes
+// Usage
 const dog = new Dog('Max', 'Golden Retriever');
-dog.speak();     // 'Max barks!'
+dog.speak(); // 'Max barks!'
 dog.fetch();
 
 const rect = new Rectangle(5, 10);
-rect.area;       // 50
+console.log(rect.area); // 50
+
+const counter = new Counter();
+counter.increment();
+counter.increment();
+console.log(counter.getCount()); // 2
 ```
 
 ### Asynchronous JavaScript
 
-JavaScript's asynchronous programming model enables non-blocking operations essential for web applications.
+JavaScript's asynchronous programming model enables non-blocking operations essential for web applications. The language has evolved through three generations of async patterns — callbacks, promises, and `async`/`await`. Modern code should use `async`/`await`; promises remain the underlying currency of the ecosystem.
 
 ```javascript
-// Callbacks (traditional approach)
-function fetchData(callback) {
-  setTimeout(() => {
-    callback({ data: 'Hello!' });
-  }, 1000);
+// 1. Callbacks - the original pattern (setTimeout is the classic demo)
+function fetchDataWithCallback(callback) {
+  setTimeout(() => callback({ data: 'Hello!' }), 1000);
 }
 
-// Promises
-function fetchDataPromise() {
+// 2. Promises - a value that may be available now, later, or never
+function fetchData() {
   return new Promise((resolve, reject) => {
     setTimeout(() => {
       const success = true;
@@ -311,139 +349,211 @@ function fetchDataPromise() {
   });
 }
 
-// Promise chains
-fetchDataPromise()
-  .then(result => {
+// 3. Chaining with .then / .catch / .finally
+fetchData()
+  .then((result) => {
     console.log(result);
     return processData(result);
   })
-  .then(processed => {
-    console.log(processed);
-  })
-  .catch(error => {
-    console.error(error);
-  })
-  .finally(() => {
-    console.log('Done');
-  });
+  .then((processed) => console.log(processed))
+  .catch((error) => console.error(error))
+  .finally(() => console.log('Done'));
 
-// Promise utilities
-Promise.all([
-  fetchUsers(),
-  fetchPosts(),
-  fetchComments()
-]).then(([users, posts, comments]) => {
-  console.log('All loaded!');
-});
-
-Promise.race([
-  fetchWithTimeout(dataPromise, 5000),
-  fallbackPromise
-]).then(data => console.log(data));
-
-// Async/Await (modern approach)
-async function loadData() {
+// 4. async/await - the modern approach; always wrap in try/catch
+async function loadUser(id) {
   try {
-    const users = await fetchUsers();
-    const posts = await fetchPosts();
-    return { users, posts };
+    const response = await fetch(`/api/users/${id}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
   } catch (error) {
-    console.error('Failed to load:', error);
-    throw error;
+    console.error('Failed to load user:', error);
+    throw error; // re-throw so callers can react
   }
 }
 
-// Parallel execution with async/await
-async function loadAllData() {
-  const [users, posts] = await Promise.all([
-    fetchUsers(),
-    fetchPosts()
-  ]);
+// 5. Parallel execution - Promise.all fails fast, Promise.allSettled never fails
+const fetchUsers = () =>
+  new Promise((resolve) => setTimeout(() => resolve([{ id: 1, name: 'Alice' }]), 500));
+const fetchPosts = () =>
+  new Promise((resolve) => setTimeout(() => resolve([{ id: 1, title: 'Hello' }]), 300));
+
+async function loadDashboard() {
+  const [users, posts] = await Promise.all([fetchUsers(), fetchPosts()]);
   return { users, posts };
 }
+
+// 6. Race conditions - usePromise.race for timeouts:
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Timed out')), ms)),
+  ]);
+}
+
+withTimeout(fetch('/api/slow-endpoint'), 5000)
+  .then((response) => response.json())
+  .catch((error) => console.error('Request failed or timed out:', error.message));
 ```
 
 ### DOM Manipulation
 
-JavaScript can create, modify, and remove HTML elements, and respond to user events.
+JavaScript can create, modify, and remove HTML elements, and respond to user events. Modern DOM work lives on the `document.querySelector` family, `classList`, and `textContent` (never raw `innerHTML` with untrusted data).
 
 ```javascript
-// Selecting elements
-const element = document.getElementById('myId');
-const elements = document.getElementsByClassName('myClass');
-const selectors = document.querySelectorAll('.container .item');
-const first = document.querySelector('.item');
+// Selecting elements - querySelector is the workhorse
+const header = document.querySelector('.site-header');
+const cards = document.querySelectorAll('.card'); // NodeList - iterate with for...of
+const form = document.querySelector('#signup-form');
 
-// Creating elements
-const newDiv = document.createElement('div');
-newDiv.textContent = 'Hello, World!';
-newDiv.className = 'highlight';
+// Reading and writing content safely
+const greeting = document.querySelector('#greeting');
+greeting.textContent = 'Hello, World!'; // safe by default
 
-// Modifying elements
-element.textContent = 'Updated text';
-element.innerHTML = '<strong>Bold text</strong>';
-element.setAttribute('data-id', '123');
-element.style.color = 'blue';
-element.classList.add('active');
-element.classList.remove('hidden');
-element.classList.toggle('visible');
+// Classes, attributes, and inline styles
+const button = document.querySelector('.js-like');
+button.classList.add('active');
+button.classList.remove('hidden');
+button.classList.toggle('visible');
+button.setAttribute('aria-pressed', 'true');
+button.dataset.likes = '12'; // maps to data-likes attribute
 
-// Event handling
-const button = document.querySelector('button');
-
+// Events - prefer addEventListener over inline handlers
 button.addEventListener('click', (event) => {
   console.log('Button clicked!', event);
 });
 
-button.addEventListener('mouseenter', () => {
-  button.style.backgroundColor = '#f0f0f0';
+// Event delegation: ONE listener on a container handles many children.
+// This is the pattern used by the full example below.
+document.querySelector('#task-list')?.addEventListener('click', (event) => {
+  const element = event.target.closest('[data-action]');
+  if (!element) return;
+  const { action, id } = element.dataset;
+  console.log(`Action "${action}" on item "${id}"`);
 });
 
-// Event delegation
-document.getElementById('list').addEventListener('click', (event) => {
-  if (event.target.matches('.item')) {
-    console.log('Item clicked:', event.target.textContent);
-  }
-});
-
-// Form handling
-const form = document.querySelector('form');
-form.addEventListener('submit', async (event) => {
+// Forms - gather input without touching the DOM piece by piece
+form?.addEventListener('submit', async (event) => {
   event.preventDefault();
-  
   const formData = new FormData(form);
   const data = Object.fromEntries(formData);
-  
-  await fetch('/api/submit', {
+
+  const response = await fetch('/api/submit', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
+    body: JSON.stringify(data),
   });
+  if (!response.ok) {
+    console.error('Submission failed:', response.status);
+  }
 });
+```
+
+### Modern ES6+ Features
+
+These everyday features dramatically reduce boilerplate and eliminate entire bug classes:
+
+```javascript
+// Optional chaining (?.) - stop "Cannot read property of undefined"
+const user = { profile: { name: 'Alice' } };
+user.profile.name;        // 'Alice'
+user.billing?.address;    // undefined - no crash
+user.profile?.email ?? 'no-email@example.com'; // 'no-email@example.com'
+
+// Nullish coalescing (??) - default only for null/undefined (not for 0 or '')
+const config = { retries: 0 };
+const retries = config.retries ?? 3; // 0, because 0 is a valid value
+const fallback = config.retryDelay ?? 1000; // 1000
+
+// Object destructuring with defaults and renaming
+const { name: displayName, role = 'viewer' } = user.profile;
+
+// Nested destructuring
+const { profile: { name } } = user;
+
+// Array destructuring with rest
+const [head, ...tail] = [10, 20, 30, 40];
+head; // 10
+tail; // [20, 30, 40]
+
+// Spread for immutable updates
+const updated = { ...user, role: 'admin' }; // new object, original untouched
+const extended = [head, ...tail]; // [10, 20, 30, 40]
+
+// Set - de-duplication and membership tests
+const seen = new Set(['a', 'b', 'a']);
+seen.size; // 2
+seen.has('a'); // true
+
+// Map - richer keys than plain objects
+const cache = new Map();
+cache.set('user:1', { name: 'Alice' });
+cache.get('user:1');
+
+// for...of - iterate any iterable including Maps
+for (const [key, value] of cache) {
+  console.log(key, value);
+}
+
+// Numeric separators and exponent shorthand for readable constants
+const MAX_UPLOAD_BYTES = 2_000_000; // 2 MB
+const NANOSECONDS = 1e9;
+```
+
+**ES modules** are the standard way to share code across files. Note the `export`/`import` syntax and that modules require an HTTP server (not `file://`):
+
+```javascript
+// math.js
+export const add = (a, b) => a + b;
+export const subtract = (a, b) => a - b;
+export default function multiply(a, b) {
+  return a * b;
+}
+
+// app.js
+import multiply, { add, subtract } from './math.js';
+
+console.log(add(2, 3), subtract(5, 2), multiply(2, 4));
 ```
 
 ## Full Example: Task Management Application
 
-```javascript
-// TaskManager.js - Complete task management application
+This complete application combines everything above: classes with private fields, a subscription event system, localStorage persistence, and a UI layer that uses event delegation instead of inline handlers. Create these three files in a folder and open `index.html` in your browser.
 
-class TaskManager {
+### File: `task-store.js` — data layer
+
+```javascript
+const STORAGE_KEY = 'tasks';
+
+class TaskStore {
+  #tasks = [];
+  #listeners = new Set();
+
   constructor() {
-    this.tasks = this.loadFromStorage();
-    this.listeners = [];
+    this.#tasks = this.#load();
   }
-  
-  // Storage methods
-  loadFromStorage() {
-    const stored = localStorage.getItem('tasks');
-    return stored ? JSON.parse(stored) : [];
+
+  // Read + defensive parse: a corrupt value must never crash the app
+  #load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (error) {
+      console.error('Failed to load tasks:', error);
+      return [];
+    }
   }
-  
-  saveToStorage() {
-    localStorage.setItem('tasks', JSON.stringify(this.tasks));
+
+  #persist() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.#tasks));
   }
-  
-  // CRUD operations
+
+  #emit() {
+    this.#listeners.forEach((listener) => listener());
+  }
+
+  // ---- Commands (state-changing) ----
   addTask(text, priority = 'medium') {
     const task = {
       id: crypto.randomUUID(),
@@ -451,315 +561,235 @@ class TaskManager {
       priority,
       completed: false,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
     };
-    
-    this.tasks.unshift(task);
-    this.saveToStorage();
-    this.notify('add', task);
-    
+    this.#tasks = [task, ...this.#tasks]; // immutable-ish replacement
+    this.#persist();
+    this.#emit();
     return task;
   }
-  
-  updateTask(id, updates) {
-    const index = this.tasks.findIndex(t => t.id === id);
-    
-    if (index === -1) {
-      throw new Error(`Task with ID ${id} not found`);
-    }
-    
-    this.tasks[index] = {
-      ...this.tasks[index],
-      ...updates,
-      updatedAt: new Date().toISOString()
-    };
-    
-    this.saveToStorage();
-    this.notify('update', this.tasks[index]);
-    
-    return this.tasks[index];
-  }
-  
-  deleteTask(id) {
-    const index = this.tasks.findIndex(t => t.id === id);
-    
-    if (index === -1) {
-      throw new Error(`Task with ID ${id} not found`);
-    }
-    
-    const [deleted] = this.tasks.splice(index, 1);
-    this.saveToStorage();
-    this.notify('delete', deleted);
-    
-    return deleted;
-  }
-  
+
   toggleTask(id) {
-    const task = this.tasks.find(t => t.id === id);
-    
-    if (!task) {
-      throw new Error(`Task with ID ${id} not found`);
-    }
-    
-    return this.updateTask(id, { completed: !task.completed });
-  }
-  
-  // Query methods
-  getTask(id) {
-    return this.tasks.find(t => t.id === id);
-  }
-  
-  getAllTasks() {
-    return [...this.tasks];
-  }
-  
-  getPendingTasks() {
-    return this.tasks.filter(t => !t.completed);
-  }
-  
-  getCompletedTasks() {
-    return this.tasks.filter(t => t.completed);
-  }
-  
-  getTasksByPriority(priority) {
-    return this.tasks.filter(t => t.priority === priority);
-  }
-  
-  searchTasks(query) {
-    const lowerQuery = query.toLowerCase();
-    return this.tasks.filter(t => 
-      t.text.toLowerCase().includes(lowerQuery)
+    this.#tasks = this.#tasks.map((task) =>
+      task.id === id ? { ...task, completed: !task.completed } : task
     );
+    this.#persist();
+    this.#emit();
   }
-  
-  // Statistics
+
+  deleteTask(id) {
+    this.#tasks = this.#tasks.filter((task) => task.id !== id);
+    this.#persist();
+    this.#emit();
+  }
+
+  // ---- Queries (read-only) ----
+  getTasks(filter = 'all') {
+    if (filter === 'pending') {
+      return this.#tasks.filter((task) => !task.completed);
+    }
+    if (filter === 'completed') {
+      return this.#tasks.filter((task) => task.completed);
+    }
+    return [...this.#tasks]; // defensive copy
+  }
+
   getStats() {
-    const total = this.tasks.length;
-    const completed = this.tasks.filter(t => t.completed).length;
-    const pending = total - completed;
-    
-    const byPriority = {
-      high: this.tasks.filter(t => t.priority === 'high').length,
-      medium: this.tasks.filter(t => t.priority === 'medium').length,
-      low: this.tasks.filter(t => t.priority === 'low').length
-    };
-    
-    return { total, completed, pending, byPriority };
+    const total = this.#tasks.length;
+    const completed = this.#tasks.filter((task) => task.completed).length;
+    return { total, completed, pending: total - completed };
   }
-  
-  // Event system
-  subscribe(callback) {
-    this.listeners.push(callback);
-    
-    return () => {
-      this.listeners = this.listeners.filter(cb => cb !== callback);
-    };
-  }
-  
-  notify(action, data) {
-    this.listeners.forEach(callback => callback(action, data));
+
+  // ---- Subscription (observer pattern) ----
+  subscribe(listener) {
+    this.#listeners.add(listener);
+    return () => this.#listeners.delete(listener);
   }
 }
 
-// UI Controller
-class TaskUI {
-  constructor(manager) {
-    this.manager = manager;
-    this.filter = 'all';
-    
-    this.initElements();
-    this.bindEvents();
-    this.render();
-    
-    // Subscribe to changes
-    this.unsubscribe = manager.subscribe(() => this.render());
-  }
-  
-  initElements() {
-    this.form = document.getElementById('task-form');
-    this.input = document.getElementById('task-input');
-    this.priority = document.getElementById('task-priority');
-    this.list = document.getElementById('task-list');
-    this.filterButtons = document.querySelectorAll('.filter-btn');
-    this.stats = document.getElementById('task-stats');
-  }
-  
-  bindEvents() {
-    this.form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      this.handleAddTask();
-    });
-    
-    this.filterButtons.forEach(btn => {
-      btn.addEventListener('click', () => {
-        this.filter = btn.dataset.filter;
-        this.updateActiveFilter();
-        this.render();
-      });
-    });
-  }
-  
-  handleAddTask() {
-    const text = this.input.value.trim();
-    
-    if (!text) return;
-    
-    try {
-      this.manager.addTask(text, this.priority.value);
-      this.input.value = '';
-      this.priority.value = 'medium';
-    } catch (error) {
-      console.error('Failed to add task:', error);
-    }
-  }
-  
-  handleToggle(id) {
-    try {
-      this.manager.toggleTask(id);
-    } catch (error) {
-      console.error('Failed to toggle task:', error);
-    }
-  }
-  
-  handleDelete(id) {
-    try {
-      this.manager.deleteTask(id);
-    } catch (error) {
-      console.error('Failed to delete task:', error);
-    }
-  }
-  
-  updateActiveFilter() {
-    this.filterButtons.forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.filter === this.filter);
-    });
-  }
-  
-  getFilteredTasks() {
-    switch (this.filter) {
-      case 'pending':
-        return this.manager.getPendingTasks();
-      case 'completed':
-        return this.manager.getCompletedTasks();
-      default:
-        return this.manager.getAllTasks();
-    }
-  }
-  
-  render() {
-    this.renderList();
-    this.renderStats();
-  }
-  
-  renderList() {
-    const tasks = this.getFilteredTasks();
-    
-    if (tasks.length === 0) {
-      this.list.innerHTML = `
-        <li class="empty-state">
-          No tasks found. ${this.filter === 'all' ? 'Add your first task above!' : 'Try a different filter.'}
-        </li>
-      `;
-      return;
-    }
-    
-    this.list.innerHTML = tasks.map(task => `
-      <li class="task-item ${task.completed ? 'completed' : ''}" data-id="${task.id}">
-        <input 
-          type="checkbox" 
-          ${task.completed ? 'checked' : ''}
-          onchange="taskUI.handleToggle('${task.id}')"
-        >
-        <span class="task-text">${this.escapeHtml(task.text)}</span>
-        <span class="task-priority priority-${task.priority}">${task.priority}</span>
-        <button class="delete-btn" onclick="taskUI.handleDelete('${task.id}')">
-          Delete
-        </button>
-      </li>
-    `).join('');
-  }
-  
-  renderStats() {
-    const stats = this.manager.getStats();
-    this.stats.innerHTML = `
-      <span>Total: ${stats.total}</span>
-      <span>Pending: ${stats.pending}</span>
-      <span>Completed: ${stats.completed}</span>
-    `;
-  }
-  
-  escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
-}
-
-// Initialize application
-const taskManager = new TaskManager();
-const taskUI = new TaskUI(taskManager);
+export const taskStore = new TaskStore();
 ```
+
+### File: `app.js` — UI layer with event delegation
+
+```javascript
+import { taskStore } from './task-store.js';
+
+// Cache DOM references once at startup
+const elements = {
+  form: document.querySelector('#task-form'),
+  input: document.querySelector('#task-input'),
+  priority: document.querySelector('#task-priority'),
+  list: document.querySelector('#task-list'),
+  stats: document.querySelector('#task-stats'),
+  filterButtons: document.querySelectorAll('[data-filter]'),
+};
+
+let currentFilter = 'all';
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function taskToHtml(task) {
+  return `
+    <li class="task-item ${task.completed ? 'completed' : ''}" data-id="${task.id}">
+      <input
+        type="checkbox"
+        data-action="toggle"
+        ${task.completed ? 'checked' : ''}
+        aria-label="Mark task as ${task.completed ? 'pending' : 'completed'}"
+      >
+      <span class="task-text">${escapeHtml(task.text)}</span>
+      <span class="priority priority-${task.priority}">${task.priority}</span>
+      <button type="button" data-action="delete" aria-label="Delete task">Delete</button>
+    </li>
+  `;
+}
+
+function render() {
+  const tasks = taskStore.getTasks(currentFilter);
+  elements.list.innerHTML =
+    tasks.map(taskToHtml).join('') ||
+    `<li class="empty-state">No tasks found. Add your first task above!</li>`;
+
+  const stats = taskStore.getStats();
+  elements.stats.innerHTML = `Total: ${stats.total} | Pending: ${stats.pending} | Completed: ${stats.completed}`;
+}
+
+// One delegated listener handles every toggle and delete — no inline handlers
+elements.list.addEventListener('click', (event) => {
+  const actionElement = event.target.closest('[data-action]');
+  if (!actionElement) return;
+  const { action } = actionElement.dataset;
+  const id = actionElement.closest('li')?.dataset.id;
+  if (!id) return;
+
+  if (action === 'toggle') taskStore.toggleTask(id);
+  if (action === 'delete') taskStore.deleteTask(id);
+});
+
+elements.form.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const text = elements.input.value.trim();
+  if (!text) return;
+  taskStore.addTask(text, elements.priority.value);
+  elements.input.value = '';
+  elements.priority.value = 'medium';
+});
+
+elements.filterButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    currentFilter = button.dataset.filter;
+    elements.filterButtons.forEach((btn) =>
+      btn.classList.toggle('active', btn === button)
+    );
+    render();
+  });
+});
+
+// Re-render on any store change
+taskStore.subscribe(render);
+render();
+```
+
+### File: `index.html` — structure only, behavior is all in JavaScript
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Task Manager</title>
+  </head>
+  <body>
+    <h1>Task Manager</h1>
+
+    <form id="task-form">
+      <label for="task-input">New task</label>
+      <input id="task-input" type="text" placeholder="What needs to be done?" required />
+      <select id="task-priority" aria-label="Priority">
+        <option value="high">High</option>
+        <option value="medium" selected>Medium</option>
+        <option value="low">Low</option>
+      </select>
+      <button type="submit">Add Task</button>
+    </form>
+
+    <div>
+      <button type="button" data-filter="all" class="active">All</button>
+      <button type="button" data-filter="pending">Pending</button>
+      <button type="button" data-filter="completed">Completed</button>
+    </div>
+
+    <ul id="task-list"></ul>
+    <p id="task-stats" aria-live="polite"></p>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
+```
+
+Open `index.html` in a browser. Add a task, toggle its checkbox, delete it, and switch filters — note that your data survives a page refresh thanks to `localStorage`.
 
 ## Common Mistakes
 
-### Using == Instead of ===
+### Using `==` Instead of `===`
 
-The loose equality operator (==) performs type coercion, which can lead to unexpected results.
+The loose equality operator (`==`) performs type coercion, which leads to unexpected results. Always use strict equality.
 
 ```javascript
-// ❌ WRONG - Using loose equality
-'5' == 5        // true (string converted to number)
-null == undefined  // true
-false == 0     // true
+// ❌ WRONG — implicit coercion is rarely what you mean
+'5' == 5; // true (string converted to number)
+false == 0; // true
+null == undefined; // true
 
-// ✅ CORRECT - Using strict equality
-'5' === 5      // false
-null === undefined  // false
-false === 0    // false
+// ✅ CORRECT — strict equality, no surprises
+'5' === 5; // false
+false === 0; // false
+null === undefined; // false
 ```
 
 ### Mutating Arrays or Objects Directly
 
-Direct mutation can cause unexpected behavior and bugs.
+Direct mutation causes subtle bugs, especially when the same array is shared across components or modules. Prefer producing new values.
 
 ```javascript
-// ❌ WRONG - Mutating original array
+// ❌ WRONG — mutating the original
 const numbers = [1, 2, 3];
-numbers.push(4); // Direct mutation
+numbers.push(4);
 
-// ✅ CORRECT - Creating new arrays
-const numbers = [1, 2, 3];
-const newNumbers = [...numbers, 4];
-
-// ❌ WRONG - Mutating object
 const user = { name: 'John' };
 user.age = 30;
 
-// ✅ CORRECT - Creating new object
+// ✅ CORRECT — immutable updates
+const numbers = [1, 2, 3];
+const newNumbers = [...numbers, 4];
+
 const user = { name: 'John' };
 const updatedUser = { ...user, age: 30 };
 ```
 
 ### Not Handling Asynchronous Errors
 
-Forgetting to handle errors in async operations can cause unhandled promise rejections.
+An unhandled promise rejection crashes the process in Node and silently loses data in the browser. Always `try/catch` around `await`.
 
 ```javascript
-// ❌ WRONG - No error handling
+// ❌ WRONG — the failure is swallowed or unhandled
 async function fetchData() {
   const response = await fetch('/api/data');
   return response.json();
 }
 
-// ✅ CORRECT - With try-catch
+// ✅ CORRECT — check status and catch errors
 async function fetchData() {
   try {
     const response = await fetch('/api/data');
-    
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    
     return response.json();
   } catch (error) {
     console.error('Failed to fetch data:', error);
@@ -768,20 +798,423 @@ async function fetchData() {
 }
 ```
 
+### Skipping the `response.ok` Check
+
+`fetch` only rejects on network failures — an HTTP 404 or 500 resolves normally. Validate the status before reading the body.
+
+```javascript
+// ❌ WRONG — a 404 resolves and JSON.parse may throw unhelpfully
+const response = await fetch('/api/users/123');
+const user = await response.json();
+
+// ✅ CORRECT — check first, then parse
+const response = await fetch('/api/users/123');
+if (!response.ok) {
+  throw new Error(`Request failed: ${response.status}`);
+}
+const user = await response.json();
+```
+
+### Leaving Event Listeners Attached
+
+Listeners attached to removed elements keep both the element and the closure alive in memory. Remove them when you clean up.
+
+```javascript
+// ❌ WRONG — listener lives forever and can fire on a stale element
+function setup() {
+  document.querySelector('#save-btn').addEventListener('click', save);
+}
+
+// ✅ CORRECT — keep a reference and remove it when done
+function setup() {
+  const button = document.querySelector('#save-btn');
+  button.addEventListener('click', save);
+  return () => button.removeEventListener('click', save);
+}
+```
+
+## Practical Tasks
+
+Complete these tasks in order. Each one builds a small project in your local environment, with concrete commands, expected output, and links to the official documentation you should consult while working.
+
+### Task 1: Master Array Methods with a Revenue Report
+
+**Objective:** Write a Node script that computes reporting metrics from a product catalog using `map`, `filter`, `reduce`, and `sort` — the four methods that appear in almost every real codebase.
+
+**Steps:**
+
+1. Create a lab folder and file:
+   ```bash
+   mkdir -p ~/dev/js-lab
+   cd ~/dev/js-lab
+   touch arrays.js
+   ```
+
+2. Paste this into `arrays.js`:
+   ```javascript
+   const products = [
+     { name: 'Laptop', price: 1200, sold: 34 },
+     { name: 'Mouse', price: 25, sold: 210 },
+     { name: 'Keyboard', price: 80, sold: 95 },
+     { name: 'Monitor', price: 300, sold: 40 },
+   ];
+
+   const totalRevenue = products.reduce(
+     (sum, product) => sum + product.price * product.sold,
+     0
+   );
+
+   const bestSellers = products
+     .filter((product) => product.sold > 50)
+     .map((product) => product.name);
+
+   const sortedByPrice = [...products].sort((a, b) => a.price - b.price);
+
+   console.log('Total revenue:', totalRevenue);
+   console.log('Best sellers:', bestSellers.join(', '));
+   console.log('Cheapest product:', sortedByPrice[0]?.name);
+   ```
+
+3. Run it:
+   ```bash
+   node arrays.js
+   ```
+
+**Verify:** You should see `Total revenue: 79,750`, `Best sellers: Mouse, Keyboard`, and `Cheapest product: Mouse`. Then extend the script yourself: add a `.map()` that produces a `{ name, revenue }` object per product, and a `.sort()` that orders by revenue descending.
+
+**Resources:**
+
+- [MDN: Array.prototype.map()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map)
+- [MDN: Array.prototype.filter()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter)
+- [MDN: Array.prototype.reduce()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/reduce)
+- [MDN: Array.prototype.sort()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort)
+
+### Task 2: Fetch Real Weather Data with async/await
+
+**Objective:** Build a CLI script that fetches live weather data from a free, keyless public API and prints it, with proper error handling for offline and invalid inputs. Node 18+ has a global `fetch`, so no dependencies are needed.
+
+**Steps:**
+
+1. Create the file:
+   ```bash
+   cd ~/dev/js-lab
+   touch weather.js
+   ```
+
+2. Paste this into `weather.js` — the API is [Open-Meteo](https://open-meteo.com/en/docs), which needs no API key:
+   ```javascript
+   const BASE_URL = 'https://api.open-meteo.com/v1/forecast';
+
+   async function getCurrentWeather(latitude, longitude) {
+     const url = new URL(BASE_URL);
+     url.searchParams.set('latitude', String(latitude));
+     url.searchParams.set('longitude', String(longitude));
+     url.searchParams.set('current_weather', 'true');
+
+     const response = await fetch(url);
+     if (!response.ok) {
+       throw new Error(`Request failed: ${response.status} ${response.statusText}`);
+     }
+     return response.json();
+   }
+
+   async function main() {
+     try {
+       const data = await getCurrentWeather(30.0444, 31.2357);
+       const current = data.current_weather;
+       console.log(`Temperature: ${current.temperature}°C`);
+       console.log(`Wind speed: ${current.windspeed} km/h`);
+     } catch (error) {
+       console.error('Could not fetch weather:', error.message);
+       process.exitCode = 1;
+     }
+   }
+
+   main();
+   ```
+
+3. Run it (several times to see values change):
+   ```bash
+   node weather.js
+   ```
+
+**Verify:** You should see a live temperature and wind speed. Now break it on purpose: change the latitude argument to `'abc'` and re-run — you should see `Could not fetch weather: Request failed: 400 Bad Request` and a non-zero exit code. This proves your error path works.
+
+**Resources:**
+
+- [MDN: Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API)
+- [MDN: async function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/async)
+- [MDN: await](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/await)
+- [Open-Meteo API Documentation](https://open-meteo.com/en/docs)
+
+### Task 3: Build a Persistent Bookmark Manager in the Browser
+
+**Objective:** Apply the DOM + localStorage patterns from the full example to a different domain: save bookmarks (title + URL), filter them, and keep them across reloads. This is your first "real" browser app.
+
+**Steps:**
+
+1. Create a project folder with three files:
+   ```bash
+   mkdir -p ~/dev/js-lab/bookmarks
+   cd ~/dev/js-lab/bookmarks
+   touch index.html app.js
+   ```
+
+2. `index.html` — a minimal form, filter buttons, and an empty list:
+   ```html
+   <!DOCTYPE html>
+   <html lang="en">
+     <head>
+       <meta charset="UTF-8" />
+       <title>Bookmark Manager</title>
+     </head>
+     <body>
+       <h1>Bookmark Manager</h1>
+       <form id="bookmark-form">
+         <input id="title" type="text" placeholder="Title" required />
+         <input id="url" type="url" placeholder="https://..." required />
+         <button type="submit">Save</button>
+       </form>
+       <input id="search" type="search" placeholder="Filter bookmarks..." />
+       <ul id="bookmark-list"></ul>
+       <script type="module" src="app.js"></script>
+     </body>
+   </html>
+   ```
+
+3. `app.js` — follow the same architecture as the full example (localStorage store + delegated rendering):
+   ```javascript
+   const STORAGE_KEY = 'bookmarks';
+
+   let bookmarks = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]');
+   let query = '';
+
+   const elements = {
+     form: document.querySelector('#bookmark-form'),
+     title: document.querySelector('#title'),
+     url: document.querySelector('#url'),
+     search: document.querySelector('#search'),
+     list: document.querySelector('#bookmark-list'),
+   };
+
+   function persist() {
+     localStorage.setItem(STORAGE_KEY, JSON.stringify(bookmarks));
+   }
+
+   function escapeHtml(text) {
+     const div = document.createElement('div');
+     div.textContent = text;
+     return div.innerHTML;
+   }
+
+   function render() {
+     const filtered = bookmarks.filter((bookmark) =>
+       bookmark.title.toLowerCase().includes(query)
+     );
+     elements.list.innerHTML =
+       filtered
+         .map(
+           (bookmark) => `
+           <li data-id="${bookmark.id}">
+             <a href="${escapeHtml(bookmark.url)}" target="_blank" rel="noopener">
+               ${escapeHtml(bookmark.title)}
+             </a>
+             <button type="button" data-action="delete">Delete</button>
+           </li>`
+         )
+         .join('') || '<li class="empty-state">No bookmarks match.</li>';
+   }
+
+   function addBookmark(title, url) {
+     bookmarks = [{ id: crypto.randomUUID(), title, url }, ...bookmarks];
+     persist();
+     render();
+   }
+
+   function deleteBookmark(id) {
+     bookmarks = bookmarks.filter((bookmark) => bookmark.id !== id);
+     persist();
+     render();
+   }
+
+   // Event delegation: one listener for every delete button
+   elements.list.addEventListener('click', (event) => {
+     const button = event.target.closest('[data-action="delete"]');
+     if (!button) return;
+     deleteBookmark(button.closest('li').dataset.id);
+   });
+
+   elements.form.addEventListener('submit', (event) => {
+     event.preventDefault();
+     addBookmark(elements.title.value.trim(), elements.url.value.trim());
+     elements.form.reset();
+     elements.title.focus();
+   });
+
+   elements.search.addEventListener('input', (event) => {
+     query = event.target.value.trim().toLowerCase();
+     render();
+   });
+
+   render();
+   ```
+
+4. Serve it over HTTP (modules refuse to run from `file://`):
+   ```bash
+   python3 -m http.server 8080
+   ```
+   Open <http://localhost:8080> in your browser.
+
+**Verify:** Add three bookmarks, refresh the page and confirm they survive. Type in the filter box and confirm the list narrows live. Then open DevTools → Application → Local Storage and confirm the `bookmarks` key holds your data. Delete a bookmark and confirm the storage updates.
+
+**Resources:**
+
+- [MDN: Introduction to the DOM](https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model/Introduction)
+- [MDN: Window.localStorage](https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage)
+- [MDN: Event delegation with Event.currentTarget](https://developer.mozilla.org/en-US/docs/Web/API/Event/currentTarget)
+
+### Task 4: Debounce a Live Search to Protect the Backend
+
+**Objective:** Build a debounced search input that simulates an API call and logs the request count. This is the pattern behind every "search as you type" feature that does not spam the server.
+
+**Steps:**
+
+1. Create the file:
+   ```bash
+   cd ~/dev/js-lab
+   touch debounce.html
+   ```
+
+2. Paste the following — note the `debounce` helper, which delays a function until a quiet period of `delayMs` passes:
+   ```html
+   <!DOCTYPE html>
+   <html lang="en">
+     <head>
+       <meta charset="UTF-8" />
+       <title>Debounced Search</title>
+     </head>
+     <body>
+       <input id="search" type="search" placeholder="Type to search..." />
+       <p id="log">0 requests sent</p>
+
+       <script>
+         function debounce(fn, delayMs) {
+           let timeoutId;
+           return (...args) => {
+             clearTimeout(timeoutId);
+             timeoutId = setTimeout(() => fn(...args), delayMs);
+           };
+         }
+
+         let requestCount = 0;
+         const log = document.querySelector('#log');
+
+         // Stand-in for a fetch to your API
+         const search = (term) => {
+           requestCount += 1;
+           log.textContent = `${requestCount} request(s) sent for "${term}"`;
+         };
+
+         const debouncedSearch = debounce(search, 400);
+
+         document.querySelector('#search').addEventListener('input', (event) => {
+           debouncedSearch(event.target.value);
+         });
+       </script>
+     </body>
+   </html>
+   ```
+
+3. Open the file directly in your browser (`open debounce.html` on macOS).
+
+**Verify:** Type "hello" character by character, as fast as you can. The log should show exactly **one** request, fired about 400 ms after you stop typing. If it showed one request per keystroke, that would be the bug this pattern prevents. Experiment by changing `delayMs` to `0` and compare.
+
+**Resources:**
+
+- [MDN: setTimeout()](https://developer.mozilla.org/en-US/docs/Web/API/setTimeout)
+- [MDN: EventTarget.addEventListener()](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener)
+- [MDN: Event reference](https://developer.mozilla.org/en-US/docs/Web/Events)
+
+### Task 5: Split a Program into ES Modules
+
+**Objective:** Refactor a single script into an ES module with named and default exports, and run it through an HTTP server to understand how the browser loads module graphs.
+
+**Steps:**
+
+1. Create two files:
+   ```bash
+   mkdir -p ~/dev/js-lab/modules
+   cd ~/dev/js-lab/modules
+   touch math.js app.js index.html
+   ```
+
+2. `math.js` — named and default exports:
+   ```javascript
+   export const add = (a, b) => a + b;
+   export const subtract = (a, b) => a - b;
+   export const PI = 3.14159;
+
+   export default function multiply(a, b) {
+     return a * b;
+   }
+   ```
+
+3. `app.js` — mix default + named imports and log results to the page:
+   ```javascript
+   import multiply, { add, subtract, PI } from './math.js';
+
+   const results = [
+     `add(2, 3) = ${add(2, 3)}`,
+     `subtract(5, 2) = ${subtract(5, 2)}`,
+     `multiply(2, 4) = ${multiply(2, 4)}`,
+     `PI = ${PI}`,
+   ];
+   document.querySelector('#output').textContent = results.join('\n');
+   ```
+
+4. `index.html` — note `type="module"`, which opts the file into strict-mode ES modules:
+   ```html
+   <!DOCTYPE html>
+   <html lang="en">
+     <body>
+       <pre id="output"></pre>
+       <script type="module" src="app.js"></script>
+     </body>
+   </html>
+   ```
+
+5. Serve over HTTP and open the page:
+   ```bash
+   python3 -m http.server 8080
+   ```
+   Open <http://localhost:8080>.
+
+**Verify:** The page shows all four computed lines. Open DevTools → Network and confirm the browser loaded `math.js` automatically (the module graph). Now try opening `index.html` directly from the filesystem — you should see a CORS error, which is exactly why modules require an HTTP server and why real projects use a dev server.
+
+**Resources:**
+
+- [MDN: JavaScript modules](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules)
+- [MDN: import statement](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import)
+- [MDN: export statement](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/export)
+
 ## Exercises
 
-1. **Array Methods Practice**: Given an array of objects representing products, use map, filter, reduce, and sort to calculate total revenue and find products under a certain price.
+Reinforce the material with these short practice prompts — aim to complete each one without looking at the code above:
 
-2. **Async/Await Project**: Build a simple weather app that fetches data from a weather API, handles loading and error states, and displays the results.
+1. **Array Methods Practice**: Given an array of products, use `map`, `filter`, `reduce`, and `sort` to calculate total revenue and find the products under a certain price (see Task 1 for a starting point).
 
-3. **Class Inheritance**: Create a class hierarchy for different types of vehicles with properties like fuel capacity, speed, and methods for starting, stopping, and moving.
+2. **Async/Await Project**: Extend Task 2 to fetch weather for three cities in parallel with `Promise.all`, and show which one is warmest.
 
-4. **DOM Manipulation**: Build a todo list application that allows adding, completing, deleting, and filtering tasks, with all state managed in localStorage.
+3. **Class Inheritance**: Create a class hierarchy for vehicles — a base `Vehicle` with fuel capacity and speed, plus `Car` and `Motorcycle` subclasses that override a `move()` method.
 
-5. **Custom Promise**: Implement a custom promise-based delay function and use it to create a loading animation sequence.
+4. **DOM Manipulation**: Convert the Task 3 bookmark manager into a full todo list with edit-in-place (double-click a title to edit it) using the same localStorage approach.
+
+5. **Custom Promise**: Implement a promise-based `delay(ms)` function and use it to sequence a loading animation: show a spinner, wait 1 second, swap in content.
 
 ## Sources
 
-- [MDN JavaScript Documentation](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
-- [JavaScript.info](https://javascript.info/)
-- [ES6 Features](https://es6.io/)
+- [MDN: JavaScript Documentation](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
+- [MDN: A re-introduction to JavaScript](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Language_overview)
+- [JavaScript.info — The Modern JavaScript Tutorial](https://javascript.info/)
+- [Node.js Documentation](https://nodejs.org/en/docs)
+- [ES6 Features Overview](https://es6.io/)

@@ -1,95 +1,85 @@
 ---
-title: "CSS"
-category: "web-development"
+title: "CSS Layout & Styling"
+slug: "css"
+category: "web-fundamentals"
 summary: "Master CSS fundamentals including selectors, the box model, flexbox, grid, animations, and responsive design techniques."
 readingTime: 25
 ---
 
+# CSS Layout & Styling
+
 ## Introduction
 
-CSS (Cascading Style Sheets) is the language used to style and lay out web pages. While HTML provides the structure and content, CSS controls the visual presentation including colors, typography, spacing, layouts, and animations. First proposed by Håkon Wium Lie in 1994 and now maintained by the W3C, CSS has evolved into a powerful styling language capable of creating sophisticated, responsive designs.
+CSS (Cascading Style Sheets) is the language that controls the visual presentation of web pages. While HTML provides the structure and semantic meaning of content, CSS governs everything a user sees: colors, typography, spacing, layouts, backgrounds, animations, and more. First proposed by Håkon Wium Lie in 1994 and now maintained by the W3C, CSS has evolved from a simple styling mechanism into a powerful declarative language capable of building sophisticated, responsive user interfaces.
 
-Modern CSS has expanded far beyond simple styling. Features like Flexbox and Grid provide sophisticated layout capabilities that once required complex frameworks or JavaScript. CSS custom properties (variables) enable theming and dynamic styling. New pseudo-classes and selectors make targeting specific elements more precise. And CSS animations and transitions create smooth, performant visual effects without JavaScript.
+Modern CSS has expanded dramatically beyond basic property declarations. Layout systems like Flexbox and Grid replaced the era of float-based hacks, providing intuitive two-dimensional and one-dimensional layout control. Custom properties (variables) enable dynamic theming and design token systems. Pseudo-classes and pseudo-elements allow precise targeting without extra markup. And hardware-accelerated animations and transitions deliver smooth visual effects without the overhead of JavaScript.
 
-Understanding CSS is essential for creating professional, accessible, and responsive web experiences. Whether you're building a simple landing page or a complex web application, CSS knowledge directly impacts the quality of your user interface and the maintainability of your codebase.
+Understanding CSS deeply is a non-negotiable skill for any web developer. Whether you are crafting a simple landing page or architecting the design system for a large-scale application, your CSS knowledge directly impacts the quality, accessibility, performance, and maintainability of the user interface. This article covers the essential concepts every developer must master, from selectors and specificity to responsive design and animation.
 
-## When to Use CSS
-
-CSS is used in virtually every web project to control visual presentation. Understanding when and how to apply CSS effectively is crucial for building quality user experiences.
-
-### Layout and Positioning
-
-CSS is essential for creating page layouts that organize content effectively. From simple centering to complex multi-column layouts, CSS provides the tools needed to structure visual hierarchy and user flow.
-
-### Responsive Design
-
-Modern web applications must work across devices of all sizes. CSS provides media queries, flexible units, and layout techniques that enable responsive designs that adapt to different screen sizes and orientations.
-
-### Visual Styling
-
-Colors, typography, borders, shadows, and other visual treatments are controlled through CSS. Understanding CSS properties and values enables you to create visually appealing interfaces that follow design systems and brand guidelines.
-
-### Animations and Interactions
-
-CSS transitions and animations create smooth visual feedback for user interactions. They are more performant than JavaScript animations for simple effects and are hardware-accelerated by browsers.
+---
 
 ## Key Concepts
 
 ### Selectors and Specificity
 
-CSS selectors target HTML elements for styling. Understanding specificity and the cascade is crucial for writing maintainable CSS.
+CSS selectors are the patterns used to target HTML elements for styling. Understanding how selectors work — and how specificity determines which styles win when multiple rules apply — is foundational to writing maintainable, predictable CSS.
+
+Specificity is calculated as a hierarchy: inline styles (highest priority), IDs, classes/attributes/pseudo-classes, and element/pseudo-elements (lowest priority). When two rules have identical specificity, the one declared later in the source wins. Using more specific selectors is useful, but overcomplicating them leads to brittle stylesheets.
 
 ```css
-/* Element selector */
+/* Element selector — targets all <p> elements */
 p {
-  font-size: 16px;
-  line-height: 1.5;
+  font-size: 1rem;
+  line-height: 1.6;
 }
 
-/* Class selector */
+/* Class selector — reusable styling for any element with this class */
 .highlight {
-  background-color: yellow;
-  padding: 0.5rem;
+  background-color: #fef3c7;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
 }
 
-/* ID selector */
-#header {
-  background-color: #fff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+/* ID selector — unique, high-specificity targeting */
+#site-header {
+  background-color: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
 }
 
-/* Descendant selector */
+/* Descendant selector — targets <p> anywhere inside an <article> */
 article p {
   margin-bottom: 1rem;
 }
 
-/* Child selector */
+/* Direct child selector — targets only direct <li> children of <ul> */
 ul > li {
   list-style-type: square;
 }
 
-/* Adjacent sibling */
+/* Adjacent sibling — targets <p> immediately after <h2> */
 h2 + p {
   margin-top: 0;
 }
 
-/* General sibling */
+/* General sibling — targets all <p> siblings after <h2> */
 h2 ~ p {
-  color: #666;
+  color: #6b7280;
 }
 
-/* Attribute selector */
+/* Attribute selector — targets inputs of a specific type */
 input[type="email"] {
-  border: 1px solid #ccc;
+  border: 1px solid #d1d5db;
+  padding: 0.5rem;
 }
 
+/* Starts-with attribute selector — useful for external links */
 a[href^="https://"] {
-  external-link-icon: true;
+  /* Indicates an external link */
 }
 
-/* Pseudo-classes */
+/* Pseudo-classes — style based on state or position */
 button:hover {
-  background-color: #0056b3;
+  background-color: #1d4ed8;
 }
 
 button:active {
@@ -97,312 +87,445 @@ button:active {
 }
 
 input:focus {
-  outline: 2px solid #007bff;
+  outline: 2px solid #3b82f6;
   outline-offset: 2px;
 }
 
 li:nth-child(odd) {
-  background-color: #f9f9f9;
+  background-color: #f9fafb;
 }
 
-/* Pseudo-elements */
-::before
-::after {
+/* Pseudo-elements — insert or style content within an element */
+.card::before {
   content: "";
-  display: inline-block;
+  display: block;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  border-radius: 4px 4px 0 0;
 }
 
 p::first-line {
-  font-weight: bold;
+  font-weight: 600;
 }
 
 p::first-letter {
   font-size: 2em;
   float: left;
   margin-right: 0.1em;
+  line-height: 1;
 }
 ```
 
-### Box Model
+### The Box Model
 
-Every element in CSS is represented as a rectangular box with content, padding, border, and margin.
+Every element rendered by CSS is a rectangular box. The box model defines the layers that compose each box: content (the text, image, or child elements), padding (space between content and border), border (a visible line around the padding), and margin (space between this box and neighboring elements).
+
+By default, CSS uses `content-box` sizing, where `width` and `height` apply only to the content area. Padding and border are added on top, making it difficult to set an element to an exact pixel width. The `border-box` model solves this by including padding and border within the declared dimensions. A global `border-box` reset is considered a best practice.
 
 ```css
-/* Default box model - content-box */
-.box {
-  width: 200px;
-  padding: 20px;
-  border: 1px solid #333;
-  margin: 10px;
-  /* Total width: 200 + 40 + 2 = 242px */
+/* Default behavior (content-box): width only applies to content area */
+.content-box-example {
+  box-sizing: content-box;
+  width: 300px;
+  padding: 24px;
+  border: 2px solid #333;
+  /* Actual rendered width: 300 + 48 + 4 = 352px */
+
 }
 
-/* Border box includes padding and border in width */
-.border-box {
+/* Recommended behavior (border-box): width includes padding and border */
+.border-box-example {
   box-sizing: border-box;
-  width: 200px;
-  padding: 20px;
-  border: 1px solid #333;
-  margin: 10px;
-  /* Total width: 200px (padding and border included) */
+  width: 300px;
+  padding: 24px;
+  border: 2px solid #333;
+  /* Actual rendered width: 300px */
 }
 
-/* Global reset */
+/* Production reset — applied globally at the top of every stylesheet */
 *,
 *::before,
 *::after {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.5;
+  color: #1f2937;
+}
+
+img,
+video,
+canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
 }
 ```
 
-### Flexbox
+### Flexbox Layout
 
-Flexbox is a one-dimensional layout system for arranging items in rows or columns.
+Flexbox is a one-dimensional layout system designed for arranging items along a single axis — either a row (horizontal) or a column (vertical). It excels at distributing space, aligning items, and handling dynamic content where item sizes may change. Flexbox requires a parent container with `display: flex` and automatically establishes a main axis and a cross axis.
+
+Key concepts include `justify-content` (alignment along the main axis), `align-items` (alignment along the cross axis), `flex-wrap` (whether items can wrap to new lines), and the `flex` shorthand on children (controlling grow, shrink, and base size).
 
 ```css
-/* Flex container */
-.flex-container {
+/* Flex container — establishes the flex formatting context */
+.navbar {
   display: flex;
-  flex-direction: row; /* row | row-reverse | column | column-reverse */
-  justify-content: space-between; /* main axis alignment */
-  /* flex-start | flex-end | center | space-between | space-around | space-evenly */
-  
-  align-items: center; /* cross axis alignment */
-  /* flex-start | flex-end | center | stretch | baseline */
-  
-  flex-wrap: wrap; /* allow wrapping */
-  /* nowrap | wrap | wrap-reverse */
-  
-  gap: 1rem; /* spacing between flex items */
-  
-  min-height: 200px;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 1rem 2rem;
+  background-color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-/* Flex item */
-.flex-item {
-  flex: 1; /* grow, shrink, basis */
-  /* flex: 1 1 0; */
-  
-  order: 0; /* control visual order */
-  
-  align-self: auto; /* override container alignment */
-  /* flex-start | flex-end | center | stretch | baseline */
+/* Flex items — children automatically participate in flex layout */
+.navbar-brand {
+  flex: 0 0 auto;
 }
 
-/* Specific sizing */
-.flex-item-2 {
-  flex: 2; /* twice as wide as flex-item */
+.navbar-links {
+  display: flex;
+  gap: 1.5rem;
+  list-style: none;
 }
 
-.flex-item-small {
-  flex: 0 0 100px; /* don't grow, don't shrink, fixed 100px */
+/* Items that grow to fill remaining space */
+.navbar-search {
+  flex: 1 1 200px;
+  max-width: 400px;
+}
+
+/* Utility: centering any content with flexbox */
+.center-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+/* Utility: equal-width columns */
+.equal-columns {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.equal-columns > * {
+  flex: 1 1 0;
+}
+
+/* Responsive: stack on small screens, row on larger */
+.responsive-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.responsive-row > * {
+  flex: 1 1 280px;
 }
 ```
 
-### CSS Grid
+### CSS Grid Layout
 
-CSS Grid is a two-dimensional layout system for both rows and columns.
+CSS Grid is a two-dimensional layout system that controls both rows and columns simultaneously. It is ideal for page-level layouts, complex card grids, dashboards, and any interface where items need to be positioned in both directions. Grid introduces concepts like `grid-template-columns`, `grid-template-rows`, `grid-template-areas`, and the `fr` fractional unit.
+
+Grid is not a replacement for Flexbox — they are complementary. Use Grid when you need two-dimensional control; use Flexbox when you need one-dimensional alignment or dynamic space distribution.
 
 ```css
-/* Grid container */
-.grid-container {
+/* Grid container with explicit columns */
+.page-layout {
   display: grid;
-  grid-template-columns: repeat(3, 1fr); /* 3 equal columns */
-  /* 1fr 1fr 1fr */
-  /* 200px 200px 200px */
-  /* auto 1fr 2fr */
-  
-  grid-template-rows: auto; /* auto-sized rows */
-  
-  gap: 1rem; /* row and column gap */
-  row-gap: 1rem;
-  column-gap: 1rem;
-  
-  /* Grid areas */
+  grid-template-columns: 250px 1fr;
+  grid-template-rows: auto 1fr auto;
   grid-template-areas:
-    "header header header"
-    "sidebar main main"
-    "footer footer footer";
+    "header  header"
+    "sidebar main"
+    "footer  footer";
+  min-height: 100vh;
 }
 
-/* Grid item */
-.grid-item {
-  grid-column: 1 / -1; /* span all columns */
-  grid-column: 1 / 3; /* start at 1, end at 3 */
-  grid-column: span 2; /* span 2 columns */
-  
-  grid-row: 1 / 3; /* span 2 rows */
-  
-  grid-area: header; /* named area */
-  
-  justify-self: center; /* horizontal alignment in cell */
-  align-self: center; /* vertical alignment in cell */
-}
+.page-header  { grid-area: header;  }
+.page-sidebar { grid-area: sidebar; }
+.page-main    { grid-area: main;    }
+.page-footer  { grid-area: footer;  }
 
-/* Responsive grid */
-.responsive-grid {
+/* Responsive grid — auto-fits items into available space */
+.card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 1.5rem;
+  padding: 1.5rem;
+}
+
+/* Grid with specific item placement */
+.dashboard {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: minmax(150px, auto);
+  gap: 1rem;
+}
+
+.dashboard-stat {
+  grid-column: span 2;
+  grid-row: span 1;
+}
+
+.dashboard-chart {
+  grid-column: span 4;
+  grid-row: span 2;
+}
+
+/* Responsive stacking on smaller screens */
+@media (max-width: 768px) {
+  .page-layout {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "header"
+      "main"
+      "sidebar"
+      "footer";
+  }
+
+  .dashboard {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-stat,
+  .dashboard-chart {
+    grid-column: span 1;
+  }
 }
 ```
 
-### Responsive Design
+### Responsive Design with Media Queries
 
-Creating layouts that adapt to different screen sizes.
+Responsive design ensures that web interfaces adapt gracefully to any screen size, from mobile phones to ultrawide monitors. The mobile-first approach starts with base styles for small screens and progressively enhances them with `min-width` media queries for larger viewports. This strategy produces leaner, faster-loading CSS and avoids the over-specificity problems of desktop-first approaches.
+
+Modern CSS also offers powerful tools like `clamp()`, `min()`, `max()`, and container queries that reduce the need for many breakpoints. Use media queries for viewport-based adjustments and container queries when a component should respond to its own container's size.
 
 ```css
-/* Base styles - mobile first */
+/* Base styles — mobile-first: designed for screens 320px and up */
 .container {
   width: 100%;
   padding: 1rem;
+  margin: 0 auto;
 }
 
-/* Tablet */
+.hero-title {
+  font-size: clamp(1.75rem, 5vw, 3rem);
+  line-height: 1.2;
+}
+
+/* Tablet breakpoint — 768px and up */
 @media (min-width: 768px) {
   .container {
     max-width: 720px;
-    margin: 0 auto;
-    padding: 1.5rem;
-  }
-  
-  .sidebar {
-    display: block;
-  }
-}
-
-/* Desktop */
-@media (min-width: 1024px) {
-  .container {
-    max-width: 960px;
     padding: 2rem;
   }
 }
 
-/* Large screens */
+/* Desktop breakpoint — 1024px and up */
+@media (min-width: 1024px) {
+  .container {
+    max-width: 960px;
+    padding: 2rem 3rem;
+  }
+}
+
+/* Wide screen breakpoint — 1280px and up */
 @media (min-width: 1280px) {
   .container {
     max-width: 1200px;
   }
 }
 
-/* Print styles */
+/* Print stylesheet */
 @media print {
-  nav, footer, .no-print {
+  nav,
+  footer,
+  .no-print {
     display: none;
   }
-  
+
   body {
     font-size: 12pt;
-    color: black;
+    color: #000000;
+    background: #ffffff;
   }
 }
 
-/* Reduced motion preference */
+/* Respect user preferences for reduced motion */
 @media (prefers-reduced-motion: reduce) {
-  * {
-    animation: none !important;
-    transition: none !important;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
-/* Dark mode */
+/* Automatic dark mode based on system preference */
 @media (prefers-color-scheme: dark) {
   body {
-    background-color: #1a1a1a;
-    color: #ffffff;
+    background-color: #111827;
+    color: #f9fafb;
   }
 }
 ```
 
-### CSS Variables
+### CSS Custom Properties (Variables)
 
-Custom properties for reusable values.
+CSS custom properties (commonly called variables) let you define reusable values that cascade through the DOM. Unlike preprocessor variables, CSS custom properties are live — they can be changed at runtime with JavaScript, making them ideal for theming, responsive adjustments, and design token systems.
+
+A well-organized variable system defines categories for colors, typography, spacing, borders, shadows, and transitions at the `:root` level. Components reference these tokens, and themes override them to create light/dark mode or brand-specific variants.
 
 ```css
+/* Design tokens — the single source of truth for your design system */
 :root {
-  /* Colors */
+  /* Color palette */
   --color-primary: #3b82f6;
-  --color-primary-dark: #2563eb;
+  --color-primary-hover: #2563eb;
+  --color-primary-light: #dbeafe;
   --color-secondary: #64748b;
   --color-success: #22c55e;
   --color-warning: #f59e0b;
   --color-error: #ef4444;
-  
-  /* Typography */
-  --font-family: 'Inter', system-ui, sans-serif;
-  --font-size-base: 16px;
-  --font-size-lg: 1.25rem;
+
+  /* Surface and text colors */
+  --surface-bg: #ffffff;
+  --surface-bg-alt: #f9fafb;
+  --surface-border: #e5e7eb;
+  --text-primary: #1f2937;
+  --text-secondary: #6b7280;
+  --text-inverse: #ffffff;
+
+  /* Typography scale */
+  --font-family-base: "Inter", system-ui, -apple-system, sans-serif;
+  --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;
-  --line-height: 1.5;
-  
-  /* Spacing */
-  --spacing-xs: 0.25rem;
-  --spacing-sm: 0.5rem;
-  --spacing-md: 1rem;
-  --spacing-lg: 1.5rem;
-  --spacing-xl: 2rem;
-  
-  /* Borders */
-  --border-radius: 8px;
-  --border-color: #e5e7eb;
-  
+  --font-size-base: 1rem;
+  --font-size-lg: 1.25rem;
+  --font-size-xl: 1.5rem;
+  --font-size-2xl: 2rem;
+  --line-height-tight: 1.25;
+  --line-height-base: 1.5;
+
+  /* Spacing scale */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+
+  /* Borders and radii */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+
   /* Shadows */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-base: 200ms ease;
+  --transition-slow: 300ms ease;
 }
 
-/* Using variables */
+/* Component using design tokens */
 .button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-6);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  line-height: var(--line-height-base);
+  color: var(--text-inverse);
   background-color: var(--color-primary);
-  padding: var(--spacing-sm) var(--spacing-lg);
-  border-radius: var(--border-radius);
-  font-family: var(--font-family);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background-color var(--transition-fast),
+              box-shadow var(--transition-fast);
 }
 
-/* Overriding variables */
-.highlight-theme {
-  --color-primary: #8b5cf6;
+.button:hover {
+  background-color: var(--color-primary-hover);
+  box-shadow: var(--shadow-md);
 }
 
-/* JavaScript can also update variables */
-.theme-dark {
+/* Theme override using the same variables */
+[data-theme="dark"] {
+  --surface-bg: #1f2937;
+  --surface-bg-alt: #111827;
+  --surface-border: #374151;
+  --text-primary: #f9fafb;
+  --text-secondary: #9ca3af;
+}
+
+[data-theme="dark"] .button {
   --color-primary: #60a5fa;
+  --color-primary-hover: #93bbfd;
 }
 ```
 
 ### Animations and Transitions
 
-Creating smooth visual effects.
+CSS transitions and animations create smooth visual effects that communicate state changes to users. Transitions animate the change between two states (e.g., hover effects). Keyframe animations define multi-step sequences that can loop, run on page load, or be triggered by class changes.
+
+For performance, always prefer animating `transform` and `opacity` — these properties are handled by the GPU compositor and do not trigger layout or paint. Avoid animating `width`, `height`, `top`, or `margin` when possible, as these trigger expensive layout recalculations. Always respect the `prefers-reduced-motion` media query for accessibility.
 
 ```css
-/* Transition */
-.transition-element {
-  transition: property duration timing-function delay;
-  /* transition: all 0.3s ease; */
-  
-  transition: 
-    background-color 0.2s ease,
-    transform 0.2s ease,
-    opacity 0.2s ease;
-}
-
-/* Hover transition */
+/* Transitions — animate between states */
 .button {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  padding: var(--space-2) var(--space-6);
+  background-color: var(--color-primary);
+  color: var(--text-inverse);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: transform var(--transition-fast),
+              box-shadow var(--transition-fast);
 }
 
 .button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-lg);
 }
 
-/* Keyframe animation */
+.button:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Focus-visible for keyboard accessibility */
+.button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Fade-in entrance animation */
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
@@ -411,66 +534,123 @@ Creating smooth visual effects.
 }
 
 .fade-in {
-  animation: fadeIn 0.5s ease forwards;
+  animation: fadeIn 0.4s ease-out forwards;
 }
 
+/* Pulse notification dot */
 @keyframes pulse {
   0%, 100% {
     opacity: 1;
+    transform: scale(1);
   }
   50% {
-    opacity: 0.5;
+    opacity: 0.6;
+    transform: scale(1.2);
   }
 }
 
-.pulse {
+.notification-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-error);
   animation: pulse 2s ease-in-out infinite;
 }
 
-@keyframes slideIn {
+/* Slide-in from left */
+@keyframes slideInLeft {
   from {
-    transform: translateX(-100%);
+    opacity: 0;
+    transform: translateX(-30px);
   }
   to {
+    opacity: 1;
     transform: translateX(0);
   }
 }
 
-/* Staggered animations */
-.stagger-1 { animation-delay: 0.1s; }
-.stagger-2 { animation-delay: 0.2s; }
-.stagger-3 { animation-delay: 0.3s; }
+/* Staggered animation delays for lists */
+.list-item:nth-child(1) { animation-delay: 0ms;   }
+.list-item:nth-child(2) { animation-delay: 60ms;  }
+.list-item:nth-child(3) { animation-delay: 120ms; }
+.list-item:nth-child(4) { animation-delay: 180ms; }
+.list-item:nth-child(5) { animation-delay: 240ms; }
+
+.list-item {
+  animation: slideInLeft 0.4s ease-out both;
+}
+
+/* Respect user motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .fade-in,
+  .list-item {
+    animation: none;
+    opacity: 1;
+  }
+
+  .notification-dot {
+    animation: none;
+  }
+
+  .button {
+    transition: none;
+  }
+}
 ```
 
-## Full Example: Responsive Card Component
+---
+
+## Practical Examples
+
+### Complete Responsive Card Component
+
+The following example combines CSS custom properties, CSS Grid, transitions, responsive design, and dark mode into a production-ready card component. It demonstrates how real-world components leverage multiple CSS concepts together.
 
 ```css
-/* Card Component CSS */
+/* ============================================
+   Responsive Card Component
+   Production-ready, accessible, dark-mode-aware
+   ============================================ */
+
 :root {
   --card-bg: #ffffff;
+  --card-bg-hover: #f9fafb;
   --card-border: #e5e7eb;
-  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  --card-shadow-hover: 0 10px 25px rgba(0, 0, 0, 0.15);
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --card-shadow-hover: 0 10px 25px rgba(0, 0, 0, 0.12), 0 4px 10px rgba(0, 0, 0, 0.08);
   --card-radius: 12px;
   --card-padding: 1.5rem;
-  
+  --card-gap: 1.5rem;
+
   --text-primary: #1f2937;
   --text-secondary: #6b7280;
   --accent-color: #3b82f6;
-  
-  --transition-fast: 0.2s ease;
-  --transition-medium: 0.3s ease;
+  --accent-color-light: #dbeafe;
+
+  --transition-fast: 150ms ease;
+  --transition-base: 250ms ease;
 }
 
+/* Card grid layout */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--card-gap);
+  padding: var(--card-gap);
+}
+
+/* Card base */
 .card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
   background-color: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: var(--card-radius);
   box-shadow: var(--card-shadow);
-  padding: var(--card-padding);
-  
-  transition: transform var(--transition-medium),
-              box-shadow var(--transition-medium),
+  overflow: hidden;
+  transition: transform var(--transition-base),
+              box-shadow var(--transition-base),
               border-color var(--transition-fast);
 }
 
@@ -480,36 +660,41 @@ Creating smooth visual effects.
   border-color: var(--accent-color);
 }
 
-/* Card Image */
+/* Card image */
 .card-image {
   width: 100%;
   height: 200px;
   object-fit: cover;
-  border-radius: calc(var(--card-radius) - 4px);
-  margin-bottom: var(--card-padding);
 }
 
-/* Card Content */
+/* Card content */
 .card-content {
   display: flex;
   flex-direction: column;
+  flex: 1;
   gap: 0.75rem;
+  padding: var(--card-padding);
 }
 
 .card-category {
+  display: inline-block;
+  align-self: flex-start;
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--accent-color);
+  background-color: var(--accent-color-light);
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--radius-sm);
 }
 
 .card-title {
   font-size: 1.25rem;
   font-weight: 700;
   color: var(--text-primary);
-  margin: 0;
   line-height: 1.3;
+  margin: 0;
 }
 
 .card-description {
@@ -517,15 +702,17 @@ Creating smooth visual effects.
   color: var(--text-secondary);
   line-height: 1.6;
   margin: 0;
+  flex: 1;
 }
 
-/* Card Footer */
+/* Card footer */
 .card-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: var(--card-padding);
-  padding-top: var(--card-padding);
+  padding: var(--card-padding);
+  padding-top: 0;
+  margin-top: auto;
   border-top: 1px solid var(--card-border);
 }
 
@@ -536,15 +723,10 @@ Creating smooth visual effects.
 }
 
 .card-author-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
   object-fit: cover;
-}
-
-.card-author-info {
-  display: flex;
-  flex-direction: column;
 }
 
 .card-author-name {
@@ -558,99 +740,125 @@ Creating smooth visual effects.
   color: var(--text-secondary);
 }
 
-/* Card with Layout Variants */
+/* Horizontal card variant */
 .card-horizontal {
-  display: grid;
-  grid-template-columns: 200px 1fr;
+  flex-direction: row;
 }
 
 .card-horizontal .card-image {
-  height: 100%;
+  width: 200px;
+  height: auto;
   min-height: 180px;
-  margin-bottom: 0;
 }
 
-/* Responsive */
+/* Responsive: stack horizontal cards on small screens */
 @media (max-width: 640px) {
   .card-horizontal {
-    grid-template-columns: 1fr;
+    flex-direction: column;
   }
-  
+
   .card-horizontal .card-image {
+    width: 100%;
     height: 200px;
-    margin-bottom: var(--card-padding);
   }
 }
 
-/* Dark Mode */
+/* Dark mode */
 @media (prefers-color-scheme: dark) {
   :root {
     --card-bg: #1f2937;
+    --card-bg-hover: #111827;
     --card-border: #374151;
     --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-    --card-shadow-hover: 0 10px 25px rgba(0, 0, 0, 0.4);
-    
+    --card-shadow-hover: 0 10px 25px rgba(0, 0, 0, 0.5);
     --text-primary: #f9fafb;
     --text-secondary: #9ca3af;
+    --accent-color-light: rgba(59, 130, 246, 0.15);
   }
 }
 ```
 
-## Common Mistakes
+---
 
-### Overusing !important
+## Common Pitfalls
 
-Using !important overrides specificity and makes CSS hard to maintain.
+### Overuse of `!important`
+
+The `!important` declaration overrides all specificity rules, making it extremely difficult to override styles later. Overusing it creates a specificity arms race where developers stack `!important` on top of `!important`. Reserve it for utility classes and print styles — never use it to fix specificity problems.
 
 ```css
-/* ❌ WRONG - Overusing !important */
-.header .nav .link {
-  color: blue !important;
+/* Problem: stacking !important to override specificity */
+.header .nav-item .link {
+  color: #3b82f6 !important;
 }
 
 .sidebar .link {
-  color: red !important;
+  color: #ef4444 !important;
 }
 
-/* ✅ CORRECT - Proper specificity */
-.header .nav-link {
-  color: blue;
+/* Solution: use more targeted class selectors with appropriate specificity */
+.nav-link {
+  color: #6b7280;
+}
+
+.nav-link--active {
+  color: #3b82f6;
 }
 
 .sidebar .nav-link {
-  color: red;
+  color: #ef4444;
+}
+```
+
+### Ignoring Specificity Hierarchy
+
+When multiple rules target the same element, specificity determines the winner. Many bugs arise from accidentally targeting the wrong specificity level, leading to styles that either do not apply or are impossible to override without `!important`.
+
+```css
+/* Problem: ID selector is too specific — cannot be overridden easily */
+#hero-banner {
+  padding: 2rem;
+}
+
+/* Solution: use class selectors instead for reusable components */
+.hero-banner {
+  padding: 2rem;
+}
+
+.hero-banner--compact {
+  padding: 1rem;
 }
 ```
 
 ### Not Using Relative Units
 
-Using fixed pixel values prevents accessibility and responsive behavior.
+Fixed pixel values for font sizes, widths, and spacing prevent users from adjusting the interface and break responsive design. Relative units like `rem`, `em`, `%`, `vw`, and `clamp()` produce interfaces that respect user settings and adapt to different viewports.
 
 ```css
-/* ❌ WRONG - Fixed pixels */
+/* Problem: fixed pixel values — not responsive, not accessible */
 .container {
   width: 960px;
   font-size: 14px;
+  padding: 16px;
 }
 
-/* ✅ CORCEPT - Relative units */
+/* Solution: relative units with responsive constraints */
 .container {
   width: min(100% - 2rem, 960px);
-  font-size: clamp(14px, 3vw, 18px);
+  margin-inline: auto;
+  font-size: clamp(0.875rem, 2.5vw, 1.125rem);
+  padding: var(--space-4);
 }
 ```
 
-### Not Resetting Default Styles
+### Forgetting the CSS Reset
 
-Different browsers have different default styles that can cause inconsistencies.
+Different browsers apply different default styles to elements. Without a reset or normalize, headings, lists, margins, and form elements can look inconsistent across browsers.
 
 ```css
-/* ❌ WRONG - No reset */
-button {
-  padding: 0.5em 1em;
-}
+/* Problem: no reset — browser defaults vary widely */
 
-/* ✅ CORRECT - Basic reset */
+/* Solution: modern minimal reset */
 *,
 *::before,
 *::after {
@@ -660,31 +868,192 @@ button {
 }
 
 body {
-  font-family: system-ui, sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-img, video {
+img,
+video,
+canvas,
+svg {
+  display: block;
   max-width: 100%;
   height: auto;
 }
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+ul,
+ol {
+  list-style: none;
+}
 ```
 
-## Exercises
+---
 
-1. **Card Grid Layout**: Create a responsive card grid using CSS Grid with auto-fit and minmax. Include hover effects and transitions.
+## Practical Tasks for Interns
 
-2. **Navigation Menu**: Build a responsive navigation menu with mobile hamburger menu using only CSS (checkbox hack or :hover).
+### Task 1: Build a Responsive Navigation Bar
 
-3. **Loading Animations**: Create three different loading spinner animations using CSS keyframes.
+Create a navigation bar that displays links horizontally on desktop and collapses into a stacked layout on mobile. Use Flexbox for alignment, CSS transitions for smooth open/close states, and a mobile-first approach with media queries.
 
-4. **Responsive Form**: Build a responsive form with styled inputs, validation states, and focus effects.
+**What to build:**
+- A fixed-top navigation bar with a logo, navigation links, and a call-to-action button
+- A mobile view where links stack vertically below the logo
+- Smooth transition when toggling the mobile menu open and closed
 
-5. **Theme Switcher**: Create a theme switcher using CSS custom properties and data attributes.
+**External resources:**
+- [MDN Flexbox Guide](https://developer.mozilla.org/en-US/docs/Learn/CSS/CSS_layout/Flexbox)
+- [CSS-Tricks: A Complete Guide to Flexbox](https://css-tricks.com/snippets/css/a-guide-to-flexbox/)
+- [web.dev: Learn CSS Layout](https://web.dev/learn/css/layout)
 
-## Sources
+**Step-by-step local setup:**
+1. Create a folder called `css-navbar-task` on your desktop.
+2. Inside it, create `index.html` and `styles.css`.
+3. In `index.html`, add a `<nav>` element containing a logo `<div>` and an unordered list `<ul>` with at least four navigation links.
+4. Link `styles.css` from the HTML `<head>`.
+5. In `styles.css`, set `.nav-container` to `display: flex`, with `justify-content: space-between` and `align-items: center`.
+6. Add a media query at `max-width: 768px` that switches the flex direction to column and adjusts spacing.
+7. Add `transition` properties to the menu items for smooth height changes.
+8. Open `index.html` in your browser and test by resizing the window.
 
-- [MDN CSS Documentation](https://developer.mozilla.org/en-US/docs/Web/CSS)
-- [CSS Tricks Flexbox Guide](https://css-tricks.com/snippets/css/a-guide-to-flexbox/)
-- [CSS Grid Garden](https://cssgridgarden.com/)
-- [Flexbox Froggy](https://flexboxfroggy.com/)
+---
+
+### Task 2: Create a CSS Grid Dashboard Layout
+
+Build a dashboard-style page layout with a sidebar, a top header bar, and a main content area that displays a grid of metric cards. Use `grid-template-areas` for the page structure and `auto-fit` with `minmax()` for the card grid.
+
+**What to build:**
+- A full-page grid layout using named grid areas (`header`, `sidebar`, `main`)
+- A responsive card grid inside the main area that adjusts columns based on viewport width
+- A sidebar that collapses to a horizontal bar on small screens
+
+**External resources:**
+- [MDN CSS Grid Layout](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_grid_layout)
+- [CSS Grid Garden](https://cssgridgarden.com/) — an interactive game to learn grid properties
+- [Kevin Powell YouTube: CSS Grid Tutorial](https://www.youtube.com/c/KevinPowell)
+
+**Step-by-step local setup:**
+1. Create a folder called `css-grid-dashboard` on your desktop.
+2. Inside it, create `index.html` and `styles.css`.
+3. In `index.html`, create a `<div class="dashboard">` containing `<header>`, `<aside>`, and `<main>` elements.
+4. Inside `<main>`, add at least six `<div class="metric-card">` elements with placeholder content.
+5. In `styles.css`, set `.dashboard` to `display: grid` and define `grid-template-areas` with `header`, `sidebar`, and `main` zones.
+6. Use `grid-template-columns: 250px 1fr` for the page layout.
+7. Inside `main`, create `.card-grid` with `grid-template-columns: repeat(auto-fit, minmax(250px, 1fr))`.
+8. Add a `@media (max-width: 768px)` breakpoint that changes `grid-template-columns` to `1fr` and reassigns grid areas.
+9. Open `index.html` in your browser and verify the layout adapts at different widths.
+
+---
+
+### Task 3: Implement a Dark Mode Toggle with CSS Variables
+
+Create a page that supports light and dark modes using CSS custom properties. The theme should change when a button is clicked (toggling a `data-theme` attribute on `<html>`) and also respect the user's system preference via `prefers-color-scheme`.
+
+**What to build:**
+- A `:root` variable system defining light and dark color tokens
+- A `[data-theme="dark"]` selector that overrides all tokens
+- A JavaScript-powered toggle button that switches the `data-theme` attribute
+- A fallback `@media (prefers-color-scheme: dark)` for users who have not interacted with the toggle
+
+**External resources:**
+- [web.dev: prefers-color-scheme](https://web.dev/articles/prefers-color-scheme)
+- [MDN: prefers-color-scheme](https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-color-scheme)
+- [CSS-Tricks: Dark Mode with CSS Variables](https://css-tricks.com/a-complete-guide-to-dark-mode-in-css/)
+
+**Step-by-step local setup:**
+1. Create a folder called `css-dark-mode` on your desktop.
+2. Inside it, create `index.html`, `styles.css`, and `script.js`.
+3. In `styles.css`, define all color variables under `:root` (surface, text, accent colors).
+4. Add `[data-theme="dark"] { ... }` that overrides those variables with dark values.
+5. Add `@media (prefers-color-scheme: dark)` that applies dark variables as a default when no preference is stored.
+6. In `index.html`, add a `<button id="theme-toggle">Toggle Theme</button>`.
+7. In `script.js`, add an event listener that toggles `data-theme` between `light` and `dark` on `<html>` and stores the choice in `localStorage`.
+8. On page load, check `localStorage` for a stored theme preference and apply it.
+9. Open `index.html` in your browser and verify the toggle works and the system preference is respected.
+
+---
+
+### Task 4: Build a Loading Animation Library
+
+Create a collection of at least four CSS-only loading animations (spinner, dots, bar, pulse ring). Package them as reusable CSS classes that can be dropped into any project.
+
+**What to build:**
+- A `.spinner` class using `@keyframes` and `border` trick
+- A `.dots` class animating three dots in sequence
+- A `.bar` class showing an expanding and contracting bar
+- A `.pulse-ring` class with an expanding, fading circle
+- Each animation should respect `prefers-reduced-motion`
+
+**External resources:**
+- [CSS-Tricks: Creating Smooth CSS Animations](https://css-tricks.com/creating-smooth-css-animations/)
+- [animista.net](https://animista.net/) — browse and customize CSS animation patterns
+- [MDN: Using CSS animations](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Animations/Using_CSS_animations)
+
+**Step-by-step local setup:**
+1. Create a folder called `css-loading-animations` on your desktop.
+2. Inside it, create `index.html` and `styles.css`.
+3. In `index.html`, create four `<div>` containers, each with a class for a different animation type (`spinner`, `dots`, `bar`, `pulse-ring`).
+4. In `styles.css`, define each `@keyframes` rule (e.g., `@keyframes spin { to { transform: rotate(360deg); } }`).
+5. Assign the corresponding class to apply `animation` properties to each element.
+6. Use `prefers-reduced-motion: reduce` to disable all animations for users who prefer reduced motion.
+7. Use only `transform` and `opacity` for all animated properties to ensure GPU acceleration.
+8. Open `index.html` in your browser, verify each animation runs smoothly, and toggle your OS reduced-motion setting to confirm fallback behavior.
+
+---
+
+### Task 5: Create a Responsive Pricing Table
+
+Build a pricing table component that displays three plans side by side on desktop and stacks vertically on mobile. Use CSS Grid with `grid-template-areas` for the internal layout of each plan card, and the `clamp()` function for responsive typography.
+
+**What to build:**
+- A grid of three pricing cards with name, price, feature list, and CTA button
+- A highlighted "recommended" plan with a distinct border or background
+- Responsive behavior: three columns on desktop, single column on mobile
+- Use CSS variables for all colors and spacing
+
+**External resources:**
+- [MDN: Grid Template Areas](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_grid_layout/Grid_template_areas)
+- [Kevin Powell YouTube: Building a Pricing Table](https://www.youtube.com/c/KevinPowell)
+- [web.dev: Learn CSS](https://web.dev/learn/css)
+
+**Step-by-step local setup:**
+1. Create a folder called `css-pricing-table` on your desktop.
+2. Inside it, create `index.html` and `styles.css`.
+3. In `index.html`, create a `<section class="pricing">` containing three `<article class="pricing-card">` elements, each with a plan name, price, `<ul>` feature list, and a `<button>` CTA.
+4. Add a `recommended` attribute or class to the middle card.
+5. In `styles.css`, set `.pricing` to `display: grid` with `grid-template-columns: repeat(auto-fit, minmax(280px, 1fr))` and `gap: 2rem`.
+6. Style each `.pricing-card` using CSS variables for colors and spacing, with a subtle border and box-shadow.
+7. Apply a distinct `border-color` or `background-color` to the `.pricing-card.recommended` variant.
+8. Use `clamp(1.5rem, 4vw, 2.5rem)` for the price font size.
+9. Add a `@media (max-width: 640px)` breakpoint if needed for single-column stacking.
+10. Open `index.html` in your browser and verify the layout adapts correctly and the recommended plan stands out.
+
+---
+
+## Further Reading
+
+- [MDN CSS Documentation](https://developer.mozilla.org/en-US/docs/Web/CSS) — the definitive reference for all CSS properties and concepts
+- [web.dev Learn CSS](https://web.dev/learn/css) — Google's structured course covering modern CSS
+- [CSS-Tricks: A Complete Guide to Flexbox](https://css-tricks.com/snippets/css/a-guide-to-flexbox/) — the most popular visual flexbox reference
+- [CSS-Tricks: A Complete Guide to CSS Grid](https://css-tricks.com/snippets/css/a-guide-to-grid/) — comprehensive grid reference
+- [CSS Grid Garden](https://cssgridgarden.com/) — interactive game for learning CSS Grid
+- [Flexbox Froggy](https://flexboxfroggy.com/) — interactive game for learning Flexbox
+- [Every Layout](https://every-layout.dev/) — recurring layout patterns using CSS primitives
+- [Kevin Powell YouTube Channel](https://www.youtube.com/c/KevinPowell) — high-quality CSS tutorials and deep dives
+- [Can I Use](https://caniuse.com/) — check browser support for any CSS feature
+- [CSS Reference](https://cssreference.io/) — visual guide to every CSS property
+- [Smashing Magazine CSS Articles](https://www.smashingmagazine.com/category/css/) — in-depth articles on advanced CSS techniques
+- [Web Accessibility Initiative (WAI)](https://www.w3.org/WAI/) — accessibility guidelines that inform CSS best practices

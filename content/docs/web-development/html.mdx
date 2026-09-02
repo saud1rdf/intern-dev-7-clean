@@ -1,58 +1,69 @@
 ---
-title: "HTML"
-category: "web-development"
+title: "HTML5 Semantic Markup"
+slug: "html"
+category: "web-fundamentals"
 summary: "Master HTML5 fundamentals including semantic markup, forms, accessibility, and modern HTML features for building structured web pages."
 readingTime: 20
 ---
 
+# HTML5 Semantic Markup
+
 ## Introduction
 
-HTML (HyperText Markup Language) is the foundation of the World Wide Web. It provides the structural skeleton for all web pages, defining the meaning and organization of content. First proposed by Tim Berners-Lee in 1989 and standardized by the W3C, HTML has evolved through multiple versions to become the powerful markup language we use today.
+HTML (HyperText Markup Language) is the foundational language of the World Wide Web. It provides the structural skeleton for every web page, defining the meaning and hierarchy of content that browsers render and assistive technologies interpret. First proposed by Tim Berners-Lee in 1989 and standardized by the W3C, HTML has evolved through multiple versions, each adding capabilities that transformed how we build for the web.
 
-HTML5, the current major version, introduced significant new features including semantic elements, native multimedia support through video and audio tags, canvas for graphics, and APIs for offline storage and geolocation. These additions transformed HTML from a simple document markup language into a platform for building complex web applications without relying heavily on plugins or external technologies.
+HTML5, the current living standard, introduced landmark features that elevated HTML from simple document markup to a full application platform. Semantic elements like `<article>`, `<section>`, `<nav>`, and `<aside>` replaced generic `<div>` containers, giving meaning to content structure. Native multimedia via `<video>` and `<audio>` eliminated the need for third-party plugins. The `<canvas>` element enabled client-side graphics, and new APIs brought offline storage, geolocation, and drag-and-drop to the browser.
 
-Understanding HTML is essential for every web developer because it forms the basis upon which CSS styling and JavaScript interactivity are built. Even in modern frameworks like React and Next.js, developers must understand HTML concepts to create effective, accessible, and well-structured applications. The principles of semantic markup, proper nesting, and accessibility are universal skills that transcend any particular framework or library.
+Understanding HTML deeply is essential for every web developer. HTML is the layer upon which CSS styling and JavaScript interactivity are built. Even in modern component-based frameworks like React and Vue, developers must grasp HTML semantics to produce accessible, well-structured, and SEO-friendly applications. The principles of semantic markup, proper nesting, and accessibility are universal skills that apply across every technology stack.
 
-## When to Use HTML
-
-HTML is the universal language of the web and is used in virtually every web development scenario. Understanding when and how to apply HTML effectively is crucial for building quality web experiences.
-
-### Document Structure
-
-Every web page requires HTML to define its basic structure. From simple landing pages to complex web applications, HTML provides the semantic foundation that communicates the purpose and hierarchy of content to browsers, search engines, and assistive technologies.
-
-### Form Creation
-
-HTML forms are essential for collecting user input, whether it's a simple contact form, a complex checkout process, or a search interface. HTML5 introduced many new input types and attributes that make form creation more powerful and user-friendly.
-
-### Content Semantics
-
-Using semantic HTML elements correctly helps search engines understand your content, improves accessibility for screen reader users, and makes your code more maintainable. Semantic elements like article, section, nav, and aside communicate the meaning of content beyond just its visual appearance.
-
-### Multimedia Integration
-
-HTML5 provides native support for embedding images, audio, video, and graphics without requiring third-party plugins. This native support is faster, more accessible, and works across all modern devices and browsers.
+---
 
 ## Key Concepts
 
-### Document Structure
+### Document Structure and Boilerplate
 
-Every HTML document follows a standard structure that browsers expect. This structure includes the DOCTYPE declaration, html, head, and body elements.
+Every HTML document follows a standard structure that tells the browser how to parse, render, and handle the page. This structure includes the `<!DOCTYPE html>` declaration, the `<html>` root element, a `<head>` section with metadata, and a `<body>` section with visible content.
+
+A complete, production-ready boilerplate includes viewport meta tags for responsive design, a character encoding declaration, a meaningful page title, external stylesheet links, and properly structured semantic sections. This foundation ensures your pages are accessible, performant, and ready for modern browsers.
 
 ```html
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    <!-- Character encoding — always declare first -->
     <meta charset="UTF-8">
+
+    <!-- Viewport meta — essential for responsive design on mobile -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="A brief description of the page">
-    <title>Page Title</title>
-    <link rel="stylesheet" href="styles.css">
-    <link rel="icon" href="favicon.ico">
+
+    <!-- Page description — used by search engines in results -->
+    <meta name="description" content="A brief, compelling description of this page (150-160 characters)">
+
+    <!-- Page title — shown in browser tabs and search results -->
+    <title>Page Title — Site Name</title>
+
+    <!-- Favicon -->
+    <link rel="icon" href="/favicon.ico" sizes="48x48">
+
+    <!-- Preconnect to external origins for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="/styles.css">
+
+    <!-- Open Graph meta for social sharing (optional) -->
+    <meta property="og:title" content="Page Title">
+    <meta property="og:description" content="Description for social sharing">
+    <meta property="og:image" content="/og-image.png">
   </head>
   <body>
-    <header>
-      <nav>
+    <!-- Skip link — allows keyboard users to bypass repetitive navigation -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <!-- Site header with primary navigation -->
+    <header class="site-header">
+      <nav aria-label="Primary navigation">
         <ul>
           <li><a href="/">Home</a></li>
           <li><a href="/about">About</a></li>
@@ -60,200 +71,258 @@ Every HTML document follows a standard structure that browsers expect. This stru
         </ul>
       </nav>
     </header>
-    
-    <main>
+
+    <!-- Main content — only one per page -->
+    <main id="main-content">
       <article>
         <h1>Main Heading</h1>
-        <p>Paragraph text goes here.</p>
+        <p>Paragraph content goes here.</p>
       </article>
-      
-      <aside>
+
+      <aside aria-label="Related content">
         <h2>Related Content</h2>
-        <p>Sidebar content.</p>
+        <p>Sidebar information.</p>
       </aside>
     </main>
-    
-    <footer>
-      <p>&copy; 2024 Company Name. All rights reserved.</p>
+
+    <!-- Site footer -->
+    <footer class="site-footer">
+      <p>&copy; 2026 Company Name. All rights reserved.</p>
     </footer>
-    
-    <script src="app.js"></script>
+
+    <!-- Scripts at end of body for faster initial rendering -->
+    <script src="/app.js" defer></script>
   </body>
 </html>
 ```
 
 ### Semantic Elements
 
-HTML5 introduced semantic elements that describe their meaning to both browsers and developers. Using these elements improves accessibility and SEO.
+HTML5 introduced a set of semantic elements that describe the purpose and role of content within a page. Using these elements correctly provides three major benefits: accessibility (screen readers can navigate by landmark regions), SEO (search engines understand content hierarchy), and maintainability (developers can immediately identify the role of each section).
+
+Each semantic element carries inherent meaning. `<header>` represents introductory content or navigation aids. `<nav>` wraps navigation links. `<main>` contains the dominant content. `<article>` holds self-contained, independently distributable content. `<section>` groups related content under a thematic heading. `<aside>` contains tangentially related content. `<footer>` provides closing information for its nearest ancestor sectioning content.
 
 ```html
-<!-- Header section - typically contains navigation or introductory content -->
-<header>
-  <h1>Website Title</h1>
-  <nav>
-    <a href="#home">Home</a>
-    <a href="#products">Products</a>
-    <a href="#about">About</a>
+<!-- Site-wide header — typically contains logo and primary navigation -->
+<header class="site-header">
+  <a href="/" aria-label="Home">
+    <img src="logo.svg" alt="Company Name" width="150" height="40">
+  </a>
+  <nav aria-label="Primary navigation">
+    <ul>
+      <li><a href="/" aria-current="page">Home</a></li>
+      <li><a href="/products">Products</a></li>
+      <li><a href="/about">About</a></li>
+      <li><a href="/contact">Contact</a></li>
+    </ul>
   </nav>
 </header>
 
-<!-- Main content - the primary content of the document -->
-<main>
-  <!-- Article - self-contained content -->
+<!-- Main content area — one per page -->
+<main id="main-content">
+  <!-- Article: self-contained, independently meaningful content -->
   <article>
     <header>
-      <h2>Article Title</h2>
-      <time datetime="2024-01-15">January 15, 2024</time>
+      <h1>How to Structure HTML Documents</h1>
+      <p>
+        Published on <time datetime="2026-01-15">January 15, 2026</time>
+        by <a href="/authors/jane">Jane Smith</a>
+      </p>
     </header>
-    <p>Article content here.</p>
+
+    <section aria-labelledby="section-intro">
+      <h2 id="section-intro">Introduction</h2>
+      <p>Understanding document structure is fundamental to web development.</p>
+    </section>
+
+    <section aria-labelledby="section-body">
+      <h2 id="section-body">Core Concepts</h2>
+      <p>Detailed explanation of semantic HTML elements and their usage.</p>
+    </section>
+
     <footer>
-      <p>Author: John Doe</p>
+      <p>Tags: <a href="/tags/html">HTML</a>, <a href="/tags/semantics">Semantics</a></p>
     </footer>
   </article>
-  
-  <!-- Section - thematic grouping of content -->
-  <section>
-    <h2>Features</h2>
-    <p>Description of features.</p>
+
+  <!-- Section: thematic grouping under a shared topic -->
+  <section aria-labelledby="related-section">
+    <h2 id="related-section">Related Articles</h2>
+    <ul>
+      <li><a href="/articles/css-basics">CSS Basics</a></li>
+      <li><a href="/articles/accessibility">Web Accessibility</a></li>
+    </ul>
   </section>
 </main>
 
-<!-- Navigation - navigation links -->
-<nav aria-label="Main navigation">
-  <ul>
-    <li><a href="#getting-started">Getting Started</a></li>
-    <li><a href="#tutorials">Tutorials</a></li>
-    <li><a href="#reference">Reference</a></li>
-  </ul>
-</nav>
-
-<!-- Aside - tangential or related content -->
-<aside>
-  <h3>Related Articles</h3>
-  <ul>
-    <li><a href="#article1">Article 1</a></li>
-    <li><a href="#article2">Article 2</a></li>
-  </ul>
+<!-- Aside: tangentially related content -->
+<aside aria-label="Author bio">
+  <h3>About the Author</h3>
+  <p>Jane Smith is a front-end developer with 8 years of experience.</p>
 </aside>
 
-<!-- Footer - footer for the document or section -->
-<footer>
+<!-- Footer: closing content for the page or section -->
+<footer class="site-footer">
   <nav aria-label="Footer navigation">
-    <a href="/privacy">Privacy Policy</a>
-    <a href="/terms">Terms of Service</a>
+    <ul>
+      <li><a href="/privacy">Privacy Policy</a></li>
+      <li><a href="/terms">Terms of Service</a></li>
+    </ul>
   </nav>
+  <p>&copy; 2026 Company Name</p>
 </footer>
 ```
 
-### Forms and Input
+### HTML Forms and Validation
 
-HTML forms are essential for user interaction. HTML5 introduced many new input types and attributes.
+HTML forms are the primary mechanism for collecting user input on the web. HTML5 introduced new input types (`email`, `url`, `date`, `range`, `color`, etc.) and built-in validation attributes (`required`, `pattern`, `min`, `max`, `minlength`, `maxlength`) that reduce the need for JavaScript validation.
+
+Every form input must have an associated `<label>` element. Labels are critical for accessibility — they allow screen readers to announce the purpose of each input, and they make the entire label text clickable to focus or toggle the input. Use `fieldset` and `legend` to group related controls, and use `autocomplete` attributes to help browsers auto-fill forms correctly.
 
 ```html
-<form action="/submit" method="POST">
+<form action="/api/register" method="POST" novalidate>
+  <!-- Fieldset groups related controls; legend provides a visible heading -->
   <fieldset>
     <legend>Personal Information</legend>
-    
+
     <div class="form-group">
-      <label for="name">Full Name</label>
-      <input 
-        type="text" 
-        id="name" 
-        name="name" 
-        required 
+      <label for="full-name">Full Name <span aria-hidden="true">*</span></label>
+      <input
+        type="text"
+        id="full-name"
+        name="fullName"
+        required
         minlength="2"
         maxlength="100"
         autocomplete="name"
-        placeholder="Enter your full name"
+        placeholder="e.g. Jane Smith"
       >
+      <small class="form-hint" id="name-hint">Between 2 and 100 characters</small>
     </div>
-    
+
     <div class="form-group">
-      <label for="email">Email Address</label>
-      <input 
-        type="email" 
-        id="email" 
-        name="email" 
+      <label for="email">Email Address <span aria-hidden="true">*</span></label>
+      <input
+        type="email"
+        id="email"
+        name="email"
         required
         autocomplete="email"
-        placeholder="you@example.com"
+        placeholder="jane@example.com"
+        aria-describedby="email-hint"
       >
+      <small class="form-hint" id="email-hint">We will never share your email</small>
     </div>
-    
+
     <div class="form-group">
       <label for="phone">Phone Number</label>
-      <input 
-        type="tel" 
-        id="phone" 
-        name="phone" 
+      <input
+        type="tel"
+        id="phone"
+        name="phone"
         pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}"
+        autocomplete="tel"
         placeholder="123-456-7890"
+        aria-describedby="phone-hint"
+      >
+      <small class="form-hint" id="phone-hint">Format: 123-456-7890</small>
+    </div>
+
+    <div class="form-group">
+      <label for="birthday">Date of Birth</label>
+      <input
+        type="date"
+        id="birthday"
+        name="birthday"
+        autocomplete="bday"
+        min="1900-01-01"
+        max="2008-01-01"
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="website">Website</label>
+      <input
+        type="url"
+        id="website"
+        name="website"
+        autocomplete="url"
+        placeholder="https://example.com"
       >
     </div>
   </fieldset>
-  
+
   <fieldset>
     <legend>Preferences</legend>
-    
+
     <div class="form-group">
-      <label for="country">Country</label>
-      <select id="country" name="country" required>
+      <label for="country">Country <span aria-hidden="true">*</span></label>
+      <select id="country" name="country" required autocomplete="country">
         <option value="">Select a country</option>
         <option value="us">United States</option>
         <option value="ca">Canada</option>
         <option value="uk">United Kingdom</option>
+        <option value="de">Germany</option>
+        <option value="other">Other</option>
       </select>
     </div>
-    
+
     <div class="form-group">
-      <label for="message">Message</label>
-      <textarea 
-        id="message" 
-        name="message" 
-        rows="5" 
-        maxlength="1000"
-        placeholder="Your message here..."
+      <label for="bio">Short Bio</label>
+      <textarea
+        id="bio"
+        name="bio"
+        rows="4"
+        maxlength="500"
+        placeholder="Tell us a little about yourself..."
+        aria-describedby="bio-count"
       ></textarea>
+      <small class="form-hint" id="bio-count">0 / 500 characters</small>
     </div>
-    
+
     <div class="form-group">
       <fieldset>
-        <legend>Newsletter Subscription</legend>
-        <label>
-          <input type="radio" name="newsletter" value="daily" checked>
-          Daily
-        </label>
-        <label>
-          <input type="radio" name="newsletter" value="weekly">
-          Weekly
-        </label>
-        <label>
-          <input type="radio" name="newsletter" value="none">
-          No thanks
-        </label>
+        <legend>Newsletter Frequency</legend>
+        <div class="radio-group">
+          <label>
+            <input type="radio" name="newsletter" value="daily">
+            Daily digest
+          </label>
+          <label>
+            <input type="radio" name="newsletter" value="weekly" checked>
+            Weekly summary
+          </label>
+          <label>
+            <input type="radio" name="newsletter" value="none">
+            No newsletters
+          </label>
+        </div>
       </fieldset>
     </div>
-    
+
     <div class="form-group">
       <label>
         <input type="checkbox" name="terms" required>
         I agree to the <a href="/terms">Terms and Conditions</a>
+        <span aria-hidden="true">*</span>
       </label>
     </div>
   </fieldset>
-  
-  <button type="submit">Submit Form</button>
-  <button type="reset">Reset</button>
+
+  <div class="form-actions">
+    <button type="submit">Create Account</button>
+    <button type="reset">Clear Form</button>
+  </div>
 </form>
 ```
 
-### Tables
+### Tables for Data
 
-HTML tables are used for displaying tabular data. They should not be used for layout purposes.
+HTML tables should be used exclusively for presenting tabular data — never for page layout. A well-structured table uses `<thead>`, `<tbody>`, and `<tfoot>` to group rows, `<th>` elements with `scope` attributes to identify header cells, and `<caption>` to provide a concise table description. These features are essential for screen reader users, who navigate tables cell by cell and rely on headers being correctly associated with data cells.
 
 ```html
 <table>
-  <caption>Monthly Sales Report</caption>
+  <caption>Monthly Revenue Report — Q1 2026</caption>
   <thead>
     <tr>
       <th scope="col">Month</th>
@@ -265,137 +334,211 @@ HTML tables are used for displaying tabular data. They should not be used for la
   <tbody>
     <tr>
       <th scope="row">January</th>
-      <td>$50,000</td>
-      <td>$30,000</td>
-      <td>$20,000</td>
+      <td>$52,000</td>
+      <td>$31,000</td>
+      <td>$21,000</td>
     </tr>
     <tr>
       <th scope="row">February</th>
-      <td>$55,000</td>
-      <td>$32,000</td>
-      <td>$23,000</td>
+      <td>$58,500</td>
+      <td>$33,200</td>
+      <td>$25,300</td>
     </tr>
     <tr>
       <th scope="row">March</th>
-      <td>$60,000</td>
-      <td>$35,000</td>
-      <td>$25,000</td>
+      <td>$64,000</td>
+      <td>$35,800</td>
+      <td>$28,200</td>
     </tr>
   </tbody>
   <tfoot>
     <tr>
       <th scope="row">Total</th>
-      <td>$165,000</td>
-      <td>$97,000</td>
-      <td>$68,000</td>
+      <td>$174,500</td>
+      <td>$100,000</td>
+      <td>$74,500</td>
     </tr>
   </tfoot>
 </table>
 ```
 
-### Multimedia
+### Multimedia and Responsive Images
 
-HTML5 provides native support for embedding media content.
+HTML5 provides native support for embedding images, audio, and video without third-party plugins. The `<img>` element supports `srcset` and `sizes` attributes that allow browsers to select the most appropriate image based on viewport width and pixel density, significantly improving performance on mobile devices. The `loading="lazy"` attribute defers offscreen image loading, and explicit `width` and `height` attributes prevent layout shift (CLS).
+
+The `<video>` and `<audio>` elements provide built-in playback controls. Including `<track>` elements with WebVTT captions ensures multimedia content is accessible to deaf and hard-of-hearing users.
 
 ```html
-<!-- Image with responsive attributes -->
-<img 
-  src="image.jpg" 
+<!-- Responsive image with art direction and density switching -->
+<img
+  src="hero-800w.jpg"
   srcset="
-    image-320w.jpg 320w,
-    image-640w.jpg 640w,
-    image-1024w.jpg 1024w
+    hero-400w.jpg   400w,
+    hero-800w.jpg   800w,
+    hero-1200w.jpg 1200w,
+    hero-1600w.jpg 1600w
   "
-  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-  alt="Description of the image for accessibility"
+  sizes="(max-width: 600px) 100vw, (max-width: 1024px) 80vw, 1200px"
+  alt="Team collaboration around a large monitor showing code review"
   loading="lazy"
-  width="1024"
-  height="768"
+  width="800"
+  height="450"
 >
 
-<!-- Audio player -->
-<audio controls>
-  <source src="audio.mp3" type="audio/mpeg">
-  <source src="audio.ogg" type="audio/ogg">
-  Your browser does not support the audio element.
+<!-- Art direction: different image crops for different viewports -->
+<picture>
+  <source media="(min-width: 1024px)" srcset="product-wide.jpg">
+  <source media="(min-width: 640px)" srcset="product-medium.jpg">
+  <img
+    src="product-square.jpg"
+    alt="Product name shown in use on a kitchen countertop"
+    loading="lazy"
+    width="640"
+    height="480"
+  >
+</picture>
+
+<!-- Audio player with multiple source formats for compatibility -->
+<audio controls preload="metadata">
+  <source src="episode-42.mp3" type="audio/mpeg">
+  <source src="episode-42.ogg" type="audio/ogg">
+  <p>Your browser does not support the audio element.
+     <a href="episode-42.mp3">Download the episode</a>.
+  </p>
 </audio>
 
-<!-- Video player -->
-<video 
-  controls 
-  width="640" 
+<!-- Video player with captions, poster image, and multiple sources -->
+<video
+  controls
+  width="640"
   height="360"
-  poster="video-poster.jpg"
+  poster="tutorial-poster.jpg"
   preload="metadata"
 >
-  <source src="video.mp4" type="video/mp4">
-  <source src="video.webm" type="video/webm">
-  <track 
-    kind="captions" 
-    src="captions.vtt" 
-    srclang="en" 
-    label="English"
+  <source src="tutorial.mp4" type="video/mp4">
+  <source src="tutorial.webm" type="video/webm">
+  <track
+    kind="captions"
+    src="tutorial-en.vtt"
+    srclang="en"
+    label="English captions"
     default
   >
-  Your browser does not support the video element.
+  <track
+    kind="captions"
+    src="tutorial-ar.vtt"
+    srclang="ar"
+    label="Arabic captions"
+  >
+  <p>Your browser does not support the video element.
+     <a href="tutorial.mp4">Download the video</a>.
+  </p>
 </video>
 
-<!-- Figure with caption -->
+<!-- Figure with caption for standalone media with a description -->
 <figure>
-  <img src="chart.png" alt="Sales chart showing growth">
+  <img
+    src="architecture-diagram.png"
+    alt="System architecture diagram showing three microservices connected through an API gateway"
+    loading="lazy"
+    width="800"
+    height="500"
+  >
   <figcaption>
-    Figure 1: Quarterly sales growth from 2020 to 2024.
+    Figure 1: Microservices architecture overview. The API gateway routes
+    requests to the authentication, data processing, and notification services.
   </figcaption>
 </figure>
 ```
 
-### Accessibility Attributes
+### Accessibility (a11y)
 
-HTML provides attributes to improve accessibility for users with disabilities.
+Web accessibility ensures that your content can be used by everyone, including people who rely on screen readers, keyboard-only navigation, or other assistive technologies. HTML provides the foundation for accessible interfaces through semantic elements, ARIA (Accessible Rich Internet Applications) attributes, proper heading hierarchy, skip links, and focus management.
+
+Key principles: every interactive element must be keyboard-operable, every image needs meaningful alternative text (or explicit empty alt for decorative images), form inputs must have associated labels, dynamic content updates must be announced to screen readers via live regions, and focus order must be logical and visible.
 
 ```html
-<!-- Skip link for keyboard users -->
+<!-- Skip link — the first focusable element on the page -->
 <a href="#main-content" class="skip-link">Skip to main content</a>
 
-<!-- ARIA labels for complex interactive elements -->
-<div 
-  role="combobox" 
-  aria-expanded="false" 
-  aria-controls="listbox" 
-  aria-label="Select a programming language"
+<!-- Decorative image — empty alt tells screen readers to ignore it -->
+<img src="decorative-border.svg" alt="" role="presentation">
+
+<!-- Meaningful image — descriptive alt text -->
+<img
+  src="chart-q4-revenue.png"
+  alt="Bar chart showing Q4 revenue increased 35% from $120K to $162K quarter-over-quarter"
+  width="600"
+  height="400"
 >
-  <input type="text" aria-autocomplete="list" aria-controls="listbox">
+
+<!-- ARIA combobox for a custom autocomplete component -->
+<div
+  role="combobox"
+  aria-expanded="false"
+  aria-controls="suggestions-list"
+  aria-label="Search for a programming language"
+>
+  <input
+    type="text"
+    aria-autocomplete="list"
+    aria-controls="suggestions-list"
+    aria-activedescendant=""
+    id="language-search"
+  >
+  <ul id="suggestions-list" role="listbox">
+    <li role="option" id="opt-js">JavaScript</li>
+    <li role="option" id="opt-py">Python</li>
+    <li role="option" id="opt-rs">Rust</li>
+  </ul>
 </div>
 
-<!-- Live region for dynamic content announcements -->
-<div 
-  role="status" 
-  aria-live="polite" 
+<!-- Live region — announces dynamic updates to screen readers -->
+<div
+  role="status"
+  aria-live="polite"
   aria-atomic="true"
+  id="form-status"
 >
-  <p>Form submitted successfully!</p>
+  <!-- Populated dynamically, e.g., "Form submitted successfully" -->
 </div>
 
-<!-- Accessible data visualization -->
-<figure>
-  <figcaption>Sales Performance Chart</figcaption>
-  <!-- Chart implementation -->
-</figure>
+<!-- Alert — immediately announced, for urgent messages -->
+<div role="alert" id="error-banner">
+  <p>Please fix the following errors before submitting.</p>
+</div>
 
-<!-- Proper heading hierarchy -->
+<!-- Proper heading hierarchy — one h1, logical nesting -->
 <main id="main-content">
-  <h1>Main Page Title</h1>
-  <section>
-    <h2>Section Title</h2>
+  <h1>Web Development Fundamentals</h1>
+
+  <section aria-labelledby="html-heading">
+    <h2 id="html-heading">HTML Basics</h2>
+    <p>HTML provides the structure for web pages.</p>
+
     <article>
-      <h3>Article Title</h3>
-      <h4>Subsection</h4>
+      <h3>Semantic Elements</h3>
+      <p>Using elements that describe their content improves accessibility.</p>
+
+      <h4>When to Use Each Element</h4>
+      <p>Each semantic element has a specific purpose and use case.</p>
     </article>
+  </section>
+
+  <section aria-labelledby="css-heading">
+    <h2 id="css-heading">CSS Styling</h2>
+    <p>CSS controls the visual presentation of HTML content.</p>
   </section>
 </main>
 ```
 
-## Full Example: Complete Webpage Structure
+---
+
+## Practical Examples
+
+### Complete Semantic Webpage
+
+The following example demonstrates a production-ready HTML page combining semantic structure, accessibility features, forms, tables, multimedia, and proper metadata. This is the kind of document you should be able to produce from scratch for any web project.
 
 ```html
 <!DOCTYPE html>
@@ -403,28 +546,35 @@ HTML provides attributes to improve accessibility for users with disabilities.
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Learn web development with our comprehensive tutorials and resources">
-  <title>WebDev Academy - Learn Web Development</title>
-  
-  <!-- Preconnect for faster font loading -->
+  <meta name="description" content="WebDev Academy offers comprehensive courses on HTML, CSS, JavaScript, and modern frameworks. Start learning web development today.">
+  <meta name="theme-color" content="#3b82f6">
+
+  <title>WebDev Academy — Learn Web Development</title>
+
+  <!-- Open Graph for social sharing -->
+  <meta property="og:title" content="WebDev Academy — Learn Web Development">
+  <meta property="og:description" content="Comprehensive web development courses for all skill levels.">
+  <meta property="og:image" content="/og-image.png">
+
+  <!-- Preconnect for performance -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-  
-  <link rel="stylesheet" href="styles.css">
+
+  <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <!-- Skip Link for Accessibility -->
+  <!-- Skip link for keyboard navigation -->
   <a href="#main-content" class="skip-link">Skip to main content</a>
-  
-  <!-- Header with Navigation -->
+
+  <!-- Site header -->
   <header class="site-header">
     <div class="container">
-      <a href="/" class="logo">
-        <img src="logo.svg" alt="WebDev Academy" width="150" height="40">
+      <a href="/" class="logo" aria-label="WebDev Academy home">
+        <img src="/logo.svg" alt="WebDev Academy" width="150" height="40">
       </a>
-      
-      <nav aria-label="Main navigation">
+
+      <nav aria-label="Primary navigation">
         <ul class="nav-list">
           <li><a href="/courses">Courses</a></li>
           <li><a href="/tutorials">Tutorials</a></li>
@@ -433,13 +583,13 @@ HTML provides attributes to improve accessibility for users with disabilities.
           <li><a href="/about">About</a></li>
         </ul>
       </nav>
-      
-      <form action="/search" method="get" class="search-form" role="search">
-        <label for="search-input" class="visually-hidden">Search courses</label>
-        <input 
-          type="search" 
-          id="search-input" 
-          name="q" 
+
+      <form action="/search" method="GET" role="search" class="search-form">
+        <label for="site-search" class="visually-hidden">Search courses</label>
+        <input
+          type="search"
+          id="site-search"
+          name="q"
           placeholder="Search courses..."
           aria-label="Search courses"
         >
@@ -447,103 +597,159 @@ HTML provides attributes to improve accessibility for users with disabilities.
       </form>
     </div>
   </header>
-  
-  <!-- Main Content -->
+
+  <!-- Main content -->
   <main id="main-content">
-    <!-- Hero Section -->
-    <section class="hero">
+    <!-- Hero section -->
+    <section class="hero" aria-labelledby="hero-title">
       <div class="container">
-        <h1>Master Web Development</h1>
-        <p>Learn HTML, CSS, JavaScript, React, and more with our comprehensive courses</p>
+        <h1 id="hero-title">Master Web Development</h1>
+        <p>Learn HTML, CSS, JavaScript, React, and more with structured courses designed for real-world projects.</p>
         <div class="hero-actions">
           <a href="/courses" class="btn btn-primary">Browse Courses</a>
           <a href="/get-started" class="btn btn-secondary">Get Started Free</a>
         </div>
       </div>
     </section>
-    
-    <!-- Features Section -->
-    <section class="features">
+
+    <!-- Features section -->
+    <section class="features" aria-labelledby="features-title">
       <div class="container">
-        <h2>Why Choose Us</h2>
+        <h2 id="features-title">Why Choose Us</h2>
         <ul class="features-grid">
           <li>
             <article class="feature-card">
-              <h3>Structured Learning</h3>
-              <p>Follow our carefully curated learning paths from beginner to advanced</p>
+              <h3>Structured Learning Paths</h3>
+              <p>Follow curated progressions from beginner to advanced with clear milestones.</p>
             </article>
           </li>
           <li>
             <article class="feature-card">
               <h3>Hands-On Projects</h3>
-              <p>Build real-world projects to solidify your understanding</p>
+              <p>Build real-world applications to solidify your understanding of each concept.</p>
             </article>
           </li>
           <li>
             <article class="feature-card">
               <h3>Community Support</h3>
-              <p>Join thousands of learners and get help when you need it</p>
+              <p>Join thousands of learners and get help when you need it through forums and mentoring.</p>
             </article>
           </li>
         </ul>
       </div>
     </section>
-    
-    <!-- Courses Section -->
-    <section class="courses">
+
+    <!-- Courses section -->
+    <section class="courses" aria-labelledby="courses-title">
       <div class="container">
-        <h2>Popular Courses</h2>
+        <h2 id="courses-title">Popular Courses</h2>
         <ul class="course-grid">
           <li>
             <article class="course-card">
-              <img src="html-course.jpg" alt="" loading="lazy">
+              <img
+                src="html-course.jpg"
+                alt="Student writing HTML markup on a laptop"
+                loading="lazy"
+                width="400"
+                height="225"
+              >
               <div class="course-content">
                 <h3>HTML Fundamentals</h3>
-                <p>Learn the building blocks of the web</p>
+                <p>Learn the building blocks of the web.</p>
                 <span class="duration">4 hours</span>
-                <a href="/courses/html" aria-label="Start HTML Fundamentals course">Start Learning</a>
+                <a href="/courses/html">Start Learning</a>
               </div>
             </article>
           </li>
           <li>
             <article class="course-card">
-              <img src="css-course.jpg" alt="" loading="lazy">
+              <img
+                src="css-course.jpg"
+                alt="Color palette and layout designs on screen"
+                loading="lazy"
+                width="400"
+                height="225"
+              >
               <div class="course-content">
                 <h3>CSS Mastery</h3>
-                <p>Style beautiful, responsive websites</p>
+                <p>Style beautiful, responsive websites.</p>
                 <span class="duration">6 hours</span>
-                <a href="/courses/css" aria-label="Start CSS Mastery course">Start Learning</a>
+                <a href="/courses/css">Start Learning</a>
               </div>
             </article>
           </li>
           <li>
             <article class="course-card">
-              <img src="js-course.jpg" alt="" loading="lazy">
+              <img
+                src="js-course.jpg"
+                alt="JavaScript code running in a browser console"
+                loading="lazy"
+                width="400"
+                height="225"
+              >
               <div class="course-content">
                 <h3>JavaScript Essentials</h3>
-                <p>Add interactivity to your websites</p>
+                <p>Add interactivity and dynamic behavior to your websites.</p>
                 <span class="duration">8 hours</span>
-                <a href="/courses/javascript" aria-label="Start JavaScript Essentials course">Start Learning</a>
+                <a href="/courses/javascript">Start Learning</a>
               </div>
             </article>
           </li>
         </ul>
       </div>
     </section>
+
+    <!-- Pricing section with a data table -->
+    <section class="pricing" aria-labelledby="pricing-title">
+      <div class="container">
+        <h2 id="pricing-title">Course Pricing</h2>
+        <table>
+          <caption>Comparison of available subscription tiers and their included features</caption>
+          <thead>
+            <tr>
+              <th scope="col">Feature</th>
+              <th scope="col">Free</th>
+              <th scope="col">Pro ($29/mo)</th>
+              <th scope="col">Team ($79/mo)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">Course Access</th>
+              <td>3 courses</td>
+              <td>All courses</td>
+              <td>All courses</td>
+            </tr>
+            <tr>
+              <th scope="row">Projects</th>
+              <td>View only</td>
+              <td>Full access</td>
+              <td>Full access + review</td>
+            </tr>
+            <tr>
+              <th scope="row">Mentoring</th>
+              <td>Community</td>
+              <td>Weekly session</td>
+              <td>Daily support</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
   </main>
-  
-  <!-- Footer -->
+
+  <!-- Site footer -->
   <footer class="site-footer">
     <div class="container">
       <div class="footer-grid">
         <div class="footer-brand">
-          <a href="/">
-            <img src="logo-white.svg" alt="WebDev Academy" width="150" height="40">
+          <a href="/" aria-label="WebDev Academy home">
+            <img src="/logo-white.svg" alt="WebDev Academy" width="150" height="40">
           </a>
-          <p>Empowering developers worldwide since 2020</p>
+          <p>Empowering developers worldwide since 2020.</p>
         </div>
-        
-        <nav aria-label="Footer navigation">
+
+        <nav aria-label="Quick links">
           <h2>Quick Links</h2>
           <ul>
             <li><a href="/courses">Courses</a></li>
@@ -552,7 +758,7 @@ HTML provides attributes to improve accessibility for users with disabilities.
             <li><a href="/blog">Blog</a></li>
           </ul>
         </nav>
-        
+
         <nav aria-label="Support">
           <h2>Support</h2>
           <ul>
@@ -562,109 +768,353 @@ HTML provides attributes to improve accessibility for users with disabilities.
             <li><a href="/terms">Terms of Service</a></li>
           </ul>
         </nav>
-        
+
         <div class="footer-newsletter">
           <h2>Stay Updated</h2>
-          <form action="/newsletter" method="post">
+          <form action="/newsletter" method="POST">
             <label for="footer-email" class="visually-hidden">Email address</label>
-            <input 
-              type="email" 
-              id="footer-email" 
-              name="email" 
+            <input
+              type="email"
+              id="footer-email"
+              name="email"
               placeholder="Enter your email"
               required
+              autocomplete="email"
             >
             <button type="submit">Subscribe</button>
           </form>
         </div>
       </div>
-      
+
       <div class="footer-bottom">
-        <p>&copy; 2024 WebDev Academy. All rights reserved.</p>
+        <p>&copy; 2026 WebDev Academy. All rights reserved.</p>
       </div>
     </div>
   </footer>
+
+  <script src="/app.js" defer></script>
 </body>
 </html>
 ```
 
-## Common Mistakes
+---
 
-### Using Non-Semantic Elements for Layout
+## Common Pitfalls
 
-Using div elements for everything instead of semantic elements makes code harder to maintain and less accessible.
+### Using Divs for Everything
+
+The most common anti-pattern in HTML is using `<div>` and `<span>` for every element, discarding the semantic meaning HTML5 provides. This harms accessibility (screen readers cannot identify page landmarks), hurts SEO (search engines cannot understand content hierarchy), and reduces maintainability (developers cannot visually distinguish a header from a sidebar from a footer without reading class names).
 
 ```html
-<!-- ❌ WRONG - Non-semantic structure -->
+<!-- Problem: non-semantic div soup — no meaning, no accessibility -->
 <div class="header">
   <div class="nav">
     <div class="logo"></div>
     <div class="menu">
-      <div class="item"></div>
+      <div class="item"><a href="/">Home</a></div>
+      <div class="item"><a href="/about">About</a></div>
     </div>
   </div>
 </div>
-<div class="main">
-  <div class="content"></div>
+<div class="main-content">
+  <div class="article">
+    <div class="title"></div>
+    <div class="body"></div>
+  </div>
   <div class="sidebar"></div>
 </div>
 <div class="footer"></div>
 
-<!-- ✅ CORRECT - Semantic structure -->
+<!-- Solution: semantic elements — meaningful, accessible, maintainable -->
 <header>
-  <nav>...</nav>
+  <nav aria-label="Primary navigation">
+    <a href="/" aria-label="Home">
+      <img src="logo.svg" alt="Company Name" width="120" height="40">
+    </a>
+    <ul>
+      <li><a href="/">Home</a></li>
+      <li><a href="/about">About</a></li>
+    </ul>
+  </nav>
 </header>
 <main>
-  <article>...</article>
-  <aside>...</aside>
+  <article>
+    <h1>Article Title</h1>
+    <p>Article body content.</p>
+  </article>
+  <aside aria-label="Sidebar">
+    <h2>Related Links</h2>
+  </aside>
 </main>
-<footer>...</footer>
+<footer>
+  <p>&copy; 2026 Company Name</p>
+</footer>
 ```
 
-### Missing Alt Text or Using Placeholder Text
+### Missing or Poor Alt Text
 
-Images without proper alt text are inaccessible to screen reader users and hurt SEO.
+Images without alt text are invisible to screen readers. Placeholder text like `"image"` or `"photo"` provides no information. Descriptive alt text should convey the content or function of the image. Decorative images (purely visual, no informational content) should use an empty `alt=""` attribute to be ignored by assistive technologies.
 
 ```html
-<!-- ❌ WRONG - Missing or placeholder alt text -->
-<img src="product.jpg" alt="image">
+<!-- Problem: missing, empty, or placeholder alt text -->
+<img src="team-photo.jpg" alt="image">
 <img src="chart.png" alt="">
+<img src="icon.svg">
 
-<!-- ✅ CORRECT - Descriptive alt text -->
-<img src="product.jpg" alt="Silver MacBook Pro with Retina display on wooden desk">
-<img src="chart.png" alt="Bar chart showing 40% increase in Q4 revenue from $50K to $70K">
+<!-- Solution: descriptive alt for informational images, empty alt for decorative -->
+<img
+  src="team-photo.jpg"
+  alt="Seven team members posing in the office lobby during the 2026 company retreat"
+  width="800"
+  height="450"
+>
+<img
+  src="chart.png"
+  alt="Line chart showing user growth from 2,000 in January to 8,500 in June 2026"
+  width="600"
+  height="400"
+>
+<img src="icon.svg" alt="" role="presentation" width="24" height="24">
 ```
 
-### Improper Heading Hierarchy
+### Breaking Heading Hierarchy
 
-Skipping heading levels or having multiple h1 elements confuses screen readers and search engines.
+Headings (`<h1>` through `<h6>`) create an outline of your page that screen readers use for navigation. Skipping levels (e.g., jumping from `<h2>` to `<h4>`) or having multiple `<h1>` elements confuses both assistive technologies and search engine crawlers. Each page should have exactly one `<h1>`, and subsequent headings should descend in order without skipping levels.
 
 ```html
-<!-- ❌ WRONG - Broken heading hierarchy -->
-<h1>Main Title</h1>
-<h3>Section (skipped h2)</h3>
-<h1>Another h1</h1>
+<!-- Problem: skipped heading levels and multiple h1 elements -->
+<h1>Company Home Page</h1>
+<h1>Welcome to Our Services</h1>
+<h3>Web Development</h3>
+  <h5>Frontend</h5>
 
-<!-- ✅ CORRECT - Proper hierarchy -->
-<h1>Main Title</h1>
-<h2>Section</h2>
-<h3>Subsection</h3>
+<!-- Solution: one h1 per page, levels descending in order -->
+<h1>Company Name — Web Development Services</h1>
+
+<h2>Web Development</h2>
+  <h3>Frontend Development</h3>
+    <h4>React Applications</h4>
+    <h4>Vue.js Applications</h4>
+  <h3>Backend Development</h3>
+    <h4>Node.js APIs</h4>
+    <h4>Python Services</h4>
+
+<h2>Design Services</h2>
+  <h3>UI/UX Design</h3>
+  <h3>Brand Identity</h3>
 ```
 
-## Exercises
+### Ignoring Form Labels
 
-1. **Personal Landing Page**: Create a personal landing page using semantic HTML5 elements. Include a header, navigation, main content area with sections, and a footer.
+Every form input must have an associated `<label>` element. Without labels, screen readers cannot announce what each input is for, and sighted users lose the click-to-focus convenience. Using `placeholder` text as a substitute for labels is a common mistake — placeholders disappear when the user types and do not meet accessibility requirements.
 
-2. **Accessible Form**: Build a registration form with proper labels, input types, validation, and accessibility attributes.
+```html
+<!-- Problem: missing labels, placeholder used as label -->
+<div>
+  <input type="text" placeholder="Your name">
+</div>
+<div>
+  <input type="email" placeholder="Email">
+</div>
 
-3. **Data Table**: Create a responsive data table showing comparative information with proper scope attributes and captions.
+<!-- Solution: properly associated labels with for/id pairing -->
+<div class="form-group">
+  <label for="contact-name">Full Name <span aria-hidden="true">*</span></label>
+  <input
+    type="text"
+    id="contact-name"
+    name="name"
+    required
+    autocomplete="name"
+    placeholder="e.g. Jane Smith"
+  >
+</div>
+<div class="form-group">
+  <label for="contact-email">Email Address <span aria-hidden="true">*</span></label>
+  <input
+    type="email"
+    id="contact-email"
+    name="email"
+    required
+    autocomplete="email"
+    placeholder="jane@example.com"
+  >
+</div>
+```
 
-4. **Image Gallery**: Build an image gallery using semantic markup with figure and figcaption elements.
+---
 
-5. **Documentation Page**: Create a documentation-style page with proper heading hierarchy, code examples, and navigation.
+## Practical Tasks for Interns
 
-## Sources
+### Task 1: Build a Personal Portfolio Page
 
-- [MDN HTML Documentation](https://developer.mozilla.org/en-US/docs/Web/HTML)
-- [HTML Living Standard](https://html.spec.whatwg.org/)
-- [W3C HTML Validator](https://validator.w3.org/)
+Create a single-page personal portfolio using only HTML (no CSS or JavaScript yet). The page should demonstrate proper semantic structure, accessibility features, and correct heading hierarchy.
+
+**What to build:**
+- A complete HTML page with `<header>`, `<main>`, and `<footer>` landmarks
+- A navigation bar with anchor links to page sections
+- A hero section with your name and a brief introduction
+- An "About Me" section with a short bio
+- A "Projects" section with at least three project entries using `<article>` elements
+- A "Contact" section with a simple form
+- A skip link, proper heading hierarchy (one `<h1>`, descending `<h2>`/`<h3>`), and meaningful alt text on any images
+
+**External resources:**
+- [MDN: Getting Started with HTML](https://developer.mozilla.org/en-US/docs/Learn/HTML/Introduction_to_HTML/Getting_started)
+- [web.dev: Learn HTML](https://web.dev/learn/html)
+- [W3C HTML Validator](https://validator.w3.org/) — validate your finished page here
+
+**Step-by-step local setup:**
+1. Create a folder called `portfolio-task` on your desktop.
+2. Inside it, create a single file called `index.html`.
+3. Start with the full HTML boilerplate: `<!DOCTYPE html>`, `<html lang="en">`, `<head>` with `charset`, `viewport`, `title`, and `<body>`.
+4. Add a skip link as the first element in `<body>`: `<a href="#main-content" class="skip-link">Skip to main content</a>`.
+5. Create a `<header>` with your name in an `<h1>` and a `<nav>` with anchor links.
+6. Create `<main id="main-content">` with `<section>` elements for About, Projects, and Contact.
+7. In the Projects section, use `<article>` elements with `<h3>` headings and descriptive paragraphs.
+8. In the Contact section, add a `<form>` with labeled `<input>` fields for name, email, and message.
+9. Add a `<footer>` with copyright information.
+10. Open `index.html` in your browser, then paste the source code into the [W3C Validator](https://validator.w3.org/) and fix any reported errors.
+
+---
+
+### Task 2: Create an Accessible Registration Form
+
+Build a multi-section registration form that demonstrates all HTML5 input types, built-in validation attributes, proper label associations, fieldset groupings, and ARIA descriptions.
+
+**What to build:**
+- A form with at least two `<fieldset>` groups with `<legend>` headings
+- Input types: `text`, `email`, `password`, `tel`, `date`, `url`, `select`, `textarea`, `radio`, `checkbox`, and `range`
+- Each input must have a `<label>` with a matching `for`/`id` pair
+- Validation attributes: `required`, `minlength`, `maxlength`, `pattern`, `min`, `max`
+- `aria-describedby` on inputs with helper text or error message containers
+- A submit button and a reset button
+
+**External resources:**
+- [MDN: Forms Guide](https://developer.mozilla.org/en-US/docs/Learn/Forms)
+- [WebAIM: Form Accessibility](https://webaim.org/techniques/forms/controls)
+- [HTML5 Doctor: Form Elements](http://html5doctor.com/)
+
+**Step-by-step local setup:**
+1. Create a folder called `form-task` on your desktop.
+2. Inside it, create `index.html` and `styles.css` (link it in the `<head>`).
+3. Start with the HTML boilerplate and add a `<main>` with an `<h1>` heading.
+4. Create a `<form>` with `action` and `method` attributes (even if the endpoint is fictional for now).
+5. Add the first `<fieldset>` with `<legend>Personal Details</legend>` and include name, email, password, and date of birth inputs, each with a `<label>`.
+6. Add the second `<fieldset>` with `<legend>Preferences</legend>` and include a country dropdown, a textarea for a bio, radio buttons for a plan choice, and a terms checkbox.
+7. Add validation attributes to every required input and pattern-based validation where appropriate.
+8. Add `<small>` helper text below inputs that need format guidance, and connect it with `aria-describedby`.
+9. Add submit and reset buttons at the bottom.
+10. In `styles.css`, add a `.visually-hidden` utility class and style `.form-group` with spacing.
+11. Open `index.html`, test tab-through navigation (Tab key), and verify every input is announced correctly by a screen reader or by Chrome's accessibility inspector.
+
+---
+
+### Task 3: Build a Responsive Data Dashboard with Tables
+
+Create a page containing at least two data tables demonstrating proper table semantics, accessibility attributes, and responsive behavior.
+
+**What to build:**
+- Two `<table>` elements with `<caption>`, `<thead>`, `<tbody>`, and `<tfoot>`
+- All `<th>` elements must have correct `scope="col"` or `scope="row"` attributes
+- A "monthly sales" table and a "team performance" table
+- A proper heading hierarchy connecting tables to their section headings
+- Use CSS (basic inline or linked) to make tables horizontally scrollable on small screens using `overflow-x: auto` on a wrapper `<div>`
+
+**External resources:**
+- [MDN: HTML Tables](https://developer.mozilla.org/en-US/docs/Learn/HTML/Tables)
+- [W3C: Tables Tutorial](https://www.w3.org/WAI/tutorials/tables/) — comprehensive accessibility guide
+- [web.dev: Tables and Data](https://web.dev/learn/html/tables/)
+
+**Step-by-step local setup:**
+1. Create a folder called `tables-task` on your desktop.
+2. Inside it, create `index.html` and `styles.css`.
+3. Start with the HTML boilerplate and add a `<main>` with an `<h1>` heading.
+4. Add a `<section>` with an `<h2>` heading and the first table (Monthly Sales Report) with all four table sections (`caption`, `thead`, `tbody`, `tfoot`).
+5. Add a second `<section>` with an `<h2>` heading and the second table (Team Performance) with the same structure.
+6. Ensure every `<th>` has the correct `scope` attribute.
+7. In `styles.css`, wrap each table in a `<div class="table-wrapper">` with `overflow-x: auto; max-width: 100%;`.
+8. Style `<caption>` with `caption-side: top; padding: 0.5rem; font-weight: 600;`.
+9. Open `index.html` in your browser, resize the window to mobile width, and verify both tables scroll horizontally without breaking the layout.
+10. Validate the page with the [W3C Validator](https://validator.w3.org/).
+
+---
+
+### Task 4: Create an Image Gallery with Lazy Loading
+
+Build a page that displays a collection of images using semantic HTML, responsive image techniques, and native lazy loading.
+
+**What to build:**
+- A gallery page using a `<section>` with a heading and a list of `<figure>` elements
+- Each `<figure>` must contain an `<img>` with a descriptive `alt` attribute and a `<figcaption>`
+- All images must use `loading="lazy"` and explicit `width`/`height` attributes to prevent layout shift
+- At least one `<picture>` element with multiple `<source>` elements for different viewports
+- A decorative logo image using `alt=""` and `role="presentation"`
+
+**External resources:**
+- [web.dev: Lazy Loading](https://web.dev/articles/fast-lazy-loading)
+- [MDN: Lazy Loading](https://developer.mozilla.org/en-US/docs/Web/Performance/Lazy_loading)
+- [web.dev: Responsive Images](https://web.dev/learn/design/responsive-images/)
+
+**Step-by-step local setup:**
+1. Create a folder called `gallery-task` on your desktop.
+2. Inside it, create `index.html` and `styles.css`.
+3. Start with the HTML boilerplate and add a `<main>` with an `<h1>` heading.
+4. Add a decorative `<img>` near the top with `alt=""` and `role="presentation"`.
+5. Create a `<section>` with an `<h2>` heading for the gallery.
+6. Add at least six `<figure>` elements, each containing an `<img>` and a `<figcaption>`. Use placeholder image services (e.g., `https://picsum.photos/800/600?random=1`) and set explicit `width="800"` and `height="600"` attributes.
+7. Add `loading="lazy"` to every gallery image.
+8. Create one `<picture>` element with `<source>` elements for `min-width: 1024px` and `min-width: 640px`, with a fallback `<img>`.
+9. In `styles.css`, use CSS Grid to lay out the gallery: `display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;`.
+10. Style `<figcaption>` with padding, centered text, and a smaller font size.
+11. Open `index.html`, open browser DevTools Network tab, and scroll slowly to verify images load lazily (you should see requests fire as images enter the viewport, not all at once).
+
+---
+
+### Task 5: Build a Documentation Page with Proper Semantics
+
+Create a documentation-style page that demonstrates complex semantic structure, nested sections, code blocks, a table of contents, and proper heading hierarchy.
+
+**What to build:**
+- A long-form documentation page with an `<h1>` title and multiple `<h2>` sections
+- Each section should contain `<h3>` subsections and `<h4>` sub-subsections where appropriate
+- Include `<pre><code>` blocks for code examples
+- Add a sidebar `<nav>` with a table of contents using anchor links to each section heading
+- Use `<dl>` (definition list) for a glossary or terminology section
+- Use `<blockquote>` for an important note or quote
+
+**External resources:**
+- [MDN: HTML Semantics](https://developer.mozilla.org/en-US/docs/Glossary/Semantics)
+- [HTML5 Doctor](http://html5doctor.com/) — element flowchart and usage guide
+- [MDN: Web Components — Shadow DOM](https://developer.mozilla.org/en-US/docs/Web/API/Web_components/Using_shadow_DOM) — advanced semantic encapsulation
+
+**Step-by-step local setup:**
+1. Create a folder called `docs-page-task` on your desktop.
+2. Inside it, create `index.html` and `styles.css`.
+3. Start with the HTML boilerplate and add a `<main id="main-content">`.
+4. Add an `<h1>` document title and a brief introductory `<p>`.
+5. Create a two-column layout: a `<nav aria-label="Table of contents">` sidebar with anchor links, and the main `<article>` content area.
+6. In the article, create at least four `<section>` elements, each with an `<h2>` heading and `id` matching the corresponding nav link.
+7. Inside at least one section, add `<h3>` and `<h4>` subsections to create a three-level heading hierarchy.
+8. Add `<pre><code>` blocks (with `class="language-html"` or similar) for code examples.
+9. Add a `<dl>` definition list section with at least five terms and their definitions.
+10. Add a `<blockquote>` with a `<cite>` element for an important note.
+11. In `styles.css`, style the layout with Flexbox (sidebar + main content), add a background to `<pre>` blocks, and style `<blockquote>` with a left border.
+12. Verify heading hierarchy by running the page through a heading outline tool or by manually checking that no levels are skipped.
+
+---
+
+## Further Reading
+
+- [MDN HTML Documentation](https://developer.mozilla.org/en-US/docs/Web/HTML) — the definitive reference for all HTML elements and attributes
+- [HTML Living Standard](https://html.spec.whatwg.org/) — the official specification maintained by WHATWG
+- [web.dev: Learn HTML](https://web.dev/learn/html) — Google's structured course covering modern HTML
+- [HTML5 Doctor](http://html5doctor.com/) — element flowchart and "Can I use?" guidance for semantic elements
+- [W3C HTML Validator](https://validator.w3.org/) — the official tool for validating HTML documents
+- [WAI: Web Accessibility Tutorials](https://www.w3.org/WAI/tutorials/) — tutorials on forms, tables, images, and carousels
+- [WebAIM](https://webaim.org/) — accessibility training, articles, and evaluation tools
+- [The A11Y Project](https://www.a11yproject.com/) — community-driven accessibility checklist and resource library
+- [Can I Use](https://caniuse.com/) — check browser support for any HTML element or attribute
+- [MDN: Accessibility](https://developer.mozilla.org/en-US/docs/Web/Accessibility) — comprehensive accessibility documentation
+- [Smashing Magazine: HTML Articles](https://www.smashingmagazine.com/category/html/) — in-depth articles on modern HTML techniques
+- [JavaScript.info: Document](https://javascript.info/document) — understanding the DOM and how HTML is parsed by browsers

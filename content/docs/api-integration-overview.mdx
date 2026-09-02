@@ -1,0 +1,391 @@
+---
+title: "API Integration"
+slug: "api-integration"
+category: "api-integration"
+description: "Master API integration with REST APIs, GraphQL, authentication, testing, and containerization"
+readingTime: 15
+---
+
+# API Integration
+
+APIs are the contract between your application and the services it depends on. This module teaches you how to consume REST and GraphQL APIs safely, validate everything that crosses the network boundary, and test integrations the way production teams do.
+
+## Overview & The Why
+
+A production API integration must survive changing schemas, flaky networks, hostile input, and strict time budgets. Teams that ignore these realities hit the same failures:
+
+- **Schema drift**: external APIs change response shapes without notice. Unvalidated JSON reaches UI code and crashes at runtime with errors that make no sense.
+- **Silent timeouts**: without an explicit deadline, a request can hang until the browser or OS gives up, freezing the UI for tens of seconds.
+- **Leaked credentials**: API keys and private endpoints embedded in client bundles are scraped within hours of deployment.
+- **Inconsistent error shapes**: when every endpoint returns a different error format, each caller needs bespoke handling and error reporting becomes guesswork.
+- **Unsafe retries**: blindly retrying non-idempotent writes duplicates orders, payments, and notifications.
+
+This page is the hub for the module. It defines the vocabulary, ships the reference REST client you will study in depth, and anchors the GraphQL article with a runnable Apollo example.
+
+## Key Concepts
+
+- **HTTP methods**: `GET` (read), `POST` (create), `PUT` (full replace), `PATCH` (partial update), `DELETE` (remove). Each carries a distinct semantic that servers and proxies rely on.
+- **Status codes**: numbered outcomes in classes - 2xx success, 3xx redirect, 4xx client error, 5xx server error. The status line, not the body, is the primary contract.
+- **REST**: an architectural style that models resources as URLs and operates on them with HTTP methods; stateless, cacheable, and uniformly addressable.
+- **GraphQL**: a query language and runtime served from one endpoint. Clients declare exactly the fields they need; operations are queries, mutations, and subscriptions.
+- **Runtime validation**: TypeScript types vanish at runtime. A schema library such as Zod re-checks external payloads against a declared shape before data reaches business logic.
+- **Idempotency**: an operation that can be repeated safely - the first attempt applies, retries are no-ops. Retrying without idempotency is dangerous.
+- **Rate limiting and backoff**: servers reply `429` with a `Retry-After` hint; clients must back off exponentially and honor that header.
+- **CORS**: browsers enforce a same-origin policy; cross-origin requests need explicit server headers or a local proxy during development.
+- **Authentication**: bearer tokens on the `Authorization` header; refresh flows and PKCE keep long-lived sessions secure without exposing credentials.
+- **Pagination**: offset- or cursor-based slicing so large collections stay bounded.
+
+## Learning Path
+
+| Topic | What You Will Build | Estimated Time |
+|-------|---------------------|----------------|
+| [REST APIs & Defensive Validation](/docs/api-integration/rest) | A type-safe client with Zod validation and retry handling | 15 min |
+| [GraphQL Integration with Apollo Client](/docs/api-integration/graphql) | Typed queries, caching, and a reactive React UI | 20 min |
+| [Postman for API Testing](/docs/api-integration/postman) | Collections, automated tests, and CI integration | 15 min |
+
+## Production-Grade Code
+
+The REST client below is the file-by-file backbone of the module. It is defensive by design: every request has a deadline, every response is type-checked at runtime, and failures are returned as typed results instead of unexpected exceptions.
+
+### lib/apiResult.ts
+
+```typescript
+export interface ApiErrorPayload {
+  code: string;
+  message: string;
+  details?: unknown;
+}
+
+export class ApiError extends Error {
+  readonly status: number;
+  readonly code: string;
+  readonly details?: unknown;
+
+  constructor(status: number, payload: ApiErrorPayload) {
+    super(payload.message);
+    this.name = "ApiError";
+    this.status = status;
+    this.code = payload.code;
+    this.details = payload.details;
+  }
+}
+
+export type ApiResult<T> =
+  | { ok: true; data: T }
+  | { ok: false; error: ApiError };
+```
+
+### lib/httpClient.ts
+
+```typescript
+import { z } from "zod";
+import { ApiError, type ApiResult } from "./apiResult";
+
+type JsonBody = Record<string, unknown>;
+
+interface HttpClientOptions {
+  baseUrl: string;
+  timeoutMs?: number;
+  headers?: Record<string, string>;
+}
+
+interface RequestOptions<T> {
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  path: string;
+  body?: JsonBody;
+  schema?: z.ZodType<T>;
+  signal?: AbortSignal;
+}
+
+export class HttpClient {
+  private readonly baseUrl: string;
+  private readonly timeoutMs: number;
+  private readonly defaultHeaders: Record<string, string>;
+
+  constructor(options: HttpClientOptions) {
+    this.baseUrl = options.baseUrl.replace(/\/+$/, "");
+    this.timeoutMs = options.timeoutMs ?? 10_000;
+    this.defaultHeaders = { ...options.headers };
+  }
+
+  async request<T>(options: RequestOptions<T>): Promise<ApiResult<T>> {
+    const url = `${this.baseUrl}${options.path}`;
+
+    try {
+      const response = await fetch(url, {
+        method: options.method,
+        headers: { "Content-Type": "application/json", ...this.defaultHeaders },
+        body: options.body ? JSON.stringify(options.body) : undefined,
+        signal: options.signal ?? AbortSignal.timeout(this.timeoutMs),
+      });
+
+      const raw = await this.parseBody(response);
+
+      if (!response.ok) {
+        return { ok: false, error: this.toApiError(response.status, raw) };
+      }
+
+      if (options.schema) {
+        const parsed = options.schema.safeParse(raw);
+        if (!parsed.success) {
+          return {
+            ok: false,
+            error: new ApiError(response.status, {
+              code: "SCHEMA_MISMATCH",
+              message: "Response did not pass runtime validation",
+              details: parsed.error.flatten(),
+            }),
+          };
+        }
+        return { ok: true, data: parsed.data };
+      }
+
+      return { ok: true, data: raw as T };
+    } catch (cause) {
+      return { ok: false, error: this.toNetworkError(cause) };
+    }
+  }
+
+  private async parseBody(response: Response): Promise<unknown> {
+    const text = await response.text();
+    if (text.length === 0) return null;
+    try {
+      return JSON.parse(text);
+    } catch {
+      return text;
+    }
+  }
+
+  private toApiError(status: number, raw: unknown): ApiError {
+    if (raw !== null && typeof raw === "object") {
+      const payload = raw as Record<string, unknown>;
+      const code = typeof payload.code === "string" ? payload.code : "HTTP_ERROR";
+      const message = typeof payload.message === "string" ? payload.message : `Request failed with status ${status}`;
+      return new ApiError(status, { code, message, details: payload.details });
+    }
+    return new ApiError(status, {
+      code: "HTTP_ERROR",
+      message: `Request failed with status ${status}`,
+    });
+  }
+
+  private toNetworkError(cause: unknown): ApiError {
+    const name = cause instanceof Error ? cause.name : "UNKNOWN_ERROR";
+
+    if (name === "TimeoutError") {
+      return new ApiError(0, {
+        code: "REQUEST_TIMEOUT",
+        message: `Request exceeded the ${this.timeoutMs}ms timeout`,
+      });
+    }
+
+    if (name === "AbortError") {
+      return new ApiError(0, {
+        code: "REQUEST_ABORTED",
+        message: "Request was aborted by the caller",
+      });
+    }
+
+    return new ApiError(0, {
+      code: "NETWORK_ERROR",
+      message: "Network request failed before a response was received",
+      details: cause instanceof Error ? cause.message : cause,
+    });
+  }
+}
+```
+
+### lib/usersApi.ts
+
+```typescript
+import { z } from "zod";
+import { HttpClient } from "./httpClient";
+import type { ApiResult } from "./apiResult";
+
+export const userSchema = z.object({
+  id: z.number(),
+  name: z.string().min(1),
+  email: z.string().email(),
+  phone: z.string().optional(),
+});
+
+export type User = z.infer<typeof userSchema>;
+
+const client = new HttpClient({
+  baseUrl: "https://jsonplaceholder.typicode.com",
+  timeoutMs: 5_000,
+});
+
+export async function getUser(id: number): Promise<ApiResult<User>> {
+  return client.request({
+    method: "GET",
+    path: `/users/${id}`,
+    schema: userSchema,
+  });
+}
+```
+
+### examples/fetchUser.ts
+
+```typescript
+import { getUser } from "../lib/usersApi";
+
+async function main(): Promise<void> {
+  const result = await getUser(1);
+
+  if (result.ok) {
+    console.log(`Loaded ${result.data.name} <${result.data.email}>`);
+    return;
+  }
+
+  console.error(`[${result.error.code}] ${result.error.message}`);
+}
+
+void main();
+```
+
+The GraphQL article builds on the same discipline. A minimal Apollo consumer that renders loading, error, and data states looks like this:
+
+### components/CountriesList.tsx
+
+```tsx
+import { gql, useQuery } from "@apollo/client";
+
+interface Country {
+  code: string;
+  name: string;
+  capital: string;
+}
+
+const GET_COUNTRIES = gql`
+  query GetCountries {
+    countries {
+      code
+      name
+      capital
+    }
+  }
+`;
+
+export function CountriesList() {
+  const { data, loading, error } = useQuery<{ countries: Country[] }>(GET_COUNTRIES);
+
+  if (loading) return <p role="status">Loading countries...</p>;
+  if (error) return <p role="alert">Query failed: {error.message}</p>;
+
+  return (
+    <ul>
+      {data?.countries.map((country) => (
+        <li key={country.code}>
+          {country.name} - {country.capital}
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+To try it without any setup, point the Apollo `HttpLink` at a public endpoint such as `https://countries.trevorblades.com`.
+
+## API Comparison Reference
+
+### REST vs GraphQL
+
+| Aspect | REST | GraphQL |
+|--------|------|---------|
+| Endpoint model | One URL per resource | Single endpoint for all operations |
+| Data fetching | Server-defined payloads per resource | Client-declared fields per query |
+| Over- and under-fetching | Common | Avoided by design |
+| Caching | Native HTTP caching (ETag, CDN) | Client-side normalization (Apollo) |
+| Versioning | URL or Accept header | Schema evolution with deprecations |
+| Strongest fit | Public CRUD APIs, CDNs | Aggregating services, mobile clients |
+
+### HTTP Status Codes at a Glance
+
+| Status | Class | Meaning | Typical Client Action |
+|--------|-------|---------|----------------------|
+| 200 / 201 | Success | OK / resource created | Use the payload |
+| 400 / 422 | Client error | Invalid request body | Fix the payload and retry |
+| 401 / 403 | Client error | Unauthenticated / forbidden | Refresh credentials or permissions |
+| 404 | Client error | Resource not found | Surface to the user |
+| 429 | Rate limit | Too many requests | Back off, honor Retry-After |
+| 500 / 502 | Server error | Failure / bad gateway | Retry with backoff, then alert |
+
+## Best Practices
+
+1. **Validate every payload at the boundary** with a runtime schema (Zod) before it enters your domain logic.
+2. **Set an explicit timeout on every request** and surface failures as typed results, never as raw unhandled network exceptions.
+3. **Never ship secrets in client bundles** - private API keys and internal endpoints belong behind a server-side proxy.
+4. **Retry safely**: exponential backoff with jitter, idempotency keys for writes, and respect for `Retry-After`.
+5. **Standardize error contracts**: every error carries a machine-readable `code`, a human `message`, and a correlation `requestId`.
+6. **Contract-test critical integrations** and pin schema versions so drift is caught in CI instead of production.
+
+## Practical Tasks for Interns
+
+### Task 1: Run the Defensive REST Client Locally
+
+**Objective**: exercise the `HttpClient` from this article against a live public API and observe its typed result union in both success and failure branches.
+
+**Apply it locally**:
+1. Scaffold: `mkdir api-client-lab && cd api-client-lab && npm init -y && npm install -D typescript tsx @types/node zod`
+2. Recreate `lib/apiResult.ts`, `lib/httpClient.ts`, `lib/usersApi.ts`, and `examples/fetchUser.ts` with the code above.
+3. Run `npx tsx examples/fetchUser.ts` - expect `Loaded Leanne Graham <Sincere@april.biz>`.
+4. Break the happy path on purpose: change the path to `/users/999999` and rerun - expect a typed `{ ok: false }` result with code `HTTP_ERROR`, not an unhandled exception.
+5. Set `timeoutMs: 1` in `usersApi.ts` and rerun - expect the request to fail fast with `REQUEST_TIMEOUT`.
+
+**Success**: every branch prints through the `ApiResult` union; no raw exceptions escape the client.
+
+**Resources**: [MDN Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API), [AbortSignal.timeout()](https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal/timeout_static), [Zod documentation](https://zod.dev/), [JSONPlaceholder](https://jsonplaceholder.typicode.com/).
+
+### Task 2: Contract-Test the Client Without a Network
+
+**Objective**: verify timeout and error parsing deterministically by stubbing the global `fetch`.
+
+**Apply it locally**:
+1. Create `tests/httpClient.test.ts` importing `test` from `node:test` and `strict` from `node:assert`.
+2. In the first test, stub `globalThis.fetch` to resolve with `new Response('{"message":"rate limited"}', { status: 429, headers: { "content-type": "application/json" } })`; assert `result.ok === false` and `result.error.code === "HTTP_ERROR"`.
+3. In the second test, stub `fetch` to reject with `new DOMException("timed out", "TimeoutError")`; assert `result.error.code === "REQUEST_TIMEOUT"`.
+4. Run `node --import tsx --test tests/httpClient.test.ts`.
+
+**Success**: both tests pass, proving the client's failure contract without any real network access.
+
+**Resources**: [Node.js test runner](https://nodejs.org/api/test.html), [MDN Response](https://developer.mozilla.org/en-US/docs/Web/API/Response), [MDN DOMException](https://developer.mozilla.org/en-US/docs/Web/API/DOMException).
+
+### Task 3: Wire the Apollo Component Into a Vite App
+
+**Objective**: render live GraphQL data in a React app using the three-state `useQuery` pattern from this article.
+
+**Apply it locally**:
+1. `npm create vite@latest graphql-lab -- --template react-ts && cd graphql-lab && npm install && npm install @apollo/client graphql`
+2. In `src/main.tsx`, create an `ApolloClient` with `new InMemoryCache()` and `uri: "https://countries.trevorblades.com"`, then wrap the app in an `ApolloProvider` with the client as its `client` prop.
+3. Add `src/CountriesList.tsx` with the component from this article and render it from `App.tsx`.
+4. Run `npm run dev` and open http://localhost:5173.
+
+**Success**: a list of countries and capitals renders; throttling the network in DevTools flips the UI into the `role="alert"` error state; the Network tab shows a single POST.
+
+**Resources**: [Apollo Client documentation](https://www.apollographql.com/docs/react/), [GraphQL Learn](https://graphql.org/learn/), [Vite guide](https://vite.dev/guide/), [Countries GraphQL API](https://countries.trevorblades.com/).
+
+### Task 4: Read HTTP Semantics With curl
+
+**Objective**: build the habit of inspecting raw status lines, headers, and bodies before writing any client code.
+
+**Apply it locally**:
+1. `curl -i https://jsonplaceholder.typicode.com/users/1`
+2. `curl -i -X POST https://jsonplaceholder.typicode.com/posts -H "Content-Type: application/json" -d '{"title":"hello"}'`
+3. `curl -i https://api.github.com/rate_limit`
+4. `curl -i -X PATCH https://jsonplaceholder.typicode.com/does-not-exist`
+
+**Success**: you can explain each returned status (`200`, `201`, `200` with rate-limit headers, `404`) and point to the exact header that carries the rate-limit information.
+
+**Resources**: [HTTP Semantics (RFC 9110)](https://www.rfc-editor.org/rfc/rfc9110.html), [MDN HTTP status codes](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status), [OWASP API Security Top 10](https://owasp.org/www-project-api-security/).
+
+## Deep Reading & References
+
+- [HTTP Semantics (RFC 9110)](https://www.rfc-editor.org/rfc/rfc9110.html) - the official HTTP specification
+- [MDN Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) - reference for request and response primitives
+- [Zod](https://zod.dev/) - runtime schema validation used across the module
+- [Apollo Client documentation](https://www.apollographql.com/docs/react/) - GraphQL state management
+- [GraphQL Learn](https://graphql.org/learn/) - official GraphQL introduction
+- [OWASP API Security Top 10](https://owasp.org/www-project-api-security/) - threat model for API integrations
+- [Google API Design Guide](https://cloud.google.com/apis/design) - enterprise API patterns
+- [JSONPlaceholder](https://jsonplaceholder.typicode.com/) - free fake REST API for practice

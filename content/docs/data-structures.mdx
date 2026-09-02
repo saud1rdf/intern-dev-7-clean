@@ -1,27 +1,402 @@
-
+---
+title: "Data Structures"
+description: "Master essential data structures: arrays, linked lists, stacks, queues, trees, hash tables, graphs, and their real-world applications"
 ---
 
-## 5️⃣ Data Structures  
-**المسار:**  
-`content/docs/data-structures.mdx`
+# Data Structures
 
-```mdx
----
-title: Data Structures | هياكل البيانات
-description: Arrays, maps, and sets explained | شرح هياكل البيانات
----
+Data structures are the substrate of every performance-sensitive system: databases, caches, routers, and compilers all reduce to a handful of shapes that guarantee specific operational costs. This page is the module hub. It establishes the vocabulary, the complexity model, and the production-grade TypeScript implementations you will reuse in the algorithms article.
 
-# Data Structures | هياكل البيانات
+## Overview & The Why
 
-## English
-Data structures help organize and store data efficiently.
+Choosing the wrong structure is not a style issue - it is a production incident waiting to happen. The failure modes below are routine in real codebases:
 
-### Common types
-- Array
-- Map
-- Set
+- **Linear scans on hot paths**: storing data you look up frequently in a plain array turns every read into an O(n) scan, which collapses under load.
+- **Wrong ordering guarantees**: using a stack where a queue belongs (or vice versa) silently reorders work and corrupts business semantics.
+- **Unbounded caches**: memoizing results without an eviction policy is a memory leak with a delayed onset.
+- **Broken invariants**: a heap or search tree is only fast while its invariants hold; a single operation that violates them degrades everything back to O(n).
+- **Reinventing built-ins**: hand-rolled hash tables and ordered maps are almost always slower and buggier than the engine-tuned `Map` and `Set`.
 
-```js
-const arr = [1,2,3];
-const map = new Map();
-map.set("id", 1);
+## Key Concepts
+
+- **Big-O notation**: asymptotic growth of time or space per operation (O(1), O(log n), O(n), O(n log n)); the shared language for comparing structures.
+- **Amortized cost**: average cost per operation across a sequence - `Array.push` is O(1) amortized even though a single push can trigger a full copy.
+- **Invariant**: a property that must hold after every operation; the guarantee that makes a structure's complexity claims true.
+- **LIFO and FIFO**: the last-in-first-out (stack) and first-in-first-out (queue) ordering contracts.
+- **Hash function, load factor, collision**: how maps and sets distribute keys, when they resize, and how collisions degrade average-case behavior.
+- **Heap property**: every parent precedes its children in sort order; this rule gives O(log n) push and pop with O(1) peeking.
+- **Prefix tree (trie)**: shares common prefixes of keys so prefix lookups cost O(k), the key length, regardless of how many keys are stored.
+- **Recency (LRU)**: an eviction policy that discards the least recently used entry first, keeping working sets hot.
+- **Cache locality**: sequential memory access is orders of magnitude faster than pointer chasing; relevant when choosing arrays over linked structures.
+
+## Learning Path
+
+| Topic | Description | Where to Go |
+|-------|-------------|-------------|
+| Algorithms fundamentals | Big-O, recursion, and problem-solving patterns | [Algorithms Overview](/docs/algorithms-data-structures/algorithms) |
+| SQL & query builders | Structured data stored relationally with Prisma | [SQL & Query Builders](/docs/algorithms-data-structures/sql-query-builders) |
+| Reference implementations | 40+ readable JavaScript implementations | [trekhleb/javascript-algorithms](https://github.com/trekhleb/javascript-algorithms) |
+| Interactive visualizations | Animate heaps, linked lists, and graph traversals | [Visualgo](https://visualgo.net/en) |
+| Production data types | How Redis models hashes, sets, and sorted sets | [Redis Data Types](https://redis.io/docs/data-types/) |
+| Interview curricula | Structured problem sets with official explanations | [LeetCode Explore](https://leetcode.com/explore/learn/) |
+
+## Production-Grade Code
+
+The implementations below are generic, fully typed, and free of `any`. They double as the starter files for Task 1, so create them exactly as shown.
+
+### src/structures/Stack.ts
+
+```typescript
+export class Stack<T> {
+  private items: T[] = [];
+
+  push(value: T): void {
+    this.items.push(value);
+  }
+
+  pop(): T | undefined {
+    return this.items.pop();
+  }
+
+  peek(): T | undefined {
+    return this.items[this.items.length - 1];
+  }
+
+  get size(): number {
+    return this.items.length;
+  }
+
+  get isEmpty(): boolean {
+    return this.items.length === 0;
+  }
+}
+```
+
+### src/structures/Queue.ts
+
+```typescript
+export class Queue<T> {
+  private inbox: T[] = [];
+  private outbox: T[] = [];
+
+  enqueue(value: T): void {
+    this.inbox.push(value);
+  }
+
+  dequeue(): T | undefined {
+    if (this.outbox.length === 0) {
+      while (this.inbox.length > 0) {
+        this.outbox.push(this.inbox.pop()!);
+      }
+    }
+    return this.outbox.pop();
+  }
+
+  peek(): T | undefined {
+    if (this.outbox.length > 0) {
+      return this.outbox[this.outbox.length - 1];
+    }
+    return this.inbox[0];
+  }
+
+  get size(): number {
+    return this.inbox.length + this.outbox.length;
+  }
+
+  get isEmpty(): boolean {
+    return this.size === 0;
+  }
+}
+```
+
+### src/structures/MinHeap.ts
+
+```typescript
+export type Comparator<T> = (a: T, b: T) => number;
+
+export class MinHeap<T> {
+  private items: T[] = [];
+
+  constructor(private readonly compare: Comparator<T>) {}
+
+  static from<T>(iterable: Iterable<T>, compare: Comparator<T>): MinHeap<T> {
+    const heap = new MinHeap<T>(compare);
+    heap.items = [...iterable];
+    for (let i = (heap.items.length >> 1) - 1; i >= 0; i--) heap.siftDown(i);
+    return heap;
+  }
+
+  push(value: T): void {
+    this.items.push(value);
+    this.siftUp(this.items.length - 1);
+  }
+
+  pop(): T | undefined {
+    if (this.items.length === 0) return undefined;
+    if (this.items.length === 1) return this.items.pop();
+    const min = this.items[0];
+    this.items[0] = this.items.pop()!;
+    this.siftDown(0);
+    return min;
+  }
+
+  peek(): T | undefined {
+    return this.items[0];
+  }
+
+  get size(): number {
+    return this.items.length;
+  }
+
+  private siftUp(index: number): void {
+    let child = index;
+    while (child > 0) {
+      const parent = (child - 1) >> 1;
+      if (this.compare(this.items[child], this.items[parent]) >= 0) break;
+      [this.items[child], this.items[parent]] = [this.items[parent], this.items[child]];
+      child = parent;
+    }
+  }
+
+  private siftDown(index: number): void {
+    while (true) {
+      let smallest = index;
+      const left = index * 2 + 1;
+      const right = left + 1;
+      if (left < this.items.length && this.compare(this.items[left], this.items[smallest]) < 0) smallest = left;
+      if (right < this.items.length && this.compare(this.items[right], this.items[smallest]) < 0) smallest = right;
+      if (smallest === index) break;
+      [this.items[index], this.items[smallest]] = [this.items[smallest], this.items[index]];
+      index = smallest;
+    }
+  }
+}
+```
+
+### src/structures/LruCache.ts
+
+```typescript
+interface LruNode<K, V> {
+  key: K;
+  value: V;
+  prev: LruNode<K, V> | null;
+  next: LruNode<K, V> | null;
+}
+
+export class LruCache<K, V> {
+  private readonly entries = new Map<K, LruNode<K, V>>();
+  private head: LruNode<K, V> | null = null;
+  private tail: LruNode<K, V> | null = null;
+
+  constructor(private readonly capacity: number) {
+    if (!Number.isInteger(capacity) || capacity <= 0) {
+      throw new RangeError("LruCache capacity must be a positive integer");
+    }
+  }
+
+  get(key: K): V | undefined {
+    const node = this.entries.get(key);
+    if (node === undefined) return undefined;
+    this.moveToHead(node);
+    return node.value;
+  }
+
+  set(key: K, value: V): void {
+    const existing = this.entries.get(key);
+    if (existing !== undefined) {
+      existing.value = value;
+      this.moveToHead(existing);
+      return;
+    }
+    const node: LruNode<K, V> = { key, value, prev: null, next: null };
+    this.entries.set(key, node);
+    this.addToHead(node);
+    if (this.entries.size > this.capacity) {
+      const victim = this.tail;
+      if (victim !== null) {
+        this.unlink(victim);
+        this.entries.delete(victim.key);
+      }
+    }
+  }
+
+  delete(key: K): boolean {
+    const node = this.entries.get(key);
+    if (node === undefined) return false;
+    this.unlink(node);
+    this.entries.delete(key);
+    return true;
+  }
+
+  get size(): number {
+    return this.entries.size;
+  }
+
+  private addToHead(node: LruNode<K, V>): void {
+    node.prev = null;
+    node.next = this.head;
+    if (this.head !== null) this.head.prev = node;
+    this.head = node;
+    if (this.tail === null) this.tail = node;
+  }
+
+  private unlink(node: LruNode<K, V>): void {
+    if (node.prev !== null) node.prev.next = node.next;
+    if (node.next !== null) node.next.prev = node.prev;
+    if (node === this.head) this.head = node.next;
+    if (node === this.tail) this.tail = node.prev;
+    node.prev = null;
+    node.next = null;
+  }
+
+  private moveToHead(node: LruNode<K, V>): void {
+    if (node === this.head) return;
+    this.unlink(node);
+    this.addToHead(node);
+  }
+}
+```
+
+### src/structures/Trie.ts
+
+```typescript
+export interface TrieNode {
+  children: Record<string, TrieNode>;
+  isEndOfWord: boolean;
+}
+
+export class Trie {
+  private readonly root: TrieNode = { children: {}, isEndOfWord: false };
+
+  insert(word: string): void {
+    let node = this.root;
+    for (const char of word) {
+      const next = node.children[char] ?? { children: {}, isEndOfWord: false };
+      node.children[char] = next;
+      node = next;
+    }
+    node.isEndOfWord = true;
+  }
+
+  search(word: string): boolean {
+    const node = this.findNode(word);
+    return node !== null && node.isEndOfWord;
+  }
+
+  startsWith(prefix: string): boolean {
+    return this.findNode(prefix) !== null;
+  }
+
+  keysWithPrefix(prefix: string): string[] {
+    const start = this.findNode(prefix);
+    if (start === null) return [];
+    const words: string[] = [];
+    const collect = (node: TrieNode, suffix: string): void => {
+      if (node.isEndOfWord) words.push(prefix + suffix);
+      for (const [char, child] of Object.entries(node.children)) collect(child, suffix + char);
+    };
+    collect(start, "");
+    return words;
+  }
+
+  private findNode(prefix: string): TrieNode | null {
+    let node = this.root;
+    for (const char of prefix) {
+      const next = node.children[char];
+      if (next === undefined) return null;
+      node = next;
+    }
+    return node;
+  }
+}
+```
+
+## Complexity Reference
+
+| Structure | Access | Search | Insert | Delete | Space | Best For |
+|-----------|--------|--------|--------|--------|-------|----------|
+| Dynamic array | O(1) | O(n) | O(1) | O(n) | O(n) | Random access, iteration |
+| Hash map / set | O(1) | O(1) | O(1) | O(1) | O(n) | Key lookup, deduplication |
+| Stack | - | O(n) | O(1) | O(1) | O(n) | Undo, parsing, DFS |
+| Queue | - | O(n) | O(1) | O(1) | O(n) | Buffering, BFS |
+| Linked list | O(n) | O(n) | O(1) | O(1) | O(n) | Edits at a known position |
+| Heap / priority queue | O(1) peek | O(n) | O(log n) | O(log n) | O(n) | Top-K, schedulers, Dijkstra |
+| Balanced BST | O(log n) | O(log n) | O(log n) | O(log n) | O(n) | Ordered keys, range queries |
+| Trie | O(k) | O(k) | O(k) | O(k) | O(n*k) | Prefix search, autocomplete |
+| LRU cache | O(1) | O(1) | O(1) | O(1) | O(capacity) | Memoization, hot caches |
+
+Average case for hash structures; k = key length; array insertion is amortized; linked-list edit costs assume a known position.
+
+## Best Practices
+
+1. **Prefer built-ins first** - `Array`, `Map`, and `Set` are engine-optimized. Hand-roll only when you need a guarantee they lack (custom eviction, prefix search, ordering semantics).
+2. **Match the structure to the dominant access pattern** - decide by what you read most often, not by what you write once during setup.
+3. **Keep invariants airtight** - the heap property and BST ordering are the source of your complexity claims; encapsulate them in a class and never expose raw internals.
+4. **Bound every cache** - a cache without a capacity and an eviction policy is a leak.
+5. **Understand amortized costs** - O(1) array insertion is amortized; prepending with `unshift` is O(n). Read the complexity table before choosing.
+6. **Measure with realistic data** - constant factors and cache locality matter: a linked list can lose to an array even for operations with the same big-O.
+
+## Practical Tasks for Interns
+
+### Task 1: Run the Implementations on Your Machine
+
+**Objective**: execute the exact code from this article and verify each structure's behavior.
+
+**Apply it locally**:
+1. Scaffold: `mkdir -p ds-lab/src/structures && mkdir -p ds-lab/examples && cd ds-lab && npm init -y && npm install -D typescript tsx @types/node`
+2. Create `src/structures/Stack.ts`, `src/structures/Queue.ts`, `src/structures/MinHeap.ts`, `src/structures/LruCache.ts`, and `src/structures/Trie.ts` exactly as shown above.
+3. Write `examples/demo.ts` that imports each class and asserts: `pop()` from a stack returns `2`; the queue `dequeue()` returns `"a"` after enqueuing `"a"` and `"b"`; `MinHeap.from([5, 3, 8, 1], (a, b) => a - b).pop()` returns `1`; after `set("a", 1); set("b", 2); get("a"); set("c", 3)` the LRU `get("b")` is `undefined`; the trie reports `search("apple") === true` and `startsWith("app") === true`.
+4. Run `npx tsx examples/demo.ts`, then `npx tsc --noEmit`.
+
+**Success**: every assertion passes without a thrown error, and `tsc` reports zero type errors.
+
+**Resources**: [TypeScript Classes handbook](https://www.typescriptlang.org/docs/handbook/2/classes.html), [MDN Map](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map), [tsx](https://tsx.is/).
+
+### Task 2: Measure O(n) vs O(1) Growth
+
+**Objective**: internalize why complexity matters by observing real timings on your laptop.
+
+**Apply it locally**:
+1. In `examples/benchmark.ts`, time `list.unshift(i)` inside a loop of 100,000 iterations using `performance.now()`, then time `list.push(i)` the same way.
+2. Run `npx tsx examples/benchmark.ts` and record both numbers.
+3. Repeat with 1,000,000 iterations and compare how the two timings scale.
+
+**Success**: `unshift` is orders of magnitude slower than `push`, and its cost grows quadratically while `push` grows linearly - visible directly in the measured numbers.
+
+**Resources**: [MDN Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array), [Big-O Cheat Sheet](https://www.bigocheatsheet.com/).
+
+### Task 3: Solve LeetCode 146 (LRU Cache)
+
+**Objective**: rebuild the LRU from memory and pass a real judge's test suite.
+
+**Apply it locally**:
+1. Re-type `src/structures/LruCache.ts` without looking; if you hesitate, re-read the article first.
+2. Open [LeetCode 146 - LRU Cache](https://leetcode.com/problems/lru-cache/) and paste your class renamed to `LRUCache`, with the constructor accepting `capacity`.
+3. Run the official sample in the editor, then write `examples/lruCheck.ts` locally that replays the same sequence and asserts the expected output `[null, null, null, 1, null, -1, null, -1, 3, 4]`.
+
+**Success**: the LeetCode editor reports `Accepted` for the full suite, and your local check prints `PASS`.
+
+**Resources**: [LeetCode 146 - LRU Cache](https://leetcode.com/problems/lru-cache/), [GeeksforGeeks - LRU implementation](https://www.geeksforgeeks.org/lru-cache-implementation/), [MDN Map](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map).
+
+### Task 4: Build Trie Autocomplete From the System Dictionary
+
+**Objective**: power fast prefix completion with a real word list and prove the trie beats a linear filter.
+
+**Apply it locally**:
+1. Confirm the dictionary exists: `wc -l /usr/share/dict/words` (macOS ships it; about 235,000 words).
+2. In `examples/autocomplete.ts`, read the file with `readFileSync("/usr/share/dict/words", "utf-8")`, split on newlines, lowercase, and `insert` every word into the `Trie`.
+3. Query `keysWithPrefix("progra")` and print the first ten results, timing the call with `performance.now()`.
+4. Compare the timing against `words.filter((word) => word.startsWith("progra"))` over the full list.
+
+**Success**: both approaches return the same completions, but the trie lookup stays constant regardless of dictionary size, while the filter scans all 235K words every time.
+
+**Resources**: [LeetCode 208 - Implement Trie](https://leetcode.com/problems/implement-trie-prefix-tree/), [Node.js fs module](https://nodejs.org/api/fs.html), [GeeksforGeeks - Trie insert and search](https://www.geeksforgeeks.org/trie-insert-and-search/).
+
+## Deep Reading & References
+
+- [trekhleb/javascript-algorithms](https://github.com/trekhleb/javascript-algorithms) - readable JavaScript implementations of every structure in this module
+- [Visualgo](https://visualgo.net/en) - interactive animations for heaps, linked lists, BSTs, and graphs
+- [Redis Data Types](https://redis.io/docs/data-types/) - production-grade structures as shipped by Redis
+- [Algorithms, 4th Edition (Sedgewick & Wayne)](https://algs4.cs.princeton.edu/) - the standard university reference
+- [CP-Algorithms - Data Structures](https://cp-algorithms.com/data_structures.html) - competitive-programming depth
+- [LeetCode Explore](https://leetcode.com/explore/learn/) - official curricula with embedded problems
