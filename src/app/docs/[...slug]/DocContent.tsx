@@ -1,11 +1,23 @@
 import { MDXRemote } from 'next-mdx-remote/rsc';
 import remarkGfm from 'remark-gfm';
+import {
+  Callout,
+  LearningObjectives,
+  PracticeProject,
+  ResourceItem,
+  Checklist,
+} from '@/components/docs/LearningPathComponents';
 
 interface DocContentProps {
   content: string;
 }
 
 const components = {
+  Callout,
+  LearningObjectives,
+  PracticeProject,
+  ResourceItem,
+  Checklist,
   pre: (props: any) => (
     <pre 
       {...props} 
@@ -35,6 +47,7 @@ export default function DocContent({ content }: DocContentProps) {
         mdxOptions: {
           remarkPlugins: [remarkGfm],
         },
+        blockJS: false,
       }}
     />
   );

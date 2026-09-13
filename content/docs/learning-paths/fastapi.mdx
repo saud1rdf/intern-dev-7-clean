@@ -1,0 +1,678 @@
+---
+title: "FastAPI: A Guided Learning Path"
+slug: "fastapi"
+category: "learning-paths"
+summary: "A structured path that takes you from knowing nothing about FastAPI to building, testing, and applying a REST API — with a guided project, an independent practice project, and curated official resources."
+readingTime: 45
+---
+
+# FastAPI: A Guided Learning Path
+
+This page is a **guided learning path**, not just an article. Instead of dumping twenty links on you and wishing you luck, it walks you through *why* FastAPI works the way it does, has you **build a real project**, then asks you to **build a different project on your own** to prove you can transfer what you learned.
+
+Follow the sections in order. Do not skip the guided project, and do not peek at a full solution for the independent project — the point of the independent project is that *you* build it.
+
+## What Is FastAPI?
+
+**FastAPI** is a modern Python framework for building **APIs** — the conversations between your application and other applications, like a mobile app, another backend, or a JavaScript website.
+
+Concretely, an API is a set of **URLs** on a server that accept requests and return **JSON** data. For example:
+
+```text
+GET /tasks        → returns a list of tasks
+POST /tasks       → creates a new task
+DELETE /tasks/42  → removes task 42
+```
+
+What makes FastAPI different from older Python frameworks:
+
+- **It uses Python type hints to drive everything.** Declare `task_id: int` in your code and FastAPI automatically validates the value, converts it, and documents it. No separate configuration files.
+- **It is built on two battle-tested libraries.** [Starlette](https://www.starlette.io/) handles the web parts (routing, requests, responses) and [Pydantic](https://docs.pydantic.dev/) handles the data (models and validation).
+- **It generates documentation for you.** Because your types describe your API, FastAPI produces an **OpenAPI** schema and interactive docs at `/docs` for free.
+- **It supports modern async Python**, which means your code can handle many requests at once while waiting on databases, files, or other services.
+
+You do not need to understand Starlette or Pydantic deeply to start. You just need to know *why they show up*: FastAPI is the glue, Pydantic models are your data contracts, and both together produce your automatic docs.
+
+## How This Learning Path Works
+
+The core idea here is **curation + sequencing + explanation + practice**:
+
+1. **Learn the smallest amount you need** — one concept per step, in the order that matters.
+2. **Build a guided project** — a Task Management API — with every code section explained: what it does, why it is written this way, and what you would change if you were building a different project.
+3. **Test it** the way real teams test APIs.
+4. **Transfer** — build a completely different project (an Employee Management API) from a specification, *without* a full solution.
+5. **Go deeper** using only the handful of official resources that matter, each pointed at a specific moment in your learning.
+
+The goal is not "one article makes you an expert." The goal is that you finish able to say: *"I understand the concept, I built something with it, and I can apply it to a project I have not seen before."*
+
+## What You Will Build
+
+| Project | What it is | How you build it |
+|---------|-----------|------------------|
+| **Task Management API** (guided) | A small CRUD API for tracking tasks, with validation, filtering, and tests | You follow the steps below, section by section |
+| **Employee Management API** (independent) | A different CRUD API for managing employees, with its own rules | You build it alone from the specification at the end of this page |
+
+Both projects cover the same underlying skills — the second one proves you can *transfer* them.
+
+<LearningObjectives items={[
+  "Explain what FastAPI is and why type hints drive everything it does",
+  "Know the vocabulary: endpoint, path, HTTP method, path parameter, query parameter, request body",
+  "Create a FastAPI app and run it locally with uvicorn",
+  "Define Pydantic models and understand the validation they give you for free",
+  "Build full CRUD endpoints that read from and write to data",
+  "Use HTTPException and status codes to communicate errors correctly",
+  "Control what your API sends to clients with response models",
+  "Test a FastAPI application with TestClient and pytest",
+  "Read FastAPI's official documentation at the right moment instead of drowning in links",
+  "Transfer all of the above to an unguided project on your own"
+]} />
+
+## Before You Start: Prerequisites
+
+You do **not** need to be an expert, but you should be comfortable with beginner Python. If a term below is unfamiliar, that is fine — the important thing is that you have *seen* these ideas before:
+
+- **Python basics**: functions, variables, `if`, loops, lists and dictionaries.
+- **Opening a terminal** and running commands.
+- **Creating a virtual environment** (`python -m venv .venv`) and installing packages with `pip`.
+- **JSON**: what `{"key": "value"}` looks like and that it is the common format APIs send over the internet.
+- A rough idea of what **HTTP requests** are (a method like `GET` or `POST` sent to a URL). You will NOT need to know web frameworks.
+
+<Callout kind="info" title="New to some of these words?">
+Terms like "endpoint", "request body", and "validation" are defined in plain language inside the concepts section below, so do not rush to other resources yet. If you find yourself struggling with the Python syntax itself, work through the official Python Tutorial first — it is linked in the resources section at the end.
+</Callout>
+
+### Environment check
+
+Make sure you can run Python 3.8 or newer (we write code that uses syntax from Python 3.10, so 3.10+ is easiest):
+
+```bash
+python --version
+```
+
+If your Python prints `3.9` or older, the syntax `str | None` will not work. In that case replace `str | None` with `Optional[str]` and import it from `typing`. Everything else in this path works on 3.8+.
+
+## The Concepts You Will Learn
+
+Before the code, here is the vocabulary mapped to *why it matters*:
+
+| Concept | Plain-language meaning | Why it matters |
+|---------|------------------------|----------------|
+| **Endpoint** | A URL on your API, e.g. `/tasks/42` | This is the address clients call |
+| **HTTP method** | The *type* of request: `GET`, `POST`, `PUT`, `DELETE` | Each method has a meaning (read, create, replace, delete) that clients and tools rely on |
+| **Path parameter** | A value that lives *inside* the URL, e.g. the `42` in `/tasks/42` | Used to point at one specific thing |
+| **Query parameter** | A value that goes after a `?`, e.g. `/tasks/?completed=true` | Used for options and filters |
+| **Request body** | JSON sent *with* a request (usually `POST`/`PUT`) | Carries the data the client wants to create or update |
+| **Pydantic model** | A Python class that describes the shape of data and validates it | Your data contract; FastAPI enforces it automatically |
+| **Response model** | The declared shape of what the API returns | Prevents leaking fields and documents the output |
+| **CRUD** | Create, Read, Update, Delete | The four operations almost every API needs |
+| **Status code** | The numeric result of a request: `200`, `201`, `404`, `422` | Tells clients if things worked and *how they failed* |
+| **OpenAPI** | A machine-readable description of your whole API | Powers the automatic interactive docs |
+
+You will see each of these in action in the guided project. Do not try to memorize the table — see it happen instead.
+
+## Guided Project: Task Management API
+
+You are going to build a small API that manages **tasks**. Each task has:
+
+- an `id` (assigned automatically),
+- a `title` (required),
+- a `description` (optional),
+- a `completed` flag (defaults to `False`).
+
+The API will support the full CRUD set plus a query filter, exactly the shape of a huge number of real-world APIs you will meet on the job.
+
+### Step 1 — Set Up Your Environment
+
+Create a folder for the project and go into it:
+
+```bash
+mkdir task-api && cd task-api
+```
+
+Create a virtual environment and install FastAPI plus uvicorn (the server that runs FastAPI):
+
+```bash
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install "fastapi[standard]"
+```
+
+**What this does:** a virtual environment keeps this project's packages separate from your system Python, so two projects that need different versions never clash. `fastapi[standard]` installs FastAPI, uvicorn, and the small extras the official docs recommend.
+
+**Why this way:** this is the setup the official *First Steps* tutorial expects. When you later deploy your API, uvicorn is the same server that runs in production — you are learning the real tool, not a toy.
+
+Now create your first file, `main.py`:
+
+```python
+from fastapi import FastAPI
+
+app = FastAPI(title="Task Manager API")
+
+
+@app.get("/")
+def root():
+    return {"message": "Task Manager API is running"}
+```
+
+### Step 2 — Run It and Understand Your First Endpoint
+
+From the same folder, run:
+
+```bash
+uvicorn main:app --reload
+```
+
+You should see output ending with something like `Uvicorn running on http://127.0.0.1:8000`. Open that URL in your browser — you will see:
+
+```json
+{"message": "Task Manager API is running"}
+```
+
+**What the pieces mean:**
+
+- `from fastapi import FastAPI` imports the class that "is" your application.
+- `app = FastAPI(title="Task Manager API")` **creates your app instance**. This single `app` object is what uvicorn serves, and what tests talk to. You configure the app through this object.
+- `@app.get("/")` is a **decorator** — it tells FastAPI "the function directly below handles requests to the path `/` that use the HTTP method `GET`."
+- The function `root()` is the **path operation function**. When a request arrives, FastAPI calls it and turns whatever you `return` into a JSON response.
+
+**What you would change for another project:** the instance name `app` is conventional, but uvicorn uses it (`uvicorn main:app` means "in the module `main`, the object `app`"). If you renamed your app object, you would update that command. The path `/` is a time-honored "health check" endpoint — nearly every API has one, so you will keep this pattern everywhere.
+
+### Step 3 — Path Parameters and Query Parameters
+
+Real APIs point at *specific* items, and let clients *filter* results. Add this to `main.py`:
+
+```python
+from fastapi import FastAPI
+
+app = FastAPI(title="Task Manager API")
+
+# In-memory "database" for this learning project
+tasks: dict[int, str] = {}
+
+
+@app.get("/")
+def root():
+    return {"message": "Task Manager API is running"}
+
+
+@app.get("/tasks/{task_id}")
+def get_task(task_id: int):
+    return tasks.get(task_id, "Task not found")
+```
+
+**Path parameter:** in `/tasks/{task_id}`, the `{task_id}` part is captured and passed to your function. Because you annotated it `task_id: int`, FastAPI does something important: it **parses and validates the value for you**. Requesting `/tasks/abc` now returns a `422` error automatically — "not an integer" — instead of making your code crash.
+
+**Query parameter:** add a filter example:
+
+```python
+@app.get("/tasks/")
+def list_tasks(completed: bool | None = None):
+    if completed is None:
+        return list(tasks.values())
+    return [t for t in tasks.values() if t.completed == completed]
+```
+
+Any function parameter that is **not** part of the path becomes a **query parameter** (the part after `?`). Giving it a default value (`= None`) makes it optional. So `GET /tasks/?completed=true` and `GET /tasks/` both work.
+
+**Important distinction to remember:** if you write a function parameter *without* a default value, FastAPI treats it as **required**. A required parameter that is not in the path becomes a *required query parameter*, and clients that forget it get a `422`. This is a very common beginner surprise.
+
+**What you would change for another project:** path parameters identify *one* resource (a user id, an order number); query parameters express *options* (filters, pagination, sorting). This rule transfers to every API you write.
+
+### Step 4 — Accept Data with Pydantic Models
+
+So far your API only reads. To *create* data you have to receive a **request body** — JSON the client sends. This is where **Pydantic models** come in.
+
+```python
+from fastapi import FastAPI
+from pydantic import BaseModel, Field
+
+app = FastAPI(title="Task Manager API")
+
+
+class TaskCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=120)
+    description: str | None = None
+    completed: bool = False
+
+
+@app.post("/tasks/", status_code=201)
+def create_task(task: TaskCreate):
+    return task
+```
+
+**What this does:**
+
+- `TaskCreate(BaseModel)` declares the *shape* of data your API accepts: a `title` string, an optional `description`, and an optional `completed` flag.
+- Declaring a parameter of that type in a path operation function tells FastAPI: "read the JSON body, validate it against this model, and give me a model instance." No manual parsing, no `request.json()`.
+- `Field(min_length=1, max_length=120)` adds **constraints**. Sending `{"title": ""}` or a giant title now fails with a `422` and an automatic, readable error message — *before your code ever runs*.
+
+**Why this is powerful:** every validation rule is expressed once, in one place. The same rules:
+- protect your code from bad input,
+- appear in the automatic docs, and
+- are the *only source of truth* — there is no second place to forget.
+
+<Callout kind="tip" title="Validation happens before your function runs">
+This is the single most important mental model in FastAPI: validation is *declarative* (you say what is allowed) and it happens automatically, before your function body starts. A function decorated with `@app.post` that takes a Pydantic model only ever runs with *valid* data.
+</Callout>
+
+In the next step you will see the same model on both sides of the conversation: what clients can send, and what your API sends back.
+
+### Step 5 — CRUD Operations
+
+Now the full picture. Replace `main.py` with this complete, working version:
+
+```python
+from fastapi import FastAPI, HTTPException, status
+from pydantic import BaseModel, Field
+
+app = FastAPI(title="Task Manager API")
+
+
+class TaskCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=120)
+    description: str | None = None
+    completed: bool = False
+
+
+class Task(TaskCreate):
+    id: int
+
+
+# In-memory "database" — fine for learning, replaced by a real DB later
+tasks: dict[int, Task] = {}
+next_id = 1
+
+
+@app.get("/")
+def root():
+    return {"message": "Task Manager API is running"}
+
+
+@app.get("/tasks/")
+def list_tasks(completed: bool | None = None):
+    if completed is None:
+        return list(tasks.values())
+    return [t for t in tasks.values() if t.completed == completed]
+
+
+@app.post("/tasks/", status_code=status.HTTP_201_CREATED)
+def create_task(task_in: TaskCreate):
+    global next_id
+    task = Task(id=next_id, **task_in.model_dump())
+    tasks[task.id] = task
+    next_id += 1
+    return task
+
+
+@app.get("/tasks/{task_id}")
+def get_task(task_id: int):
+    if task_id not in tasks:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return tasks[task_id]
+
+
+@app.put("/tasks/{task_id}")
+def update_task(task_id: int, task_in: TaskCreate):
+    if task_id not in tasks:
+        raise HTTPException(status_code=404, detail="Task not found")
+    task = Task(id=task_id, **task_in.model_dump())
+    tasks[task_id] = task
+    return task
+
+
+@app.delete("/tasks/{task_id}")
+def delete_task(task_id: int):
+    if task_id not in tasks:
+        raise HTTPException(status_code=404, detail="Task not found")
+    del tasks[task_id]
+    return {"ok": True}
+```
+
+Let's walk through every important piece — each one maps directly onto something you will do in any other project.
+
+**Two models: input vs. stored.** `TaskCreate` says what clients may *send* (no `id` — clients do not choose ids). `Task(TaskCreate)` inherits those fields and adds `id`, which is what the API *stores and returns*. Separating input and output shapes is a core API design habit; it stops clients from setting fields they should not touch.
+
+**Creating a task:**
+
+```python
+task = Task(id=next_id, **task_in.model_dump())
+tasks[task.id] = task
+next_id += 1
+```
+
+`task_in` is a validated `TaskCreate`. `.model_dump()` turns it into a plain dictionary (Pydantic v2's way of saying "give me the data"), and `**` unpacks that dictionary as keyword arguments to `Task(...)`. The result is one `Task` object with the new `id`, which is stored in the dict and returned. `next_id` is simply an integer counter — the stand-in for what a database's auto-incrementing primary key does later.
+
+**404s and `HTTPException`.** For a missing task, we do not return a fake success; we raise `HTTPException(status_code=404, detail="Task not found")`. FastAPI turns that into a real HTTP response:
+
+```json
+{"detail": "Task not found"}
+```
+
+This keeps **error shapes consistent** — clients can rely on `detail` being present, in every failure, forever. Choose expressive status codes: `404` for not found, `201` for created (instead of the default `200`), `422` for failed validation.
+
+<Callout kind="info" title="Why raise an exception instead of returning a value?">
+Raising is *abrupt*: the moment it happens, the rest of the function does not run and FastAPI takes over to produce the error response. It is the cleanest way to say "this request has a terminal outcome." In every FastAPI project you work on, `HTTPException` is how errors are communicated.
+</Callout>
+
+**PUT vs POST.** `POST /tasks/` always creates (a new `id` each time). `PUT /tasks/{task_id}` *replaces* the task at that id — the client sends a complete `TaskCreate`, and we build a new `Task` for that `task_id`. This is why we do not need the query-filter logic here.
+
+**What you would change for another project:**
+- The `tasks` dict becomes a database table (see *Beyond this path*). But the *rhythm* stays: validate the input, store it, return it, return proper errors.
+- The resource name and fields change (`employees`, `orders`, `articles`), but the five endpoints keep the same skeleton.
+- `next_id` global becomes an auto-incrementing database id.
+
+### Step 6 — Test Your API
+
+Before touching tests, open the automatic docs and *see* what your code already produced:
+
+- http://127.0.0.1:8000/docs — interactive Swagger UI. Click any endpoint, fill in the fields, and press "Execute". This UI is generated from your code: your models, your validation rules, your status codes.
+- http://127.0.0.1:8000/redoc — the alternate (ReDoc) viewer.
+- http://127.0.0.1:8000/openapi.json — the raw machine-readable schema that powers both.
+
+The docs are not a separate documentation effort — they are a *byproduct* of well-typed code.
+
+Now test automatically. Create `test_main.py` next to `main.py`:
+
+```python
+from fastapi.testclient import TestClient
+
+from main import app
+
+client = TestClient(app)
+
+
+def test_create_task():
+    response = client.post("/tasks/", json={"title": "Buy groceries"})
+    assert response.status_code == 201
+    data = response.json()
+    assert data["title"] == "Buy groceries"
+    assert data["completed"] is False
+    assert "id" in data
+
+
+def test_create_requires_title():
+    response = client.post("/tasks/", json={})
+    assert response.status_code == 422
+
+
+def test_create_rejects_blank_title():
+    response = client.post("/tasks/", json={"title": ""})
+    assert response.status_code == 422
+
+
+def test_get_one_task():
+    created = client.post("/tasks/", json={"title": "Write report", "description": "Final version"}).json()
+    response = client.get(f"/tasks/{created['id']}")
+    assert response.status_code == 200
+    assert response.json()["description"] == "Final version"
+
+
+def test_get_missing_task_returns_404():
+    response = client.get("/tasks/99999")
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Task not found"}
+
+
+def test_update_task():
+    created = client.post("/tasks/", json={"title": "Old title"}).json()
+    response = client.put(
+        f"/tasks/{created['id']}",
+        json={"title": "New title", "description": "Rewritten"},
+    )
+    assert response.status_code == 200
+    assert response.json()["title"] == "New title"
+
+
+def test_delete_task():
+    created = client.post("/tasks/", json={"title": "Temporary"}).json()
+    response = client.delete(f"/tasks/{created['id']}")
+    assert response.status_code == 200
+    assert response.json() == {"ok": True}
+
+
+def test_tasks_can_be_created_as_completed():
+    created = client.post("/tasks/", json={"title": "Done one", "completed": True}).json()
+    listed = client.get("/tasks/?completed=true").json()
+    assert any(t["id"] == created["id"] for t in listed)
+```
+
+Run the tests:
+
+```bash
+pip install pytest
+pytest
+```
+
+**What each piece means:**
+
+- `TestClient(app)` wraps your FastAPI app with a fake HTTP server *inside the test process*. No live server is started — call it like `client.get(...)`, `client.post(...)`, and it behaves like a real HTTP client (it is built on HTTPX, which is why the official docs tell you to install `httpx` alongside FastAPI).
+- Functions prefixed with `test_` are discovered by pytest. `assert` statements are the verdicts.
+- The validation tests (`test_create_requires_title`, `test_create_rejects_blank_title`) are worth their weight: they lock in the *rules* you declared, so a future change that accidentally allows blank titles fails immediately.
+
+<Callout kind="warning" title="Tests never touch your live server">
+A common beginner mistake is thinking TestClient talks to the `uvicorn` server you have running. It does not. Tests import your `app` object directly and run it in memory. That makes them fast and deterministic.
+</Callout>
+
+**What you would change for another project:** the exact paths and payloads, but the pattern — one file per app, `TestClient(app)`, happy-path plus validation-failure tests — is the same in every FastAPI codebase.
+
+### Expected Result
+
+When you finish the guided project you should be able to:
+
+- Run `uvicorn main:app --reload` and see your API.
+- Create a task with `POST /tasks/` (201), list with `GET /tasks/`, filter with `GET /tasks/?completed=true`, fetch one with `GET /tasks/1` (404 for missing), update with `PUT`, delete with `DELETE`.
+- Watch blank titles get rejected with `422`.
+- See every rule reflected in the interactive docs.
+- Run `pytest` and see all tests pass.
+
+## Common Mistakes and How to Avoid Them
+
+These are the mistakes beginners (and pros) make most often with this exact kind of API:
+
+<Callout kind="danger" title="Forgetting to install httpx">
+`TestClient` is built on **httpx**. If your tests fail to import or immediately error with something about an HTTPX dependency, run `pip install httpx` (or `pip install "fastapi[standard]"`, which includes it).
+</Callout>
+
+<Callout kind="danger" title="Path vs. query parameters">
+A parameter that is part of the path (`/tasks/{task_id}`) is a *path* parameter. A parameter that is not, with a default, is an optional *query* parameter. A parameter that is not in the path and has **no default** is a **required** query parameter — and your first `422` is born.
+</Callout>
+
+<Callout kind="danger" title="Mutable default values">
+Do not write `def get_task(task_id: int, store: dict = {})`. Default arguments in Python are evaluated once; a shared mutable default silently leaks state between calls. FastAPI's own dependencies are the cleaner path (see the official Handling Errors / Dependencies pages). The safest beginner rule: keep default values simple.
+</Callout>
+
+<Callout kind="danger" title="Skipping response models and leaking fields">
+If you return a raw dict or `await db.find(...)` object that contains fields you never meant to expose, they get sent. Declaring what you return (a response model) filters output to exactly the fields you choose. This is a security habit, not a style preference.
+</Callout>
+
+<Callout kind="danger" title="Validation error status code">
+FastAPI answers invalid request data with **422**, not 400. Many beginners write client code expecting 400 and are confused. `422` (Unprocessable Entity) is FastAPI's deliberate, documented default for validation failures — treat it as "your data did not match the contract."
+</Callout>
+
+<Callout kind="warning" title="Trailing slashes matter">
+`/tasks` and `/tasks/` are different paths. FastAPI sends a redirect (307) from `/tasks` to `/tasks/` by default. Pick one style and be consistent; the official tutorial uses a trailing slash.
+</Callout>
+
+<Callout kind="warning" title="In-memory data is not persistent">
+The `tasks` dict lives in memory: every server restart wipes your data, and multiple workers do not share it. That is *correct and intended* for this learning project. When you need persistence you swap in a database — that is the very next step below.
+</Callout>
+
+## Official Documentation: Where to Look and When
+
+These are the *only* external resources you need for this path, each pointed at the moment you should open it. Use the official docs as the reference of truth; when anything on this page or elsewhere conflicts with them, the official docs win.
+
+<ResourceItem
+  label="FastAPI Tutorial: First Steps"
+  href="https://fastapi.tiangolo.com/tutorial/first-steps/"
+  why="The official introduction — it confirms the minimal app, the decorator, and the uvicorn command you just ran."
+  when="Now, after Step 2 of the guided project."
+  focus="The path operation decorator, the run command, and the 'recap, step by step' section."
+/>
+
+<ResourceItem
+  label="FastAPI Tutorial: Path Parameters and Query Parameters"
+  href="https://fastapi.tiangolo.com/tutorial/path-params/"
+  why="These two pages are the canonical explanation of the parameter rules you saw in Step 3."
+  when="During Step 3."
+  focus="Dynamic paths, type conversion, and (on the query page) why defaults turn query parameters optional."
+/>
+
+<ResourceItem
+  label="FastAPI Tutorial: Request Body + Query Parameters and String Validations"
+  href="https://fastapi.tiangolo.com/tutorial/body/"
+  why="Shows the Pydantic request-body pattern from Step 4, plus Field constraints in more depth."
+  when="During Step 4, after you have written the TaskCreate model yourself."
+  focus="Declaring a body parameter, and string validation options such as min_length and pattern."
+/>
+
+<ResourceItem
+  label="FastAPI Tutorial: Handling Errors"
+  href="https://fastapi.tiangolo.com/tutorial/handling-errors/"
+  why="The authoritative description of HTTPException and custom error responses you used in Step 5."
+  when="During Step 5."
+  focus="Raising HTTPException, status codes, and the 422-vs-400 behavior."
+/>
+
+<ResourceItem
+  label="FastAPI Tutorial: Response Model"
+  href="https://fastapi.tiangolo.com/tutorial/response-model/"
+  why="Explains the input-vs-output model split and why response_model filters output — Step 5 and 6's core idea in official terms."
+  when="After Step 5."
+  focus="Return type annotations, filtering, and what happens to extra fields."
+/>
+
+<ResourceItem
+  label="FastAPI Tutorial: Testing"
+  href="https://fastapi.tiangolo.com/tutorial/testing/"
+  why="The official testing page — it shows TestClient and pytest exactly as you used them in Step 6."
+  when="Before writing your own tests, or while debugging a failing test."
+  focus="Importing TestClient, how to pass JSON bodies and headers, and the httpx installation note."
+/>
+
+<ResourceItem
+  label="FastAPI Tutorial: SQL (Relational) Databases"
+  href="https://fastapi.tiangolo.com/tutorial/sql-databases/"
+  why="The official continuation of this path: it walks through SQLModel + SQLite and replaces the in-memory dict with a real database."
+  when="After you finish the guided project (or the independent project). This is the most important 'next step' there is."
+  focus="The data-model/session pattern, and how each CRUD endpoint maps to a database operation."
+/>
+
+<ResourceItem
+  label="FastAPI: Deployment Concepts"
+  href="https://fastapi.tiangolo.com/deployment/concepts/"
+  why="Explains how FastAPI runs in production — the difference between dev (--reload) and production, and what uvicorn workers are."
+  when="Only after you can build APIs confidently. Deployment is a separate topic from building."
+  focus="The concepts of running the app, concurrency, and keeping it simple for your first deployment."
+/>
+
+## Beyond This Learning Path
+
+Making one API teaches you the skeleton. Real projects add layers — deliberately, one at a time, in this order:
+
+1. **A real database.** Replace the `tasks` dict with **SQLModel + SQLite** (start) and PostgreSQL (production) by following the official SQL tutorial above. The huge mental payoff: your CRUD endpoints barely change — only the storage layer.
+2. **A bigger application structure.** Split routes into modules with `APIRouter` (the official *Bigger Applications* page). Small API → one file; growing API → many files.
+3. **Dependencies.** Learn `Depends()` to share logic (auth checks, database sessions) across endpoints. This is how FastAPI keeps route functions thin.
+4. **Authentication.** The official *Security* tutorial (OAuth2 with password + JWT) is the standard next security topic.
+5. **Deployment.** Read the Deployment Concepts page, then deploy somewhere small and public (there are provider guides linked from the FastAPI docs).
+6. **Production templates.** The official Full Stack FastAPI template shows an entire real-world stack (it is a template, so use it as structure — not content to copy line by line).
+
+Which one should *you* pick? **Database first.** It is the direct continuation of the project you just built, and it makes the whole "swap the storage layer without touching the endpoints" mental model concrete.
+
+## Independent Practice: Employee Management API
+
+Now the part that turns learning into skill: building a *different* project from a specification, with no full solution in front of you.
+
+<PracticeProject title="Independent Practice — Employee Management API">
+Build a complete Employee Management API using the same skills and structure you just learned. Read the requirements carefully, then implement it yourself. This project is intentionally similar in shape and different in details — that difference is the test.
+</PracticeProject>
+
+### Project Description
+
+You work for a company that needs a tiny API to manage its **employees**. There is no frontend — just the API, its automatic docs, and tests.
+
+### Requirements
+
+- **Storage:** an in-memory store, exactly like the guided project (a real database is out of scope here).
+- **Validation:** use Pydantic constraints. Employees are created *without* an id; the API assigns it.
+
+### Expected Endpoints
+
+| Method | Path | Expected behavior |
+|--------|------|-------------------|
+| `POST` | `/employees/` | Create an employee, return `201` and the stored employee (including its generated `id`). |
+| `GET` | `/employees/` | Return the full list, `200`. |
+| `GET` | `/employees/?department=<name>` | Return only employees in that department, `200`. |
+| `GET` | `/employees/?active=<true\|false>` | Return only active or only inactive employees, `200`. The two filters should work together. |
+| `GET` | `/employees/{employee_id}` | Return one employee, `200`, or `404` with a `detail` message if missing. |
+| `PUT` | `/employees/{employee_id}` | Replace the employee, `200`, or `404` if missing. |
+| `DELETE` | `/employees/{employee_id}` | Delete the employee, return `200` with `{"ok": True}`, or `404` if missing. |
+
+### Data Requirements
+
+Each employee has:
+
+- `full_name` — string, required, `min_length=2`, `max_length=100`
+- `email` — string, required; it must look like an email. (If you use Pydantic's `EmailStr`, you need `pip install email-validator` first — the official docs mention this.)
+- `department` — string, required, one of exactly: `engineering`, `marketing`, `sales`, `hr`
+- `salary` — non-negative number (integer), required (`salary >= 0`, reject negative salaries)
+- `active` — boolean, defaults to `True`
+
+### Validation Requirements
+
+A request that breaks any rule must return `422`. For example:
+
+- blank or too-short `full_name` → `422`
+- `email` that is not an email → `422`
+- `department` outside the allowed list → `422`
+- negative `salary` → `422`
+- missing required field → `422`
+
+### Testing Requirements
+
+Write `test_employees.py` using `TestClient` + `pytest`. It must cover **at least**:
+
+- Happy path: create → 201 with an `id`; the stored object matches the response.
+- List returns what you created.
+- Filter by `department` returns only matching employees.
+- Filter by `active` returns only matching employees.
+- Filters combine (`?department=engineering&active=true`).
+- Get one employee by id → 200; get a missing id → 404 with `{"detail": ...}`.
+- Update an existing employee → 200 with new values; update a missing id → 404.
+- Delete → 200 `{"ok": True}`; delete a missing id → 404.
+- Validation failures: bad email, negative salary, unknown department, blank name, missing `full_name` → all `422`.
+
+### Expected Behavior
+
+- Every error is a consistent shape: `{"detail": "..."}`.
+- `POST` returns `201`, reads return `200`, missing resources return `404`, bad data returns `422`.
+- The interactive docs at `/docs` reflect all validation rules automatically — check them.
+- `pytest` passes with no test depending on another test's side effects (aim for tests that are independent of order).
+
+### Submission / Deliverables
+
+- The project folder containing `main.py` (or a clean split into a few modules) and `test_employees.py`.
+- A `requirements.txt` (or a note listing the packages you installed).
+- A short write-up (a few paragraphs) answering: *What was different from the Task API, what did you have to figure out yourself, and which official docs page helped you most?*
+
+<Callout kind="warning" title="Do not look up a full solution">
+The value of this project is in doing it. If you get stuck, prefer the official docs links above over a search for "employee API solution" — and keep going. Getting partway and asking a colleague a specific question teaches you far more than copying a finished file.
+</Callout>
+
+## Submission and Deliverables Checklist
+
+Use this checklist to confirm you have completed the *entire* path, not just read it:
+
+<Checklist items={[
+  "I ran the guided Task Management API locally with uvicorn",
+  "I read each code section and can explain (out loud) why TaskCreate and Task are two models",
+  "I opened /docs and confirmed the generated documentation reflects my validation rules",
+  "I wrote and ran the guided tests, and can explain why 422 appears for blank titles",
+  "I built the Employee Management API from the specification WITHOUT a full solution",
+  "I wrote independent tests covering happy paths, 404s, filters, and 422 validation cases and they pass",
+  "I compared notes: the official docs pages that helped me most, if any, are noted",
+  "I completed the short write-up for the independent project"
+]} />
+
+## A Note on How This Path Is Built
+
+This page is deliberately curated: a small number of high-value official resources, each with a *when* and a *what to focus on*, instead of a wall of links. The official FastAPI documentation is the source of truth for technical accuracy; everything else is reference material. If you finish the path with a working Task API, a working Employee API, and a clear idea of which official docs page to open for which problem — that is the win. The next project, and the one after that, will get faster.

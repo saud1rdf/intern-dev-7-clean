@@ -18,6 +18,7 @@ import {
 import Link from 'next/link';
 import { missions } from './missions/data';
 import { categories } from '@/lib/categories';
+import LearningPathSection from '@/components/docs/LearningPathSection';
 
 const categoryIcons: Record<string, typeof BookOpen> = {
   'web-development': BookOpen,
@@ -256,6 +257,8 @@ export default function DocsPage() {
             ))}
           </div>
         </section>
+
+        <LearningPathSection />
       </div>
     </div>
   );

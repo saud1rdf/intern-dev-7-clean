@@ -19,6 +19,7 @@ import {
 
 import Link from 'next/link'
 import { missions } from './docs/missions/data' // 👈 استيراد المهام
+import LearningPathSection from '@/components/docs/LearningPathSection'
 
 interface DocCategory {
   id: string
@@ -335,10 +336,12 @@ export default function DocsPage() {
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   يشمل كود جاهز + مصدر تعليمي
                 </p>
-              </Link>
-            ))}
+</Link>
+          ))}
           </div>
         </section>
+
+        <LearningPathSection />
       </div>
     </div>
   )

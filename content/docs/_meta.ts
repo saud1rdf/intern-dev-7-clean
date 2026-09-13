@@ -14,6 +14,14 @@ export type DocsMeta = DocCategoryMeta[];
 
 export const docsMeta: DocsMeta = [
   {
+    title: "Learning Paths",
+    slug: "learning-paths",
+    description: "Guided learning paths that take you from a concept to a working project",
+    pages: [
+      { title: "FastAPI: A Guided Learning Path", slug: "fastapi" },
+    ],
+  },
+  {
     title: "Web Development",
     slug: "web-development",
     description: "Modern web development with React, Next.js, HTML, CSS, and JavaScript",
