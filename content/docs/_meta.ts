@@ -19,6 +19,7 @@ export const docsMeta: DocsMeta = [
     description: "Guided learning paths that take you from a concept to a working project",
     pages: [
       { title: "FastAPI: A Guided Learning Path", slug: "fastapi" },
+      { title: "Docker & CI/CD: A Guided Learning Path", slug: "docker-cicd" },
     ],
   },
   {

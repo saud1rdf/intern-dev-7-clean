@@ -1,0 +1,1059 @@
+---
+title: "Docker & CI/CD: A Guided Learning Path"
+slug: "docker-cicd"
+category: "learning-paths"
+summary: "A fully guided second learning path: take the FastAPI Task Management API you already built, containerize it with Docker, run it next to PostgreSQL with Docker Compose, automate its tests with GitHub Actions, and publish its Docker image — finishing with an independent project built entirely on your own."
+readingTime: 75
+---
+
+# Docker & CI/CD: A Guided Learning Path
+
+This is the **second technical task** in your internship. It does **not** start a new app. You will take the **FastAPI Task Management API** you finished in the [previous learning path](/docs/learning-paths/fastapi) and carry it through the rest of a real developer's journey: **package it, run it next to a database, and automate it.**
+
+Follow every section in order. Each one ends with a *"understand this before moving forward"* checkpoint. You move on only when you pass it.
+
+The content alternates between the same four beats all the way down, just like the FastAPI path:
+
+**Explain → Show → Do → Verify → Move forward**
+
+<LearningObjectives items={[
+  "Explain what Docker is, why it exists, and the difference between an image and a container",
+  "Read a Dockerfile line by line: FROM, WORKDIR, COPY, RUN, EXPOSE, CMD",
+  "Build an image with docker build and run the container with correct port mapping",
+  "Make an image ignore junk and secrets with .dockerignore",
+  "Configure the app with environment variables and keep secrets out of the repository",
+  "Run FastAPI and PostgreSQL together with Docker Compose, using service-name networking",
+  "Run tests locally with pytest and watch a failing test on purpose",
+  "Explain what CI and CD are, why they differ, and what problem they solve",
+  "Explain the chain: local project -> Git -> GitHub -> GitHub Actions",
+  "Write a GitHub Actions workflow that runs tests on every push and pull request",
+  "Build the Docker image automatically inside GitHub Actions",
+  "Explain how an image is published to Docker Hub and what GitHub Secrets are",
+  "Transfer everything to a completely different project on your own"
+]} />
+
+## Introduction
+
+When you finished the FastAPI task, you had achieved something real: an API with validation, persistent storage, a passing test suite — running on *your machine*. That last phrase is the precise problem this task is about.
+
+Read this journey. It is the whole task in four sentences:
+
+> "My FastAPI application works on my computer."
+
+> "I want the same application to run consistently in another environment."
+
+> "I want automated tests to run whenever I push code."
+
+> "I want the Docker image to be built automatically."
+
+Three difficulties hide inside that story:
+
+**1. Environment drift.** Your app works because your laptop has the right Python, the right packages, the right everything. A colleague's machine, a CI server, a production box — each one is an unknown. Docker answers this by bundling the app *with* its environment into one image that runs identically anywhere.
+
+**2. Forgetting to test.** Right now *you* are the only one who runs your tests. If you forget, nobody notices, and a broken change can sit unreported for days. GitHub Actions answers this by running your tests automatically on every push — a robot that cannot forget.
+
+**3. Manual packaging.** When a team wants to run your app in production, someone has to "set it up." Docker answers this by making the *image itself* the artifact: you build it once, publish it, and any machine can start it with one command.
+
+How does this task connect to the FastAPI one? Think of it as the same project, two halves: the FastAPI task taught you **how to write** a backend. This task teaches you **how to take a backend and make it shippable** — it runs in a container, talks to a real database, is guarded by automated tests, and can be distributed as an image. You are not changing the API; you are professionalising everything around it.
+
+## What You Will Build
+
+By the end of this task you will have **the same Task Management API**, but wrapped in a complete delivery pipeline:
+
+| Piece | What it is | Why it is in the picture |
+|-------|-----------|--------------------------|
+| **FastAPI application** | Your existing Task API | The thing being shipped |
+| **PostgreSQL** | A real, persistent database server | Where task data lives so it survives restarts |
+| **Docker** | Container technology | Packages the app with its environment |
+| **Docker Compose** | Multi-container coordinator | Starts the app and the database together as one stack |
+| **Tests** | Your `pytest` suite | The safety net automation relies on |
+| **GitHub** | Remote Git hosting | Home of the code, source of the events that trigger automation |
+| **GitHub Actions** | GitHub's automation engine | Runs tests and builds the image automatically on every push |
+
+The whole system, as one picture:
+
+```text
+ Your laptop (dev)                GitHub (remote)                  Docker Hub (registry)
+ ┌────────────────────┐      git push ┌──────────────────┐      ┌─────────────────────┐
+ │ FastAPI container  │ ────────────► │ repository       │      │ published image     │
+ │   connects to      │               │  + .github/workflows/    │                     │
+ │ PostgreSQL container│              │                  │ push │                     │
+ └────────────────────┘               │ Actions triggers │─────►│ Anyone can pull it  │
+                                      │ run tests + build│      └─────────────────────┘
+                                      └──────────────────┘
+```
+
+You will end up with a project folder containing these new and updated files:
+
+```text
+task-api/
+├── main.py               # your API (now database-backed)
+├── models.py             # the Task table
+├── db.py                 # database connection via DATABASE_URL
+├── test_main.py          # your tests (SQLite, portable)
+├── requirements.txt      # pip dependencies
+├── .env.example          # example variables, safe to commit
+├── .env                  # real local variables, never committed
+├── Dockerfile            # how to build the image
+├── .dockerignore         # what to keep out of the image
+├── compose.yaml          # how to run app + PostgreSQL together
+└── .github/workflows/ci.yml   # the automation
+```
+
+Each piece appears, is explained, and is verified in the sections that follow. Nothing here is a mystery at the end.
+
+## Prerequisites
+
+Everything you bring into this task comes from two places: what you already learned, and two programs you install once.
+
+You should already have:
+
+- **Basic Python** — functions, variables, `if`, lists, dictionaries, and how to use a virtual environment (`python -m venv .venv`).
+- **Basic FastAPI** — writing CRUD endpoints, Pydantic models, and `TestClient` tests. That is exactly what the FastAPI task taught you.
+- **Basic REST API ideas** — endpoints, status codes (`200`, `201`, `404`, `422`), request bodies, and query parameters.
+- **Basic Git/GitHub** — `git init`, `git add`, `git commit`, `git push`, and creating a repository on GitHub. Enough to push a project.
+- **The completed FastAPI Task Management API** from the previous task — `main.py` and `test_main.py` with `pytest` passing. This is your vehicle for the whole task. If you lost the folder, rebuild the small version from the FastAPI path first: five CRUD endpoints for tasks plus passing tests. Everything below sits on top of that project.
+
+And you need two programs installed:
+
+- **Docker Desktop** (Windows/macOS) or **Docker Engine** (Linux). Docker Desktop includes **Docker Compose**, which recent Docker versions also bundle as the `docker compose` command.
+- A **GitHub account**, and `git` installed locally.
+
+<Callout kind="info" title="Complete the FastAPI task first">
+This task assumes the Task Management API from the [previous learning path](/docs/learning-paths/fastapi) is finished and passing its tests. Skipping that project and starting here would mean building the container for an app you never made — the exact thing this task does not want.
+</Callout>
+
+### Environment check
+
+Verify your tools before writing any file:
+
+```bash
+python --version      # 3.10 or newer (the code uses str | None syntax)
+git --version         # any recent version
+docker --version      # e.g. 24.x or newer
+docker compose version
+```
+
+If `docker --version` says "command not found", Docker is not installed or Docker Desktop is not running. Launch Docker Desktop and wait until the engine is ready (the whale icon stops animating). You will not get far in this task without a working Docker engine.
+
+## What Is Docker?
+
+Docker is a tool for running software inside **containers** — isolated, self-contained environments that carry the application *and* everything the application needs to run.
+
+Start with the problem it solves. Every project secretly depends on things outside the code: a specific Python version, a list of pip packages, OS libraries, environment settings. Two machines never have exactly the same combination. The classic developer phrase is "it works on my machine" — meaning the app works *here* but refuses on a colleague's laptop, on a CI server, or on the production box. Root cause: the environment travelled with neither you nor the code.
+
+Docker packages **code + environment together**. Instead of saying "install Python 3.12, then run these commands, then hope", you say "run this image" — and the image already contains everything. The same image behaves the same way on Docker on Windows, macOS, Linux, or a server. "Works on my machine" becomes "works anywhere there is Docker."
+
+Some precise definitions before you meet the commands:
+
+- A **container** is a running, isolated environment — its own files, its own processes, its own view of the network. The app inside cannot see your whole computer; it sees only what the container includes and what you explicitly connect.
+- An **image** is the read-only file that defines a container — the code and environment, frozen into a package. Every container is started *from* an image.
+- **Containers vs virtual machines**, beginner version: a VM simulates an entire computer, with its own operating system, and is heavy. A container shares the host's operating system kernel but isolates the app's files, processes, and network. The result: containers start in seconds, use far less memory, and are the standard way modern backend services are packaged and run.
+
+The real-world analogy that matches it best is **shipping containers**. Before standardized shipping containers, cargo was loaded loose and every port handled everything differently. With containers, the same box — sealed, standard size, already packed — moves from a factory to a truck to a ship to a warehouse without anyone repacking its contents. Docker is exactly that idea applied to software: your app is packed once, and then the same package ships anywhere without re-setup.
+
+Here are the commands you will use over and over in this task (each one is explained when you reach it):
+
+```bash
+docker build -t task-api .          # package the app into an image
+docker run -p 8000:8000 task-api    # start a container from the image
+docker images                       # list images on your machine
+docker ps                           # list running containers
+docker compose up                   # start app + database together
+```
+
+Do not memorise them. Just see them appear — inside the next sections each one becomes a *tool you use* for a specific job.
+
+## Docker Images vs Containers
+
+This is the single most important mental model in Docker, so it gets its own section.
+
+- An **image** is the **blueprint/package**. It is a read-only snapshot: the base operating system layer, Python, your dependencies, your code, the start command.
+- A **container** is a **running instance** of that image. It is the live process with its own ephemeral file system, started from the blueprint.
+
+Two analogies, because one always clicks:
+
+1. **Recipe vs cookies.** The image is the recipe — a fixed set of instructions. Each container is a batch of cookies baked from that recipe. You can bake many batches (containers) from the same recipe (image) without ever editing the recipe.
+2. **Zip file vs extracted folder.** The image is the `.zip` — sealed and static. The container is the extracted folder — the part that is actually alive and working. Deleting the container (extracted folder) changes nothing in the zip (image); rebuilding from the image gives you a fresh copy.
+
+Turn it into commands you can run right now, even before you have an image:
+
+```bash
+docker images     # every image on your machine
+```
+
+`docker images` prints a table: `REPOSITORY` (the name, e.g. `postgres`, `python`), `TAG` (the version label, e.g. `3.12-slim`, `16`), `IMAGE ID`, `CREATED`, and `SIZE`. If you have pulled any base images you will see them here immediately.
+
+```bash
+docker ps         # containers that are running right now
+```
+
+`docker ps` shows live containers: `CONTAINER ID`, the `IMAGE` they came from, `COMMAND`, `CREATED`, `STATUS`, `PORTS`, and `NAMES` (the auto-assigned or chosen name). Empty output is normal if nothing is running.
+
+```bash
+docker ps -a      # ALL containers, including stopped ones
+```
+
+`docker ps -a` adds stopped containers — crucial for debugging later, because a container that "disappeared" is usually still listed here, often with an exit reason.
+
+Trace the relationship through these three: `docker images` tells you what *packages* exist. `docker run` picks a package and *starts* an instance. `docker ps` shows the instances currently alive, and `docker ps -a` shows every instance that ever ran.
+
+**Understand this before moving forward:** you can say out loud, without looking, "an image is the blueprint; a container is a running copy of that blueprint; destroying a container does not touch its image."
+
+## Create the Dockerfile
+
+A **Dockerfile** is the recipe file for building an image: plain text, one instruction per line, executed from top to bottom by `docker build`. Its name is exactly `Dockerfile` — no extension.
+
+Create it in the **root of your Task Management API project** (the folder that already contains `main.py` and `test_main.py`):
+
+```dockerfile
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+EXPOSE 8000
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+This is the whole file — small by design. Now the part that separates understanding from copying: **what every line does and why it is there.**
+
+- `FROM python:3.12-slim` — the starting point. You build on an existing official image that already has Python 3.12 on a minimal Debian base (`-slim` = small, enough to run Python but no giant toolchain). Every Dockerfile starts with `FROM`; it is how you say "start from someone else's verified foundation."
+- `WORKDIR /app` — create a directory inside the image and make it the working directory for every following command. Paths stay short and predictable (`/app/main.py`, not a maze). It is the image equivalent of `cd` plus `mkdir -p`, applied to a future shell.
+- `COPY requirements.txt .` — copy exactly one file into the image: the dependency list. **Why order matters:** Docker caches each instruction as a layer. Because this `COPY` runs *before* your code is copied, rebuilding when you only edit `main.py` reuses the installed-dependencies layer and skips re-downloading everything. The dependency install is the slow part of every build, so it is isolated first.
+- `RUN pip install --no-cache-dir -r requirements.txt` — install your Python dependencies *inside the image*, during the build. `RUN` executes a command at build time. `--no-cache-dir` keeps pip's downloaded cache out of the image, keeping it smaller.
+- `COPY . .` — copy everything else from your project folder into the image. The first `.` is the **build context** (your folder); the second `.` is the destination (`/app`). What this excludes is decided by `.dockerignore` — a section of its own later, because it is that important.
+- `EXPOSE 8000` — document that the app listens on port 8000. Note the semantics: `EXPOSE` does *not* publish the port to your computer. It is a label *inside* the image that says "this service uses 8000." Publishing happens at run time with `-p`.
+- `CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]` — the command that runs when a container **starts** (not during build — that is `RUN`'s job). The array form means "run this program directly, with these arguments." Two differences from the dev command you remember: `--host 0.0.0.0` makes the app accept connections from *outside the container* (with `127.0.0.1` it would only answer inside its own network, which would look like the API is dead), and `--reload` is absent on purpose — file-watching reload is a development convenience and has no place in a reproducible image.
+
+The three instruction types to keep straight forever:
+
+- `RUN` — **build-time** command (install things, compile things).
+- `COPY` — move files from your project into the image.
+- `CMD` — **run-time** command (what starts when the container starts).
+
+**What you would change for another project:** the base image (`FROM node:22-slim` for a Node app), the install step, and the `CMD`. The shape — base → workdir → install → copy code → define start command — is identical in every real Dockerfile you will ever read.
+
+**Understand this before moving forward:** point at each of the six instructions and say what it does and whether it runs at build time or start time.
+
+## Build the Docker Image
+
+Two facts before the command:
+
+1. `docker build` needs to know which folder holds the app. That folder is the **build context** — the `.` at the end of the command. Docker copies this context into the engine, then builds each Dockerfile layer from it.
+2. `-t task-api` tags the image — gives it a name you will reuse. Without a tag, you would have to chase an image by an ID, which nobody wants to do.
+
+Build:
+
+```bash
+docker build -t task-api .
+```
+
+Watch the output. You will see something like:
+
+```text
+[+] Building 0.6s (9/9) FINISHED
+ => [1/9] FROM docker.io/library/python:3.12-slim
+ => [2/9] WORKDIR /app
+ => [3/9] COPY requirements.txt .
+ => [4/9] RUN pip install --no-cache-dir -r requirements.txt
+ => [5/9] COPY . .
+```
+
+The `[N/9]` steps map one-to-one onto your Dockerfile instructions — the build reports what it did, in order, layer by layer. The first build is the slow one (it downloads the base image and your dependencies); later builds reuse cache and finish in seconds.
+
+**What just happened:** `docker build` executed the Dockerfile against the build context and produced an **image** — a finished package. Nothing is running yet. Building is packaging, not executing.
+
+**Image tags.** A tag is `name:label`, and `:label` defaults to `:latest` when omitted. `task-api` is `task-api:latest`. Later you will publish as `YOUR_DOCKERHUB_USERNAME/task-api:latest` — the part the `USERNAME/` prefix registers with Docker Hub. Tags let the same name hold many versions:
+
+```bash
+docker build -t task-api:v1 .
+docker build -t task-api:v2 .
+```
+
+Verify the image exists:
+
+```bash
+docker images
+```
+
+You should see a row for `task-api` (and its TAG `latest`). That row is the whole app plus environment, frozen into a file you can list, inspect, and eventually share.
+
+If the build fails, the two classic causes: a typo on a file name inside the Dockerfile (is it `main.py` or `app.py` in your project?), or the base image name being misspelled (`python:3.12-slim` is exact). The error output always names the failing step — read that step.
+
+**Understand this before moving forward:** `docker build` made a *package*. You have not run the app yet.
+
+## Run the FastAPI Container
+
+Now turn the image into a running app:
+
+```bash
+docker run --rm -p 8000:8000 task-api
+```
+
+Open your browser at **http://localhost:8000/docs** and you should see the interactive **Swagger UI** — the same automatic documentation your FastAPI code generates, now being served from inside a container. Open **http://localhost:8000** for the health-check JSON, and **http://localhost:8000/redoc** for the alternate docs view.
+
+That `-p 8000:8000` is the concept of the section — **port mapping** — and its exact meaning matters:
+
+```text
+-p HOST_PORT:CONTAINER_PORT
+```
+
+- **Container port (right side):** the port the app listens on *inside* the container — 8000, because your `CMD` starts uvicorn on 8000 and `EXPOSE` documents it.
+- **Host port (left side):** the port on *your* computer that forwards to the container.
+- **`localhost` / `127.0.0.1`:** the address of your own machine. `localhost:8000` reaches your host port 8000, which forwards to the container's 8000 where uvicorn listens.
+
+The two sides need not match. If port 8000 on your machine is taken (by another container or another dev server), just change the host side:
+
+```bash
+docker run --rm -p 9000:8000 task-api
+curl http://localhost:9000/tasks/
+```
+
+Nothing inside the container changes — that is the point: the app always listens on its own 8000, and *you* decide which host port leads to it.
+
+The `--rm` flag deletes the container automatically when it stops — ideal for experiments. Run the same command with `-d` to detach (the terminal returns, the container keeps running in the background):
+
+```bash
+docker run -d --name task-api-web -p 8000:8000 task-api
+```
+
+Now `--name` gives the container a friendly handle, and these become available:
+
+```bash
+docker ps                  # see task-api-web, its PORTS column shows 0.0.0.0:8000->8000/tcp
+docker logs task-api-web   # the uvicorn startup log, including any errors
+docker stop task-api-web   # stop gracefully (like Ctrl+C)
+docker rm task-api-web     # remove the stopped container
+```
+
+Read the `PORTS` column in `docker ps`: `0.0.0.0:8000->8000/tcp` means "host port 8000 forwards to container port 8000" — your port mapping, visible.
+
+<Callout kind="warning" title="The container's file system is temporary">
+Create a task through Swagger, stop the container, run a fresh one from the same image, and the task is gone. In this task your API currently falls back to a SQLite file *inside the container* — and a container's file system is wiped when the container ends. That is not a bug; it is the exact reason the next parts of this task exist: a database that lives *outside* the container (postchain, a volume, a separate service). Remember the rule: **anything that must survive restarts lives elsewhere, never inside the container.**
+</Callout>
+
+**Understand this before moving forward:** explain what the two numbers in `-p 9000:8000` mean, and how `localhost` plays into it. Also understand that creating a task, restarting the container, and losing it is *expected behaviour* at this stage.
+
+## .dockerignore
+
+When you run `docker build -t task-api .`, Docker reads the **build context** — your project folder — and sends it to the engine. But *everything* in that folder is not wanted in the image. Enter **`.dockerignore`**: a file, next to the Dockerfile, listing what to leave out, by the same rules `.gitignore` already taught you.
+
+Create `.dockerignore` in your project root:
+
+```text
+__pycache__/
+*.pyc
+.venv/
+.git/
+.env
+*.db
+```
+
+Convince yourself of each line:
+
+- `__pycache__/` and `*.pyc` — Python's compiled bytecode. Every run regenerates it. It is junk in an image.
+- `.venv/` — your local virtual environment, hundreds of megabytes of installed packages that the image already contains from `RUN pip install`. Carrying it wastes space *and* risks a second, different environment silently shadowing the real one.
+- `.git/` — the full repository history, unnecessary at runtime.
+- `.env` — **your secrets. This line matters most.** If `.env` sneaks into the build context it gets copied into the image by `COPY . .`, and anything in an image *stays* there — recoverable from the image's layers and carried wherever the image goes. A leaked database password inside a published image is a real incident, not a hypothetical.
+- `*.db` — your local SQLite files, which are just test data.
+
+<Callout kind="danger" title="Secrets in images are permanent">
+Anything `COPY . .` takes in becomes part of the image — and pulls of that image ship it to every machine that runs it. The `.dockerignore` line for `.env` is a security control, not housekeeping. When in doubt: ignore broadly, copy explicitly, and treat every file as guilty until proven excludable.
+</Callout>
+
+**Why not just skip the file? Because the problem is invisible.** The build succeeds either way — `.dockerignore` decides how clean the image is, and image bloat and secret leakage come disguised inside a working app. Build speed is the visible symptom (junk means larger contexts, slower uploads); security is the silent one.
+
+**Understand this before moving forward:** name three things `.dockerignore` keeps out and why each matters, one of which must be a security reason.
+
+## Environment Variables
+
+An **environment variable** is a named value that lives *outside your code* and that your program reads at run time. `DATABASE_URL` is the one your FastAPI project already uses. Look at your `db.py`:
+
+```python
+import os
+
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./tasks.db")
+```
+
+`os.getenv("DATABASE_URL", ...)` reads the variable; if it is not set, it falls back to SQLite. This one line is why the *same code* can run against three different databases with zero code changes: you change the environment, not the program.
+
+**Why not hard-code configuration?** Because configuration differs by situation. The database URL is different on your laptop, in CI, and in production. A password is a secret. A database host is a "where am I running today" detail. Hard-coding means editing code for every environment, and **hard-coding secrets means putting secrets in the repository where everyone can read them** — and in image layers, as the previous section warned.
+
+Provide environment variables to a container two ways. Inline:
+
+```bash
+docker run --rm -p 8000:8000 -e DATABASE_URL="sqlite:///./other.db" task-api
+```
+
+From a file — the practical way. A `.env` file is plain `KEY=value` lines:
+
+```text
+# .env — real local values, NEVER commit this file
+DATABASE_URL=sqlite:///./tasks.db
+```
+
+```bash
+docker run --rm -p 8000:8000 --env-file .env task-api
+```
+
+To keep the file out of Git and out of the image, `.gitignore` and `.dockerignore` each carry a `.env` line. For documentation, commit an **`.env.example`** — safe placeholders that tell a future developer what to create:
+
+```text
+# .env.example — safe to commit, values are placeholders
+DATABASE_URL=postgresql+psycopg2://taskuser:taskpassword@db:5432/tasks
+```
+
+Now the critical distinction the user of this site asked you to understand:
+
+**Local `.env` vs GitHub Actions Secrets.** These are two different homes for secrets:
+
+- The **local `.env`** file lives on your machine, is read by `docker run --env-file` (and later Compose), and must be kept out of Git so it never reaches GitHub at all. `.env` is *your* secret storage.
+- **GitHub Actions Secrets** live *inside GitHub*. You store a value in **Settings → Secrets and variables → Actions** (e.g. a secret named `DOCKERHUB_TOKEN`), and workflows read it at run time through `${{ secrets.DOCKERHUB_TOKEN }}`. GitHub encrypts it, injects it only during a run, and masks it in logs. A workflow file can *reference* a secret without ever containing its value — the value itself never enters the repository.
+
+The rule in one sentence: **local secrets live in a gitignored `.env`; automated-run secrets live in GitHub Actions Secrets; neither ever appears in committed or image content.**
+
+**Understand this before moving forward:** say why `DATABASE_URL` is an environment variable and not literal code, and explain where the same app would get its secret on your laptop versus in a GitHub Actions run.
+
+## Docker Compose
+
+Your project now has **two things that must run together**: the FastAPI app *and* a database. Managing them as separate `docker run` commands is technically possible and practically miserable — two commands, command-line arguments scattered everywhere, and a fragile mental model of "the app reaches the database at *some* address." Worse, `docker run` gives each container its own network and no automatic way for them to find each other.
+
+**Docker Compose** solves exactly this: you describe the whole stack declaratively in one file, and `docker compose up` starts every service together, on a shared network, in the right order. One command replaces a checklist. It is the difference between a to-do list and a definition of "what running correctly means."
+
+Create `compose.yaml` in the project root:
+
+```yaml
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: taskuser
+      POSTGRES_PASSWORD: taskpassword
+      POSTGRES_DB: tasks
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U taskuser -d tasks"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+psycopg2://taskuser:taskpassword@db:5432/tasks
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+```
+
+Break the concepts down one by one:
+
+- **`services`** — the list of pieces in your stack. Each service is one container (or a fleet of identical containers) with a name. Here: `db` and `api`.
+- **The `api` service** — `build: .` means "build this service's image from the Dockerfile in this folder." Its `environment:` sets `DATABASE_URL` to point at PostgreSQL — and here is the star of the section: the host in that URL is **`db`**, the *service name*.
+- **The `db` service** — `image: postgres:16` pulls the official PostgreSQL image. `environment:` (`POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`) is how the official image bootstraps itself on first start: it creates that user, that password, and that database. `ports: "5432:5432"` publishes the database on your machine so you can connect with desktop tools or psql. `volumes:` maps a **named volume** onto PostgreSQL's data folder so the data survives `docker compose down`.
+- **`volumes: postgres_data:`** — a named volume: storage Docker manages for you, outside any container. Containers come and go; the volume keeps the data. This is the "survives restarts" story made real.
+- **`healthcheck:`** — PostgreSQL launches long before it accepts queries. `pg_isready` is the probe; Compose polls it until the database reports ready.
+- **`depends_on: db condition: service_healthy`** — ordering. The `api` service starts only after the database is proven healthy. Without this, your app races a half-started database and fails with "connection refused" — randomly, depends on the day.
+- **Networks** — implicit, not written: Compose automatically creates a private network for the project and puts every service on it. That network is what makes service-name addressing work. You *can* declare networks explicitly, but for this task the automatic one is correct and simpler.
+
+Now the question this section exists to answer:
+
+**Why is the database hostname `db` and not `localhost`?** Because inside a container, `localhost` means *that container itself*. Your app runs in the `api` container; its `localhost:5432` would look for PostgreSQL inside its own container — where nothing is listening. Compose's private network lets services address each other **by service name**: the `api` container reaches the database at hostname `db`, and Compose's DNS maps `db` to the database container's address. Rename the service to `postgres` and the URL host must change to `postgres` too. The `DATABASE_URL` in the file literally uses the service name as the hostname.
+
+That is why `db.py` reads `DATABASE_URL` from the environment: the host is a *changeable configuration value*, different per environment, and the compose file is where this environment's value lives.
+
+The obvious question that follows — "did you just put `taskpassword` in a committed file?" — gets a short, honest answer: **for learning, those are placeholders, and yes, this exact file must keep them out of real projects.** Section "Docker Hub" shows the correct pattern (secrets as GitHub Secrets). Compose can also read values with `env_file:` or `${VAR}` interpolation from `.env`; `environment:` is the pump-you-can-read version for now.
+
+**Understand this before moving forward:** explain, without looking, why the app's database URL says `db` and not `localhost`, and what the `volumes:` and `depends_on` blocks each guarantee.
+
+## Run FastAPI + PostgreSQL
+
+The one-command stack:
+
+```bash
+docker compose up --build -d
+```
+
+- `up` — start (and keep running) the whole stack.
+- `--build` — rebuild the images first, so your latest code is in the containers. Without it, Compose happily runs an outdated image.
+- `-d` — detached: returns your terminal while the stack runs in the background.
+
+From here on, every command has a job. Learn them as a set:
+
+```bash
+docker compose ps             # status of every service: Running? Healthy?
+docker compose logs -f api    # stream the app's logs live (Ctrl+C to exit)
+docker compose logs db        # the database's own log, when diagnosis calls
+docker compose down           # stop and remove the containers (keeps the volume)
+docker compose down -v        # same, PLUS delete the named volume = wipe your data
+```
+
+Verify that what should be running, is running:
+
+```bash
+docker compose ps
+```
+
+You want the `api` service `Up` and the `db` service `Up (healthy)` — the healthcheck gate passed, which is why `api` did not crash on startup. Then confirm the app really serves requests:
+
+```bash
+curl http://localhost:8000/tasks/
+```
+
+The API answers. Now prove the two services actually talk:
+
+1. Open **http://localhost:8000/docs** and create a task.
+2. Look at the raw row inside PostgreSQL itself — reach into the database container:
+
+```bash
+docker compose exec db psql -U taskuser -d tasks
+```
+
+At the psql prompt, run `\dt` (list tables) and `SELECT * FROM tasks;` (see your data), then exit with `\q`. What you just touched is the *same* database your app writes to — the API and the database are genuinely connected, via the `db` service name.
+
+Then prove the persistence payoff — the thing that was impossible in the "Run the FastAPI Container" section:
+
+```bash
+docker compose down          # containers gone; postgres_data volume stays
+docker compose up -d         # start again, fresh containers, same volume
+curl http://localhost:8000/tasks/    # your task is STILL there
+```
+
+That is Docker Compose doing its real job: **your app's data now survives container lifecycles.** Containers are disposable; the volume is not.
+
+**Understand this before moving forward:** run through the whole verify loop yourself — `ps` shows both healthy, `/docs` answers, `psql` proves the connection, and `down/up` preserves the data. If any of those four fail, stop and read the `logs`; the answer is in them.
+
+## Testing
+
+Tests come *before* automation, always. GitHub Actions can only give you a meaningful green/red if the red is trustworthy locally first. So before writing any workflow, prove the baseline on your own machine.
+
+Run your suite:
+
+```bash
+pytest
+```
+
+`pytest` discovers every function whose name starts with `test_`, runs it, and reports a green dot for each pass and details for each failure. Your suite should end with something like `9 passed`. The tests use their own SQLite database (the `os.environ["DATABASE_URL"]` line at the top of `test_main.py`), so they need nothing external — no Docker, no PostgreSQL. That portability is exactly why CI will be able to run them next.
+
+Now do what the section title warns about: **make a test fail on purpose, and study what failure actually looks like**, because most of a developer's day is reading failure output.
+
+In `test_main.py`, change one assertion to a wrong value:
+
+```python
+def test_create_task(clean_db):
+    response = client.post("/tasks/", json={"title": "Buy groceries"})
+    assert response.status_code == 500   # deliberately wrong, we return 201
+```
+
+Run `pytest` again. You will see a red `F` and a block of output that names the test, the file and line of the failing assertion, and the two values:
+
+```text
+status_code = 500, expected = 201
+```
+
+Read those three pieces — *which test, which line, which values* — because they are the entire debugging workflow compressed. Now restore the correct `201` and run `pytest` one more time until it is green.
+
+<Callout kind="warning" title="Tests never touch the running PostgreSQL stack">
+Your tests talk to the app in-process with `TestClient`, and they open their *own* SQLite database. The `docker compose` stack can be running or not; the tests do not care. This isolation is what makes CI simple: tests need only Python and `pip install -r requirements.txt` — nothing else.
+</Callout>
+
+**Understand this before moving forward:** you can say why a test that is red *locally* must be fixed before any automation is worth writing, and you know what a failing `pytest` block looks like.
+
+## What CI/CD Means
+
+Two abbreviations that name two related but *different* things.
+
+**CI — Continuous Integration** is the practice of automatically checking every change the moment it arrives. The machine runs your tests on a clean environment each time you push code or open a pull request. "Integration" is the point: everyone's changes are constantly merged and verified *as a whole*, so a break is caught in minutes, while the change is fresh — not discovered three weeks later when it has silently poisoned the codebase.
+
+**CD — Continuous Delivery (or Deployment)** is what happens *after* CI agrees things work. **Delivery** means every green change is automatically turned into a ready-to-ship artifact (your Docker image), and publishing is one deliberate step away. **Deployment** goes further and puts that artifact into production automatically.
+
+CI and CD are a pipeline, not synonyms:
+
+- CI asks: **"does it still work?"** → run tests.
+- CD asks: **"is it shipped?"** → build + publish (delivery), or publish + deploy to prod (deployment).
+
+A tiny everyday example to fix the idea. Imagine submitting a school assignment. CI is the automated checker that grades every submission as it arrives against the rubric — instantly, consistently, no remembering. CD is the delivery service that, once a submission passes, packages it and ships it to the teacher's desk — with "delivery" shipping it but not putting it in the grade book automatically, and "deployment" also entering the grade and filing the copy. The grade *check* and the *shipping* are different jobs.
+
+Scope for this task, stated plainly: **this learning path implements CI fully and takes a first step into CD.** You will have tests running on every push (CI), and the Docker image built and *published* to Docker Hub on the main branch (that is delivery — the "D" of CD). Automatic deployment to a server, Kubernetes, and infrastructure plumbing are deliberately out of scope; they come later, not today.
+
+## GitHub Actions
+
+**GitHub Actions** is GitHub's built-in automation engine. You write **workflows** — plain YAML files — that say "whenever *this* happens, run *that*." GitHub reads those files from a folder inside your repository and executes them on its own machines.
+
+The vocabulary, once:
+
+- **Event** — the trigger: a `push`, a `pull_request`, a schedule, a manual button.
+- **Workflow** — one automation, one YAML file, defined by `name`, `on` (triggers), and `jobs`.
+- **Job** — a unit of work that runs on its own fresh machine ("runner"). A workflow can contain several jobs.
+- **Step** — one command inside a job. Jobs run steps in order; a failing step stops the job.
+- **Action** — a reusable building block you reference with `uses:` (e.g. `actions/checkout`). Actions are how workflows stay short: someone has already written "copy the repo onto the machine" for you.
+
+**Why use it instead of testing locally?** Because your laptop is the least trustworthy test environment there is — your packages, your paths, your habits. GitHub Actions runs on a *clean machine every time*: your code, checked out fresh, dependencies installed fresh, then tests. If they pass there, they pass anywhere. Nobody can forget to run CI; there is no one to forget.
+
+Workflow files live in `.github/workflows/` inside your repository. GitHub watches that folder: you push a workflow (or a change to one), and GitHub picks it up and starts scheduling runs for it.
+
+Create the folder, then the file:
+
+```bash
+mkdir -p .github/workflows
+```
+
+Your first workflow, `ci.yml`:
+
+```yaml
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run tests
+        run: pytest
+```
+
+Walk through it before pushing — it is only a dozen lines:
+
+- `name: CI` — a human label for the workflow's list on the Actions tab.
+- `on:` — the triggers. `push` and `pull_request` both mean "any push to any branch, and any pull request opened or updated." No event, no run.
+- `jobs:` — the work. This workflow has one job named `test`.
+- `runs-on: ubuntu-latest` — the job runs on a brand-new Ubuntu virtual machine GitHub spins up for each run. Nothing of yours is already there; that is the feature.
+- `steps:` — the plan, top to bottom:
+  - `uses: actions/checkout@v7` — copies your repository onto the fresh machine. Always first; without it the runner has no code. The `@v7` is the action's version tag.
+  - `uses: actions/setup-python@v6` with `python-version: "3.12"` — installs the same Python major version your image uses. Consistency between environments is the whole game here.
+  - `run: pip install -r requirements.txt` — install your dependencies on the clean machine, exactly as if on a fresh laptop.
+  - `run: pytest` — run the suite. **Any failing test turns the whole job red.** That single behaviour — fail loudly — is the mechanism of CI.
+
+**Understand this before moving forward:** given a workflow file, point to the event, the job, and each step, and say what the machine is doing at that moment.
+
+## Automated Testing with GitHub Actions
+
+Push the project to GitHub with a workflow in place, and watch it run:
+
+If the repository already exists on GitHub, connect and push:
+
+```bash
+git add .
+git commit -m "Add Docker, Compose, and CI workflow"
+git branch -M main
+git push -u origin main
+```
+
+Then on GitHub:
+
+1. Open the **Actions** tab — you will see a run for the `CI` workflow triggered by your push.
+2. Click into it: the job, its steps, and live logs. The first run is the slowest; installing Python and dependencies on a cold machine takes minutes.
+3. The run ends with a **green check** — every step passed, or a **red cross** — at least one step failed, and the failed step names itself in the log.
+
+What green means: **on a clean machine, with your latest code, `pip install` succeeded and every test passed.** It is "it works" — with the environment argument removed.
+
+What red means: either a test genuinely failed (check the `Run tests` step log for the `pytest` failure block — the same `status_code`-style output you produced in the Testing section) or the machine could not even set up (dependency install failed, file not found). Open the failed step and read; the log is the answer.
+
+Now pull the same lever you pulled locally — **deliberately break a test, push, and watch red**:
+
+1. Change an assertion in `test_main.py` to a wrong value (e.g. expect `status_code == 500`).
+2. Commit and push.
+3. The workflow reruns on the push and ends **red**.
+4. Restore the correct assertion, commit, push, and confirm green.
+
+Why this exercise matters: a workflow you have only ever seen green is a decoration. A workflow whose red you have *watched* is a tool. Failing on push, in public, is the entire safety mechanism — and now you know what it looks like from both sides.
+
+**Understand this before moving forward:** you can say where workflow files live, what a green check and a red cross mean, and what the log of a failed `Run tests` step will show you.
+
+## Build the Docker Image in CI
+
+Tests passing is only half of "ready." The other half is the shipment: the **artifact** — in this task, the Docker image. Build it in CI too, so the image is produced from **your latest code** on a **clean runner**, not from whatever state your laptop happened to be in.
+
+Why CI and not just locally? Compare the two:
+
+- **Building locally:** your build context, your installed Docker, your current code. It works — but the artifact exists only on your machine, and if only you can produce it, the team depends on a lucky laptop.
+- **Building in CI:** the same `docker build` runs automatically after every (green) push on a fresh runner. The team can *always* produce the latest image from GitHub itself, with nothing depending on any individual's machine. It turns image-building into a repeatable product of the repository.
+
+Extend `ci.yml` with a second job:
+
+```yaml
+  docker:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build image
+        run: docker build -t task-api .
+```
+
+Two additions, both worth understanding:
+
+- `needs: test` — **job dependency**: the `docker` job starts only if the `test` job passed. One YAML keyword becomes the policy "never package broken code."
+- `run: docker build -t task-api .` — the exact command from the Dockerfile section, now running on every green push, on the runner's pre-installed Docker.
+
+GitHub-hosted `ubuntu-latest` runners ship with Docker. For a single-architecture build, a plain `docker build` is honest and legible. Real projects usually swap it for the official `docker/setup-buildx-action@v3` plus `docker/build-push-action@v7` pair — Buildx is Docker's modern build engine, and it is what enables *multi-platform* images (the same image built for `linux/amd64` and `linux/arm64` in one workflow). You will meet the build-push version in the Docker Hub section, because that is the one that *pushes*.
+
+Push the extended workflow and watch: push → `test` job runs → on green, `docker` job runs and builds the image. If the image builds here, it will build for anyone.
+
+**Understand this before moving forward:** explain why an image built in CI is more trustworthy than one built on a laptop, and what `needs: test` guarantees.
+
+## Docker Hub
+
+Time for the delivery step: the image should not live only on transient CI runners. It should live somewhere permanent, from which **any machine can pull and run it.**
+
+**A container registry** is a server that stores and distributes images. **Docker Hub** is the public registry from the Docker project — the default place `docker pull` looks. The flow, which is the whole section:
+
+```text
+local / CI docker image  -->  push (upload)  -->  Docker Hub  -->  pull (download)  -->  any other machine
+```
+
+"Any other machine" is the payoff: a server, a colleague's laptop, a cloud host. Each needs only Docker installed and one pull command. Your image on Docker Hub is the product of your pipeline.
+
+Docker Hub names images `username/image:tag` — the username registers whose registry namespace it lands in. Do the flow once by hand to feel it:
+
+```bash
+docker login
+docker tag task-api YOUR_DOCKERHUB_USERNAME/task-api:latest
+docker push YOUR_DOCKERHUB_USERNAME/task-api:latest
+docker pull YOUR_DOCKERHUB_USERNAME/task-api:latest
+```
+
+- `docker login` — authenticate to Docker Hub, a step that writes credentials to a config file on your machine. Prefer a generated **access token** over your password; create one at Docker Hub → Account Settings → Security.
+- `docker tag` — renames your local image to include the registry prefix Docker Hub expects.
+- `docker push` — uploads it.
+- `docker pull` — downloads it on another machine (**or on yours after wiping the local image**), and `docker run` starts it.
+
+**Automating the push needs a secret — never your literal password in a file.** GitHub's **Secrets** are the mechanism: named values you store once, encrypted, and which workflows read at run time without the value ever living in the repository.
+
+Set up, on your repository's **Settings → Secrets and variables → Actions**:
+
+- A **variable** `DOCKERHUB_USERNAME` = your Docker Hub username (not secret; visible on purpose).
+- A **secret** `DOCKERHUB_TOKEN` = your Docker Hub access token (a credential; encrypted and masked).
+
+Then add the publish job to `ci.yml`, gated so only `main` ships:
+
+```yaml
+  publish:
+    runs-on: ubuntu-latest
+    needs: [test, docker]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: ${{ vars.DOCKERHUB_USERNAME }}/task-api:latest
+```
+
+Dissect it:
+
+- `needs: [test, docker]` — publish only after tests *and* the local image build both passed.
+- `if: github.ref == 'refs/heads/main'` — only the main branch publishes. Feature branches build and test; they never ship.
+- `docker/login-action@v4` — logs CI into Docker Hub. The `${{ secrets.DOCKERHUB_TOKEN }}` is replaced at run time by GitHub; in logs you will see it printed as `***`. The username comes from the variable, `${{ vars.DOCKERHUB_USERNAME }}`.
+- `docker/setup-buildx-action@v3` — ensures the modern Buildx engine is present.
+- `docker/build-push-action@v7` — the modern build *and* push: `context: .` (this repository), `push: true` (upload), `tags:` names the published image.
+
+When the run completes, the proof, from anywhere with Docker:
+
+```bash
+docker pull YOUR_DOCKERHUB_USERNAME/task-api:latest
+docker run --rm -p 8000:8000 YOUR_DOCKERHUB_USERNAME/task-api:latest
+curl http://localhost:8000/tasks/
+```
+
+That is the loop closed: local image → Docker Hub → another machine. And it only ever ships on a green main branch.
+
+<Callout kind="danger" title="Credentials are credentials">
+`secrets.DOCKERHUB_TOKEN`, the password inside `docker login`, and `taskpassword` in a compose file are all the same species of thing: a credential that unlocks something. They belong in GitHub Secrets or a gitignored `.env` — never in workflow files, `main.py`, Dockerfiles, or committed compose files. If any credential ever leaks, rotate it at the source (Docker Hub, GitHub) immediately.
+</Callout>
+
+**Understand this before moving forward:** explain the full journey of an image from a local build to running on another machine, and what `secrets` vs `vars` means without opening the file that references them.
+
+## Basic CD Concept
+
+Put the whole pipeline on one page, end to end:
+
+```text
+git push
+   │
+   ▼
+GitHub Actions: test job     (CI — does it still work?)
+   │ green
+   ▼
+GitHub Actions: docker job   (build the image)
+   │ green
+   ▼
+GitHub Actions: publish job  (CD-Delivery — push image to Docker Hub)
+   │
+   ▼
+(deployment stage — out of scope for this task)
+```
+
+Every stage after a green is *waiting on the previous stage.* Nothing ships on a red. That is the mental model: **quality gates in sequence, artifact at the end.**
+
+What you built in this task sits at the CI + delivery end of that line. You did **CI** (automated tests on every push and pull request) and the **delivery** side of CD (the image publishes automatically on `main`). The rightmost box — **deployment**, pushing the artifact to a running server — is deliberately *not* part of this task. In principle, deploying is one more stage after publish (`SSH to a server and `docker compose up` the pulled image`, or a hosting platform that pulls your image and runs it), but a full deployment discussion means servers, domains, and infrastructure — a separate task, not this one.
+
+Why stop here on purpose? Because a beginner who has learned CI plus image publishing has the complete loop that matters inside a team: **your code is tested automatically and turned into a shippable artifact automatically.** Kubernetes, clouds, and autoscaling are later topics; they add nothing but confusion before this foundation is solid.
+
+**Understand this before moving forward:** draw the five-box pipeline from `git push` to deployment on paper, then put a box around the stages this task implemented and explain why deployment was intentionally left outside it.
+
+## Troubleshooting
+
+A real debugging section — every failure mode a beginner hits in this exact assignment, each with what it means, what to check, and how to fix it.
+
+| Symptom | What it means | What to check | How to fix / debug |
+|---------|---------------|---------------|--------------------|
+| `docker: command not found` | Docker is not installed or not on your PATH | `which docker`; reinstall if missing | Install Docker Desktop (Win/mac) or Docker Engine (Linux); restart your terminal and the app |
+| `Cannot connect to the Docker daemon` | The Docker engine itself is not running | Open Docker Desktop and wait for the whale; `docker info` | Start Docker Desktop / `systemctl start docker`; retry the command |
+| `port is already allocated` | Something already uses the host port you asked for | `docker ps` and `lsof -i :8000` — find the squatter | Change the host side of the mapping: `-p 9000:8000`; stop the other container if you own it |
+| Container starts then exits immediately | The app inside crashes at startup | `docker ps -a` finds the dead container; `docker logs <id>` shows the real error | Read the log: usually a missing import, a typo in `CMD`, or a Python straight-up error; fix, rebuild, rerun |
+| `connection refused` from the app to the database | The app cannot reach PostgreSQL | `docker compose ps` — is `db` up? Is it `healthy`? | Check the host in `DATABASE_URL` is the service name (`db`), not `localhost`; confirm both services are up |
+| Wrong database hostname | The URL points at the wrong place | Look at the `DATABASE_URL` in `compose.yaml` | Use the Compose service name as the host; rename the service and the host must change together |
+| `role "taskuser" does not exist` / password failure | DB credentials mismatch | Compare `POSTGRES_USER`/`POSTGRES_PASSWORD`/`POSTGRES_DB` (db service) with the URL's credentials (api service) | Align the three `POSTGRES_*` values with the URL; the URL user/password must match the image's bootstrap values exactly |
+| `DATABASE_URL` missing / wrong | The app used a fallback or crashed on config | `docker compose config` prints the interpolated values; check `.env` exists and the `environment:` block | Provide the variable: Compose `environment:`, `env_file:`, or a local `.env`; never rely on the fallback by accident |
+| `docker build` fails | A Dockerfile instruction, typo, or unavailable base | The build prints the failing step `[N/9]` — read that step's error | Fix the named step: file name used by `COPY`/`CMD` exists? `FROM` tag spelled correctly? Network reachable for the base image? |
+| Tests pass locally, fail in GitHub Actions | CI environment differs from yours | Compare: same Python (`3.12` both in `setup-python` and the image), same `requirements.txt` install | Reinstall clean (`pip install -r requirements.txt` then `pytest`) exactly as the workflow does; remove machine-specific state from tests |
+| GitHub Actions workflow fails | A step failed — the run tells you which | Open the run, click the failed step, read its log | Fix what the log names: install error, test failure, YAML typo (the runtime validates syntax and prints the line) |
+| Docker image build fails in CI | The runner cannot reproduce your local build | File paths, case, and missing context on a fresh checkout | Build with the same command locally from a *clean* clone; fix path/typos; `needs:`, secrets, permissions rarely mask real build errors |
+| Docker Hub push: authentication error | `login-action` got bad or missing credentials | Confirm `DOCKERHUB_USERNAME` (variable) and `DOCKERHUB_TOKEN` (secret) exist in Settings; test `docker login` by hand | Re-add or regenerate the token on Docker Hub; re-add the secret; note tags must be lowercase |
+
+The universal debugging loop, same ten keys for every row: **read the error → change exactly one thing → rerun → repeat.** Docker and CI are loud; treat the noise as directions.
+
+## Final Project Checklist
+
+This is the whole task as a checklist. Anything unchecked means "come back and finish this section":
+
+<Checklist items={[
+  "FastAPI works locally (uvicorn starts, /docs opens)",
+  "Dockerfile created and every instruction (FROM, WORKDIR, COPY, RUN, EXPOSE, CMD) understood",
+  "Docker image builds (docker build -t task-api .)",
+  "Container runs (docker run -p 8000:8000 task-api)",
+  "Swagger docs open inside the container at /docs",
+  ".dockerignore created and secrets excluded",
+  "Environment variables configured and .env kept out of Git and the image",
+  "Docker Compose file created (compose.yaml)",
+  "PostgreSQL container runs and is healthy",
+  "FastAPI connects to PostgreSQL via the service name",
+  "Tests pass locally (pytest green, including the deliberate-failure exercise)",
+  "GitHub repository updated and code pushed",
+  "GitHub Actions workflow created in .github/workflows/",
+  "Tests run automatically on push and pull requests",
+  "Docker image builds in CI (needs: test)",
+  "Docker Hub publishing understood and image pushed with secrets",
+  "CI/CD concepts can be explained out loud (CI vs CD, and what this task includes)"
+]} />
+
+## Independent Practice: Employee Management API
+
+This is the transfer test. Build a **different** FastAPI project and send it through the **entire** journey you just did — Docker, PostgreSQL, Compose, tests, CI, image — **without a solution in front of you.**
+
+<PracticeProject title="Independent Practice — Employee Management API">
+Build a complete Employee Management API, then containerize it and automate it exactly as you did the Task API. Read the requirements, implement it yourself, and do not look up a full solution — the entire value of this project is the doing.
+</PracticeProject>
+
+### Project Description
+
+You work for a company that needs a small API to manage **employees**, and it must be deliverable in the same sense the Task API now is: containerized so it runs anywhere, persisted in PostgreSQL, tested, and automatically verified on every push.
+
+### Requirements
+
+- A FastAPI API with the endpoints below, using SQLModel and a `DATABASE_URL` environment variable, with a local SQLite fallback.
+- A real PostgreSQL service running alongside it via Docker Compose — this is the formal part, not optional.
+- A test suite using `TestClient` that runs against its own database.
+
+### Suggested Endpoints
+
+| Method | Path | Expected behavior |
+|--------|------|-------------------|
+| `POST` | `/employees/` | Create an employee, return `201` and the stored employee (including its generated `id`). |
+| `GET` | `/employees/` | Return the full list, `200`. |
+| `GET` | `/employees/?department=<name>` | Return only employees in that department, `200`. |
+| `GET` | `/employees/?active=<true\|false>` | Return only active or only inactive employees, `200`. Filters combine. |
+| `GET` | `/employees/{employee_id}` | Return one employee, `200`, or `404` with a `detail` message if missing. |
+| `PUT` | `/employees/{employee_id}` | Replace the employee, `200`, or `404` if missing. |
+| `DELETE` | `/employees/{employee_id}` | Delete the employee, return `200` with `{"ok": true}`, or `404` if missing. |
+
+### Database Requirements
+
+Each employee: `full_name` (string, required, 2–100 chars), `email` (string, required, must look like an email — Pydantic's `EmailStr` needs `email-validator` installed), `department` (one of `engineering`, `marketing`, `sales`, `hr`), `salary` (non-negative number, required; reject negatives), `active` (boolean, defaults to `true`).
+
+### Docker Requirements
+
+- A hand-written `Dockerfile` and `.dockerignore` in the same folder as the app.
+- The image must build cleanly on a machine with no virtual environment of its own.
+
+### Compose Requirements
+
+- `compose.yaml` with two services: the API and PostgreSQL.
+- PostgreSQL protected by a named volume, exposed via `ports`, gated behind a `healthcheck`.
+- The API's `DATABASE_URL` using the database **service name** — and you must be able to explain why `localhost` would fail.
+
+### Testing Requirements
+
+- `pytest` passing locally against a dedicated database (SQLite is fine).
+- Validation: bad email, negative salary, unknown department, blank name, missing required field → `422`.
+- Missing employees → `404` with `{"detail": ...}`.
+
+### GitHub Actions Requirements
+
+- `.github/workflows/`: tests on every push and pull request, image build as a separate job `needs`-gated on the tests, and publishing to Docker Hub gated to the `main` branch with secrets for the credentials.
+
+### Acceptance Criteria
+
+- The stack starts with `docker compose up --build -d`, the API answers, and employee data survives `docker compose down` + `up`.
+- The workflow is green locally-tested code, red on a deliberately broken test (you verified from both sides).
+- A `README.md` documents: `docker compose up --build -d`, the `DATABASE_URL` variable, and the push-pull path through Docker Hub.
+
+### Suggested Official Resources
+
+- FastAPI **Testing** and **SQL (relational) databases** tutorials, for the SQLModel patterns.
+- Docker **Get Started** and the **Dockerfile reference** from the curated resources, for the container.
+- **Building and testing Python** and Docker's **GitHub Actions** guides, for the workflow — all linked in Curated Resources below.
+
+Do not provide yourself the final code. When stuck, prefer the official resources over a solution search — and ask a colleague a *specific* question about the exact error you see.
+
+## Curated Resources
+
+For each resource: **what it is, why it is useful, when to open it, and what to focus on.** Official Docker, GitHub, and FastAPI documentation is the technical source of truth; when this page and the docs disagree, the docs win.
+
+First, the prerequisite for this whole task — the previous lesson, built on this site:
+
+**[FastAPI: A Guided Learning Path](/docs/learning-paths/fastapi)** — the task you just finished. It is where the Task Management API, its tests, and your FastAPI foundations came from. Anything in this task that refers to "your existing project" refers to what you built there. Use it as a reference when the API code itself needs a refresher.
+
+<ResourceItem
+  label="Docker: Get Started"
+  href="https://docs.docker.com/get-started/"
+  why="Docker's own official introduction — what containers are, why they matter, and the first build/run flow; the authoritative version of the image-vs-container idea."
+  when="Review it at any point from Creating the Dockerfile through Running the Container."
+  focus="The image/container mental model and the anatomy of the first Dockerfile."
+/>
+
+<ResourceItem
+  label="Docker Compose"
+  href="https://docs.docker.com/compose/"
+  why="The formal reference for compose files — services, networks, volumes, environment — the source of truth behind your compose.yaml."
+  when="While writing or debugging the compose file (Run FastAPI + PostgreSQL section)."
+  focus="The compose file structure, and how services reach each other by name."
+/>
+
+<ResourceItem
+  label="Docker Compose Quickstart"
+  href="https://docs.docker.com/compose/gettingstarted/"
+  why="A walkthrough of building a Compose stack from a real code sample — a second, worked example of every idea in the compose section."
+  when="After the stack works, to see the same pattern written by the Docker team."
+  focus="The complete service definition and the one-command workflow."
+/>
+
+<ResourceItem
+  label="Dockerfile reference"
+  href="https://docs.docker.com/reference/dockerfile/"
+  why="The complete dictionary of Dockerfile instructions — the exact semantics of FROM, WORKDIR, COPY, RUN, EXPOSE, and CMD, plus less common ones."
+  when="Whenever you doubt what one line of a Dockerfile really does."
+  focus="The RUN vs CMD distinction and the COPY/context behaviour."
+/>
+
+<ResourceItem
+  label="FastAPI: Docker deployment"
+  href="https://fastapi.tiangolo.com/deployment/docker/"
+  why="The official FastAPI page on containerizing exactly your kind of app — its recommended start command matches the one in this task's Dockerfile."
+  when="While writing the Dockerfile, to confirm the production-correct uvicorn command."
+  focus="The base image choice and the uvicorn --host 0.0.0.0 start command."
+/>
+
+<ResourceItem
+  label="GitHub Actions: Building and testing Python"
+  href="https://docs.github.com/en/actions/tutorials/build-and-test-code/python"
+  why="The official tutorial for the exact workflow shape you wrote — checkout, setup-python, install, test; canonical wording and going-deeper options."
+  when="While writing or tuning the CI workflow."
+  focus="The job layout, the setup-python inputs, and the dependencies-install step."
+/>
+
+<ResourceItem
+  label="GitHub Actions documentation"
+  href="https://docs.github.com/en/actions"
+  why="The home of everything workflow-related — triggers, jobs, steps, events, secrets, and the Actions tab behaviour."
+  when="Whenever a workflow keyword behaves unexpectedly."
+  focus="Trigger (on) syntax and how secrets and variables are stored and referenced."
+/>
+
+<ResourceItem
+  label="GitHub Actions: Containerized services"
+  href="https://docs.github.com/en/actions/tutorials/use-containerized-services"
+  why="The official pattern for running a database (for example PostgreSQL) as a service *inside* CI — the advanced direction this task deliberately skips today."
+  when="Only once you actually need tests against PostgreSQL in CI. Not now."
+  focus="Adding a services: block to a workflow and pointing tests at it."
+/>
+
+<ResourceItem
+  label="Docker GitHub Actions"
+  href="https://docs.docker.com/build/ci/github-actions/"
+  why="Docker's own guide to building images in CI — the Buildx workhorse behind this task's CI image job."
+  when="While working through Build the Docker Image in CI."
+  focus="Adding buildx setup and a build step to a workflow."
+/>
+
+<ResourceItem
+  label="Docker + GitHub Actions"
+  href="https://docs.docker.com/guides/gha/"
+  why="Docker's end-to-end guide for building *and pushing* with GitHub Actions — the complete version of this task's publish job."
+  when="After the publish job runs, to deepen and confirm the login + push pattern."
+  focus="The full workflow and how the Docker Hub token is handled."
+/>
+
+## Reference Project
+
+One additional reference — a real, public repository that shows all of this working together:
+
+**[san99tiago/fastapi-docker-github-actions](https://github.com/san99tiago/fastapi-docker-github-actions)** — a sample project combining FastAPI, Docker, Docker Compose, pytest, Docker Hub, and GitHub Actions.
+
+**How to use it — as a reference only.** It is a map, not a photocopier. Very important, at the same volume level as the rest of this page:
+
+- Open it *after* you have gone through this task, and read it as a second worked example: look at its `Dockerfile`, its `compose.yaml` (or equivalent), its `.github/workflows`, and how its tests are wired.
+- Compare what it chose with what you built. Different examiners make different, both-correct choices — seeing *alternatives* deepens the understanding that the guided sections gave you.
+- **Do not copy its content.** Every file in your own project should be something you can explain line by line — and copying another project's files is the fastest way to have code you cannot defend. Our educational content stays original; the official Docker, GitHub, and FastAPI documentation is the technical source of truth for anything this site teaches.
+
+## Beyond This Learning Path
+
+You now run, test, and publish one service pair. In order of value, the natural next steps:
+
+1. **Tests against PostgreSQL in CI** — the containerized-services pattern turns your CI into a true Pg environment.
+2. **GitHub Container Registry** — publish to `ghcr.io` instead of (or in addition to) Docker Hub; the publish job changes only its `tags`.
+3. **Real deployment (CD)** — your image is delivered; the next stage pulls it on a server and runs it. This is the box left deliberately outside this task.
+4. **Multi-stage Dockerfiles** — build dependencies in one stage, ship only the runtime in the final image; noticeably smaller images.
+5. **Branch protection** — make the CI check *required*, so red builds cannot merge.
+
+The single most valuable follow-up is the registry-to-deployment pair: from "I can publish an image" to "I can ship an app."
+
+## A Note on How This Task Is Built
+
+This task is the deliberate second half of a two-part journey: the FastAPI path taught you to *write* a backend; this one teaches you to *package, run, and automate* it. Every section follows the same four-beat loop — explain, show, do, verify, move forward — and every technical claim above defers to the official resources in Curated Resources as the source of truth. When you finish with a containerized, PostgreSQL-backed, CI-tested, Docker Hub–published Task API, and an independent Employee API you did alone, you have crossed from "I wrote a backend" to "I can deliver a backend." That crossing, not any single command, is what this task exists to grow.
