@@ -20,6 +20,7 @@ export const docsMeta: DocsMeta = [
     pages: [
       { title: "FastAPI: A Guided Learning Path", slug: "fastapi" },
       { title: "Docker & CI/CD: A Guided Learning Path", slug: "docker-cicd" },
+      { title: "Authentication & Authorization: A Guided Learning Path", slug: "authentication-authorization" },
     ],
   },
   {

@@ -1,0 +1,1611 @@
+---
+title: "Authentication & Authorization: A Guided Learning Path"
+slug: "authentication-authorization"
+category: "learning-paths"
+summary: "A guided third learning path: add real users to the Task Management API you already built — registration, login, password hashing with Argon2, JWT access tokens, current-user dependencies, user-owned resources, and role-based authorization — with authentication and authorization test suites, and an independent Employee Management API built on your own."
+readingTime: 90
+---
+
+# Authentication & Authorization: A Guided Learning Path
+
+This is the **third technical task** in your internship. It is the natural next step on the **same Task Management API** you have been carrying forward. In the [first learning path](/docs/learning-paths/fastapi) you built the API. In the [second learning path](/docs/learning-paths/docker-cicd) you containerized it, gave it a real PostgreSQL database, and automated its tests. Now an uncomfortable question finally has to be answered: **right now, anyone who can reach your API can read, edit, and delete every task. Who are these people, and what are they allowed to do?**
+
+This task gives your backend the two capabilities every real system needs:
+
+- **Authentication** — *"Who are you?"* (the user proves who they are with credentials).
+- **Authorization** — *"What are you allowed to do?"* (the API decides what that user may touch).
+
+You will implement both properly: not "is there a token?" checks pasted over existing endpoints, but the real pattern — password hashing you can defend, signed access tokens you can explain, ownership rules that stop one user reading another user's private data, and roles that decide who may perform admin actions.
+
+Follow the sections in order. Each big practical section follows the same four beats as the previous paths:
+
+**Explain → Show → Do → Verify → Move forward**
+
+Move on only when you pass the checkpoint at the end of the section.
+
+## What You Will Build
+
+By the end of this task the **same Task Management API** has become a **multi-user, access-controlled backend**:
+
+| Piece | What it is | Why it is in the picture |
+|-------|-----------|--------------------------|
+| **User table** | A `User` model in the database | Where registered users, their password hashes, and their roles live |
+| **Registration** | `POST /register` | Creates an account: validates input, checks duplicates, hashes the password |
+| **Login** | `POST /login` | Verifies credentials and hands back a signed access token |
+| **JWT access token** | A signed, expiring credential | Proves to every later request that the bearer is a known user |
+| **Current-user dependency** | `get_current_user` | Every protected endpoint's entrance check: decode token → load user |
+| **Ownership rules** | `owner_id` on every task | A user only sees and changes their own tasks — the authorization layer |
+| **Roles** | `user` and `admin` | Simple role-based access control for admin-only operations |
+| **Tests** | `test_auth.py` | Locks in both the *authentication* and *authorization* behavior |
+
+The mental picture, from sign-up to a guarded request:
+
+```text
+someone signs up ──► POST /register ──► password hashed ──► user row in PostgreSQL
+        │                                        ┌───────────────────────┐
+        ▼                                        ▼                       │
+someone logs in ──► POST /login ──► JWT signed with JWT_SECRET ──► kept by the client
+                                                                         │
+        next request                                                      │
+        ┌────────────────────────────────────────────────────────────────┘
+        ▼
+ GET /tasks/{id} with header "Authorization: Bearer <token>"
+        │
+        ▼  FastAPI security dependency
+ verify token signature + expiry ──► find the user ──► ownership check ──► respond (200)
+                                                                    or 401 / 403 / 404
+```
+
+Your project folder grows a few new files and changes several existing ones:
+
+```text
+task-api/
+├── main.py            # your API — now with /register, /login, protected endpoints
+├── models.py          # Task table gains owner_id; new User table (with role)
+├── db.py              # unchanged from task 2 (DATABASE_URL engine + session)
+├── security.py        # NEW: password hashing (Argon2) + access-token creation
+├── test_main.py       # your existing tests, adjusted for authenticated endpoints
+├── test_auth.py       # NEW: the authentication + authorization test suite
+├── requirements.txt   # adds pwdlib[argon2], pyjwt, python-multipart
+├── .env.example       # adds JWT_SECRET (and documentation of it)
+└── .github/workflows/ci.yml   # unchanged — your new tests run automatically there
+```
+
+Every piece appears, is explained, and is verified below.
+
+## What You Will Learn
+
+<LearningObjectives items={[
+  "Explain the difference between authentication (who are you?) and authorization (what may you do?) with a real-life analogy",
+  "Store and verify passwords with Argon2 via pwdlib — never plaintext, never reversible",
+  "Register a user: validation, duplicate detection, and what is (and is not) stored",
+  "Explain what a JWT is, what its three parts contain, what signing means, and why it is signed, not encrypted",
+  "Log in with OAuth2 form data and receive an access token with an expiry",
+  "Protect an endpoint with the OAuth2PasswordBearer scheme and the current-user dependency",
+  "Tell the difference between being authenticated and being authorized to access one specific resource",
+  "Enforce ownership so users can only reach their own tasks, and explain why this is a security fix",
+  "Implement role-based authorization with user and admin roles, including a 403 for forbidden actions",
+  "Explain 401 vs 403 vs 404 vs 422 with real examples",
+  "Write dedicated authentication and authorization tests, including denied-access tests",
+  "Run the whole thing with Docker + PostgreSQL and inside the existing CI pipeline",
+  "Transfer all of the above to an unguided Employee Management API on your own"
+]} />
+
+## What You Already Know
+
+You are not starting from zero. This task *reuses* almost everything from the two previous ones:
+
+| From task 1 (FastAPI) | How it is reused here |
+|------------------------|-----------------------|
+| Path operations, Pydantic models, validation | The registration payload and every protected endpoint |
+| `HTTPException` + status codes | The 401 / 403 / 404 / 409 responses of the auth flow |
+| `TestClient` + pytest testing style | All the new authentication and authorization tests |
+| The concept of dependencies (`Depends`) | `get_current_user` is the centerpiece of the whole task |
+
+| From task 2 (Docker + CI/CD) | How it is reused here |
+|------------------------------|-----------------------|
+| SQLModel models + `DATABASE_URL` | The new `User` table and the `owner_id` column on tasks |
+| `db.py` engine and session | Every endpoint that reads or writes users and tasks |
+| `compose.yaml` | Gains one extra environment variable, nothing more |
+| `ci.yml` | Unchanged — the new tests run in the existing pipeline |
+
+If any of those ideas feel shaky, the two previous pages are linked throughout this one. This task adds *identity and access control on top of a backend you already know how to write* — it does not ask you to learn a new framework.
+
+## Prerequisites
+
+You should already have, from the two previous tasks:
+
+- **The finished Task Management API** from task 2 — SQLModel tables, `DATABASE_URL` environment variable, `db.py`, `compose.yaml`, and a passing `pytest` suite. This is your vehicle.
+- **Docker Desktop / Engine** and your **GitHub repository** working, from task 2.
+
+New in this task:
+
+- `pip install pwdlib[argon2] pyjwt python-multipart email-validator` — install these when the sections below introduce them (each one is explained before it is used). `python-multipart` comes with `fastapi[standard]`, but listing it in `requirements.txt` makes the dependency explicit.
+
+<Callout kind="info" title="Complete tasks 1 and 2 first">
+This task assumes the Task Management API from the [FastAPI path](/docs/learning-paths/fastapi), upgraded with PostgreSQL and a passing CI pipeline in the [Docker & CI/CD path](/docs/learning-paths/docker-cicd), is finished. The steps that follow *change existing files* — skipping the earlier tasks means editing a project you never built.
+</Callout>
+
+### Environment check
+
+Confirm the project still runs and tests green before you touch anything:
+
+```bash
+source .venv/bin/activate
+pytest
+uvicorn main:app --reload
+```
+
+You should see your existing tests pass and the API serve on http://127.0.0.1:8000. Then stop the server (`Ctrl+C`) — the rest of this task edits `main.py` pieces and you will verify each one with tests, not with a browser session.
+
+**Understand this before moving forward:** you can state, in one sentence each, what the previous task left you with: database-backed tasks, a Compose stack, and a CI workflow that runs `pytest`.
+
+## Authentication vs Authorization
+
+Two questions. They sound similar, they are different, and confusing them is the most expensive mistake in security engineering.
+
+**Authentication answers: "Who are you?"** It is the *proof of identity*. The user offers something only they should have — typically a username plus a password — and the server checks that proof. You cannot fix a problem as *"this is Alice"* without authentication.
+
+**Authorization answers: "What are you allowed to do?"** It is the *permission check*. Once the server knows *which* user is talking, it decides whether that user may perform the requested action on the requested resource. You cannot decide whether Alice may delete task 42 unless you first know the request is from Alice.
+
+A daily-life version makes the split unforgettable.
+
+- At the airport, **authentication** is the passport check: *"Show me who you are."* The officer confirms the document is genuine and matches your face.
+- **Authorization** is the boarding pass: *"Show me what you are allowed to do."* The pass says which gate, which zone, which seat — even though your passport is perfectly valid. A valid passport does not let you into the cockpit.
+
+That is the whole mental model this task runs on:
+
+> **Authentication proves you are you. Authorization proves you may do *this one thing*.**
+
+They also fail differently, and those failures use different HTTP status codes (covered in the errors section below). Notice the boundary cases now, because tests depend on them:
+
+- A user who is **not authenticated** (no token, or a bad token) gets rejected at the *identity* gate — `401`.
+- A user who **is authenticated** but tries something they may not do (someone else's task, an admin action) passes the identity gate and is rejected at the *permission* gate — `403`.
+
+Both rejections keep the request from succeeding. But they answer different questions, and — a fact you will use all task long — **an authenticated user is NOT automatically authorized to do anything.** That single sentence is the entire plot of sections *User-Owned Resources* and *Authorization and Roles*.
+
+**Understand this before moving forward:** using the airport analogy, explain the difference between a passport and a boarding pass, and give one example of "authenticated but not authorized" that could happen in the Task API.
+
+## How Authentication Works
+
+Here is the complete authentication flow, before any code:
+
+```text
+1. User registers           2. Server stores a HASH of the password     3. User logs in
+   ┌───────────┐              ┌──────────────────────────────┐            ┌──────────┐
+   │ "alice +   │ ──────────► │ username, email, argon2 hash │ ◄────────── │ "alice + │
+   │  password" │              │ of password, role            │            │ password" │
+   └───────────┘              └──────────────────────────────┘            └──────────┘
+                                                                                │ verify hash
+                                                                                ▼
+                                     4. Successful login ──► server issues a signed access token
+                                     5. Client sends that token on every later request:
+                                        Authorization: Bearer <token>
+                                     6. Server verifies the token signature + expiry,
+                                        identifies the user, and only then asks:
+                                        "is this user allowed to do this?"
+```
+
+Walk through the six steps as one story:
+
+1. **The user registers.** They tell the server "I am Alice" and give a password. The server never trusts the bare claim — that is what step 2 is for.
+2. **The server stores a hash of the password**, not the password itself. If the database is ever stolen, the thief gets unreadable hashes, not working credentials. (The next section but one explains why that matters so much.)
+3. **The user logs in.** They send the same username and password again, but now the server compares (verifies) their input against the stored hash.
+4. **A successful login produces an access token** — a short-lived, signed proof of identity. From now on the user does not send their password again; they send the token. This is a huge security improvement by itself: the password crosses the wire once, at login, instead of with every single request.
+5. **The client sends the token on every request** in an HTTP header: `Authorization: Bearer <token>`. "Bearer" means "whoever holds this token is the user it describes."
+6. **The server verifies the token** (signature valid? not expired?), loads the user, and *then* runs the authorization check for the specific endpoint.
+
+The token is the bridge between steps 4 and 6. A token the client invents is worthless, because the server checks its signature. A token that is real but expired is worthless, because the server checks its expiry. Both facts translate directly into test cases later.
+
+Errors deliberately surface at the two gates you met above: missing/bad/expired identity → `401` at the identity gate; valid identity but insufficient permission → `403` at the permission gate.
+
+**Understand this before moving forward:** describe steps 1–6 in your own words without looking, and say what a step-5/6 world gets you that a "send the password every time" world does not.
+
+## How JWT Works
+
+**JWT** stands for *JSON Web Token*. It is the format the access token uses. A JWT is a string that looks like a random blob and is actually three readable parts glued with dots:
+
+```text
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+    . e30
+    . t9vMunvScKTOc0iFxQJj5nXOMF1V7Zq1BSLbqHdbv9I
+```
+
+Every JWT is `header.payload.signature`. It is *just text* — everyone can read it. That is the least intuitive thing about JWTs, and the most important, so we start there.
+
+### The three parts of a JWT
+
+**Header** — says *how* the token was signed.
+
+```text
+{ "alg": "HS256", "typ": "JWT" }
+```
+
+`HS256` means "hash-based signature with SHA-256", a symmetric signing algorithm: the same secret signs and verifies. There is nothing secret in the header; it is routing information.
+
+**Payload** — the *claims*: the actual statements about the user. Your API will use three:
+
+```text
+{ "sub": "12", "iat": 1781234467, "exp": 1781236267 }
+```
+
+- `sub` (**subject**) — who the token is about. Convention: keep it a *stable identifier* you can look up (your user's database id, or username). Do not put the whole user object in here.
+- `iat` (**issued at**) — when the token was created, as a Unix timestamp.
+- `exp` (**expiration**) — when the token stops being valid, as a Unix timestamp. The server *must* reject `exp`-in-the-past tokens; PyJWT does this automatically.
+
+**Signature** — the security part. It is computed as:
+
+```text
+signature = HMAC_SHA256( secret, header + "." + payload )
+```
+
+The server signs with the `JWT_SECRET` only it knows. Anyone can *write* the header and payload they want — but without the secret they cannot produce a matching signature, so the server will throw their token away.
+
+### Signed, not encrypted
+
+This distinction — stated bluntly because it is the one job-critical fact of this whole section:
+
+> **A JWT is SIGNED, not ENCRYPTED.** Signing proves *who wrote it*. Encryption would hide *what it says*. JWT signing does the first and not the second.
+
+Read the payload again: it is base64 text, trivially decoded by anyone. The token identifies the user; it does not keep secrets. So the rules fall out naturally:
+
+- **Never put secrets in the payload** — no passwords, no hashes, no internal data you would not print on a receipt. The payload is a public label: "this token is about user 12 until timestamp X."
+- **Never let the client be the source of truth.** The client's token is *input*. The server re-verifies the signature, re-checks the expiry, and looks the user up in the database. If the payload says "user 12 is an admin" but the database says role `user`, the database wins.
+
+A wax-seal analogy instead of a safe: a JWT is a *sealed letter slathered in a readable envelope*. Anyone can slide the paper out and read it. But the wax seal carries the royal signet ring's impression, and only the holder of the ring (the server and its `JWT_SECRET`) can press a seal that matches. A changed letter over a forged seal fails inspection instantly.
+
+Two more behaviors to internalize, both of which the tests will prove:
+
+- **The client cannot be trusted to keep the token honest — but the signature check makes that irrelevant.** The server throws away anything it did not sign.
+- **The token's only power is its expiry.** A stolen token is a valid token until `exp`. That is *why* expiry exists: it puts a time limit on how long a stolen credential is worth anything. Thirty minutes is a sane default for an access token. Longer-lived refresh tokens and revocation are "beyond this path" territory — deliberately.
+
+`exp` is checked by the decode step automatically (PyJWT raises `ExpiredSignatureError` for you). You do not hand-roll expiry comparisons; you simply do not catch that case as "valid."
+
+**Understand this before moving forward:** name the three parts of a JWT, say what each contains, and explain — out loud, like a colleague asked you — why a JWT is "signed, not encrypted" and what that means about what may (and may not) go in the payload.
+
+## Password Hashing
+
+Time for the code-level heart of authentication: what the server *stores* when a user registers.
+
+**Why not store the password?** Think about real damage. If a database containing plaintext passwords leaks (a stolen backup, a SQL injection, a misconfigured export), every account is instantly compromised — and most people reuse passwords, so the leak cascades into their email, their banking, everything. If the database contains *hashes*, the leaked data is almost useless to thieves: hashing is a **one-way** operation. Go ahead and try the arithmetic: there is no subtraction from a hash back to the password. An attacker with a leaked hash can only *guess* passwords one at a time and check each guess — and modern algorithms make each guess slow on purpose.
+
+**So the rules are absolute:**
+
+- Never store a plaintext password. Ever.
+- Never write your own password hashing. Use a battle-tested library.
+- Prefer a modern, slow, memory-hard algorithm. The current FastAPI security tutorial recommends **Argon2**, and `pwdlib` provides it with `PasswordHash.recommended()`.
+
+`pwdlib` is the library the official FastAPI documentation now uses for password hashing (passlib, the older default, is unmaintained and breaks on Python 3.13+). Install it and the token library now:
+
+```bash
+pip install "pwdlib[argon2]" pyjwt python-multipart email-validator
+```
+
+Now create a new file, `security.py`, next to `main.py`:
+
+```python
+import os
+from datetime import datetime, timedelta, timezone
+
+import jwt
+from pwdlib import PasswordHash
+
+JWT_SECRET = os.getenv("JWT_SECRET")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+if not JWT_SECRET:
+    raise RuntimeError("JWT_SECRET environment variable is not set")
+
+password_hash = PasswordHash.recommended()
+
+DUMMY_HASH = password_hash.hash("not-a-real-password")
+
+
+def get_password_hash(password: str) -> str:
+    return password_hash.hash(password)
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return password_hash.verify(plain_password, hashed_password)
+
+
+def create_access_token(subject: str, expires_minutes: int = ACCESS_TOKEN_EXPIRE_MINUTES) -> str:
+    expire = datetime.now(timezone.utc) + timedelta(minutes=expires_minutes)
+    payload = {"sub": subject, "iat": int(datetime.now(timezone.utc).timestamp()), "exp": expire}
+    return jwt.encode(payload, JWT_SECRET, algorithm=ALGORITHM)
+```
+
+Read it like a security reviewer, because that is now your job:
+
+- `password_hash = PasswordHash.recommended()` builds a hasher with the recommended **Argon2** settings. `hash()` produces a new hash with a random salt every call; `verify()` compares a candidate against a stored hash — timing-safe, salted, and done for you.
+- `JWT_SECRET` is read from the environment and the app **refuses to start without it** (`raise RuntimeError`). This is deliberate: a missing secret must fail loudly at startup, not silently produce tokens anyone could forge. The mistake it prevents is "forgot to set the variable, everything 'works', secrets are weak."
+- `DUMMY_HASH` exists for one subtle reason you will meet at login: a wrong-username and wrong-password should take the same time to reject. If the server returned instantly for unknown usernames, an attacker could probe which usernames exist just by timing the responses.
+- `create_access_token` builds the `sub` (subject) and `exp` (expiry) claims exactly as described in the JWT section and asks PyJWT to sign with `HS256`.
+
+<Callout kind="danger" title="Traces are not checks">
+Somewhere out there, tutorials hash passwords with `hashlib.sha256(password.encode()).hexdigest()`. That is *not* secure — raw SHA-256 is astronomically fast, so leaked hashes could be guessed at billions of attempts per second with cheap GPUs. Argon2 and friends exist precisely because they are **slow and memory-hard**. When you evaluate any tutorial or library, the question is never "does it hash?" but "with what, and how slow is it on purpose?"
+</Callout>
+
+Set the secret now (details in the Docker section below, but it costs one command) and verify the hashing behavior:
+
+```bash
+export JWT_SECRET="$(openssl rand -hex 32)"
+python -c "
+from security import get_password_hash, verify_password
+h = get_password_hash('hunter2-hunter2')
+print(h)
+print(verify_password('hunter2-hunter2', h))   # True
+print(verify_password('wrong-password', h))    # False
+"
+```
+
+Run it twice and notice the printed hash **changes every time**, even for the same password — Argon2 salts each hash randomly. That is why the stored value, and verification against it, are both unique per user.
+
+**What is stored, then?** A string like:
+
+```text
+$argon2id$v=19$m=65536,t=3,p=4$<random salt>$<digest>
+```
+
+This is the hash and its parameters *in one self-describing string*: algorithm, version, cost factors, salt, and digest. The library parses it back when verifying. Nothing in there is the password.
+
+**Understand this before moving forward:** explain to a colleague, in two sentences, why the Task API stores an Argon2 string instead of a password — and why "it can never be un-hashed" is exactly what you want.
+
+## Database User Model
+
+The database gains a `User` table, and every existing `Task` gains an `owner_id` pointing at its owner. This is the storage layer of both authentication (users exist) and authorization (tasks know their owners).
+
+Replace the contents of `models.py` with:
+
+```python
+from datetime import datetime
+
+from sqlmodel import Field, Relationship, SQLModel
+
+
+class User(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    username: str = Field(min_length=3, max_length=50, index=True, unique=True)
+    email: str = Field(max_length=120, index=True, unique=True)
+    hashed_password: str
+    role: str = Field(default="user")
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    tasks: list["Task"] = Relationship(back_populates="owner")
+
+
+class Task(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    title: str = Field(min_length=1, max_length=120)
+    description: str | None = None
+    completed: bool = False
+    owner_id: int = Field(foreign_key="user.id")
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    owner: "User" = Relationship(back_populates="tasks")
+```
+
+What changed, and why:
+
+- **`User.id`** — used as the subject of every access token (`sub`) and as `Task.owner_id`.
+- **`User.username` and `User.email` are `unique=True`** — the database itself refuses a second row with the same value. You will still do an application-level duplicate check at registration (for a friendlier error), but the unique constraint is the *final* guarantee that two users can never share a username. Both are `index=True` so "find user by username" stays fast.
+- **`hashed_password`** — the ONLY password-related column, and it stores the Argon2 string. There is deliberately no `password` column, and nothing named `plaintext` anywhere in the schema.
+- **`role`** — defaults to `"user"`. The two values in this task are `"user"` and `"admin"`. Where the role lives matters: it lives **in the database**, the server's source of truth — never in the client, and never decided by request data.
+- **`Task.owner_id` with `foreign_key="user.id"`** — every task must point at an existing user. This is the column every authorization check in the next sections compares against. The `created_at` and `Relationship` lines give timestamps and let you write `user.tasks`.
+
+Now make the database aware of the new table by recreating it (this wipes existing rows — fine for a learning project):
+
+```bash
+rm -f ./tasks.db
+python -c "
+from sqlmodel import SQLModel
+import db, models
+SQLModel.metadata.create_all(db.engine)
+print(SQLModel.metadata.tables.keys())
+"
+```
+
+You should see `user` and `task` printed. From here on, `db.py` and its `get_session` dependency stay exactly as task 2 left them — the session is what every auth endpoint uses to load and store users.
+
+<Callout kind="info" title="schema.sql was invented here, table names are conventional">
+SQLModel derives table names from class names — `User` becomes the `user` table, `Task` becomes `task`. Column names come from the attributes. Find these in PostgreSQL later with `\dt` if you want to look at the real rows during the Docker section.
+</Callout>
+
+**Understand this before moving forward:** point at each column of `User` and say what it is for, and say what `foreign_key="user.id"` on `Task` guarantees about every task in the database.
+
+## User Registration
+
+The first endpoint anyone touches, and the least glamorous to protect: **`POST /register`**. For security-minded designers this endpoint has its own discipline.
+
+### What the API receives
+
+A JSON body describing the new identity. Add this near the top of `main.py`, above your app instance:
+
+```python
+from datetime import datetime
+
+from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from pydantic import BaseModel, EmailStr, Field
+from sqlmodel import Session, select
+from jwt.exceptions import InvalidTokenError
+
+from db import get_session
+from models import Task, User
+from security import (
+    JWT_SECRET,
+    ALGORITHM,
+    DUMMY_HASH,
+    create_access_token,
+    get_password_hash,
+    verify_password,
+)
+
+app = FastAPI(title="Task Manager API")
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+
+
+class UserCreate(BaseModel):
+    username: str = Field(min_length=3, max_length=50)
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=72)
+
+
+class UserOut(BaseModel):
+    id: int
+    username: str
+    email: str
+    role: str
+    created_at: datetime
+```
+
+Notable choices and why:
+
+- `UserCreate` uses Pydantic constraints so **validation happens before your function runs**: too-short username, a `password` under 8 characters, or a malformed email all return `422` automatically (this is the "validation error" status you met in task 1). `EmailStr` needs the `email-validator` package you installed — the official FastAPI docs mention this exact dependency.
+- `password` is capped at `max_length=72` because Argon2 (like its cousins) has a length ceiling on the input it processes; a documented cap prevents a confusing mismatch between "what the user typed" and "what got hashed." Note what is *not* here: no limits that force short or weak passwords — length minimums and caps, not complexity theater.
+- `UserOut` is the **response model**: it declares exactly what the API will ever reveal about a user — `id`, `username`, `email`, `role`, `created_at`. Because `hashed_password` is not in `UserOut`, FastAPI filters it out of every response. This is the "don't expose unnecessary sensitive information" rule made structural rather than remembered. (You already met input-vs-output model separation in task 1; it now earns its keep as a security control.)
+
+### The endpoint itself
+
+Append this to `main.py`:
+
+```python
+@app.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
+def register(user_in: UserCreate, session: Session = Depends(get_session)):
+    existing = session.exec(
+        select(User).where((User.username == user_in.username) | (User.email == user_in.email))
+    ).first()
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A user with that username or email already exists",
+        )
+    user = User(
+        username=user_in.username,
+        email=user_in.email,
+        hashed_password=get_password_hash(user_in.password),
+    )
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user
+```
+
+Step by step:
+
+1. **Duplicate check.** Before creating, ask the database whether a row already exists with this username *or* this email. If yes → `409 Conflict` (the honest status for "it already exists"). The `unique=True` constraints stay as the backstop.
+2. **Hash, never store.** The only password material that ever touches the database is `hashed_password=get_password_hash(user_in.password)`. The raw `user_in.password` exists in memory for the length of the request and then ceases to exist. There is no code path that writes it anywhere.
+3. **Persist.** `session.commit()` writes the row; `session.refresh(user)` loads the database-generated `id` so the response can include it.
+4. **Return the safe shape.** Because the route declares `response_model=UserOut`, the response contains only the public fields — and whenever you look at a `User` in the next sections, remember `hashed_password` is sitting right there in the object, so *leak it only if you meant to*.
+
+Run it and prove the behavior with curl:
+
+```bash
+export JWT_SECRET="$(openssl rand -hex 32)"
+uvicorn main:app --reload
+```
+
+```bash
+curl -s -X POST http://127.0.0.1:8000/register \
+  -H "Content-Type: application/json" \
+  -d '{"username":"alice","email":"alice@example.com","password":"alice-supersecret"}'
+```
+
+```json
+{"id":1,"username":"alice","email":"alice@example.com","role":"user","created_at":"..."}
+```
+
+Notice: no password field, and no `hashed_password` in the response — because of the response model. Now prove the rules you wrote:
+
+```bash
+# duplicate username -> 409
+curl -s -o /dev/null -w "%{http_code}\n" -X POST http://127.0.0.1:8000/register \
+  -H "Content-Type: application/json" \
+  -d '{"username":"alice","email":"other@example.com","password":"another-secret-123"}'
+
+# too-short password -> 422
+curl -s -o /dev/null -w "%{http_code}\n" -X POST http://127.0.0.1:8000/register \
+  -H "Content-Type: application/json" \
+  -d '{"username":"bob","email":"bob@example.com","password":"short"}'
+
+# bad email -> 422
+curl -s -o /dev/null -w "%{http_code}\n" -X POST http://127.0.0.1:8000/register \
+  -H "Content-Type: application/json" \
+  -d '{"username":"bob","email":"not-an-email","password":"a-real-password-1"}'
+```
+
+Check the automatic docs at http://127.0.0.1:8000/docs — `POST /register` lists its schema, its validation rules, and even shows the `422` examples, generated directly from your `UserCreate` model.
+
+**Understand this before moving forward:** explain (a) why the raw password never reaches the database, (b) why the response cannot contain the hash, and (c) why duplicates need *both* an application check and unique database constraints.
+
+## Login and Access Tokens
+
+Registration created the identity. Login *verifies* it and issues the token that makes every later request fast and safe.
+
+### How the credentials are received
+
+FastAPI's official approach for a username/password login is the **OAuth2 Password flow**. Two parts matter:
+
+- `OAuth2PasswordRequestForm` — a ready-made dependency that reads `username` and `password` as **form data** (not JSON). The OAuth2 spec fixes the field names: they must literally be `username` and `password` — your own database columns can be named anything, but this login endpoint speaks the spec. Form data is why `python-multipart` is installed.
+- `OAuth2PasswordBearer(tokenUrl="login")` — declared above in `main.py`. Two jobs: it tells FastAPI "this API accepts Bearer tokens, obtained at the `/login` endpoint", which adds the right security scheme to the automatic OpenAPI docs (you will see an Authorize button in Swagger); and it is the dependency that *extracts* the token from the `Authorization` header in protected endpoints (the very next section).
+
+### The login endpoint
+
+Append this to `main.py`:
+
+```python
+@app.post("/login")
+def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    session: Session = Depends(get_session),
+):
+    user = authenticate_user(session, form_data.username, form_data.password)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    token = create_access_token(subject=str(user.id))
+    return {"access_token": token, "token_type": "bearer"}
+```
+
+And the helper it calls, also in `main.py` (or in `security.py` — your call; it reads the database, so `main.py` is fine):
+
+```python
+def authenticate_user(session: Session, username: str, password: str) -> User | None:
+    user = session.exec(select(User).where(User.username == username)).first()
+    if user is None:
+        verify_password(password, DUMMY_HASH)  # keep timing uniform
+        return None
+    if not verify_password(password, user.hashed_password):
+        return None
+    return user
+```
+
+Read the security decisions inside this tiny endpoint:
+
+- **Look up by username, then verify the hash.** Finding the user is a database `SELECT`. Verifying is `verify_password(password, user.hashed_password)`. Only if *both* succeed is there a user to return.
+- **One error message for both failures.** Whether the username does not exist or the password is wrong, the response is identical: `Incorrect username or password`, `401`. The API must not reveal *which* half failed — that information is exactly what an attacker probing for valid usernames is fishing for. (The official tutorial treats the missing-user case with a dummy-hash verify for the same reason on *timing*.)
+- **The `WWW-Authenticate: Bearer` header** on the `401` — the standard signal that "this endpoint authenticates with Bearer tokens, and your token (or lack of one) was rejected." FastAPI's docs include it for good reason; it costs nothing and makes automated clients behave correctly.
+- **The token lasts 30 minutes.** `create_access_token(subject=str(user.id))` embeds the user's id as `sub` and the default 30-minute `exp`. The response sends `token_type: "bearer"` alongside it — the client echoes that back in the `Authorization` header of every later request.
+
+<Callout kind="warning" title="Why 401 here but 403 in authorization sections">
+`/login` is the *identity gate*: bad credentials mean you could not authenticate, so it is `401 Unauthorized`. When a *validly authenticated* user later reaches for something they may not have, that is the *permission gate* and it will be `403 Forbidden`. Different gates, different codes. Both are tested later.
+</Callout>
+
+Try it:
+
+```bash
+curl -s -X POST http://127.0.0.1:8000/login \
+  -d "username=alice" -d "password=alice-supersecret"
+```
+
+```json
+{"access_token":"eyJhbGciOiJIUzI1NiIs...","token_type":"bearer"}
+```
+
+Then decode the token yourself — lessons from the JWT section, now live. Copy the `access_token` value and run:
+
+```bash
+python -c "
+import sys, base64, json
+token = sys.argv[1]
+header, payload, sig = token.split('.')
+def b64(s): return base64.urlsafe_b64decode(s + '=' * (-len(s) % 4)).decode()
+print(b64(header))
+print(b64(payload))
+" "<paste your token here>"
+```
+
+You will see the readable header and payload — proof that the payload is *not encrypted* — including the `exp` timestamp. Now confirm the failure paths:
+
+```bash
+# wrong password -> 401
+curl -s -o /dev/null -w "%{http_code}\n" -X POST http://127.0.0.1:8000/login \
+  -d "username=alice" -d "password=definitely-not-it"
+
+# unknown username -> 401 with the SAME detail message
+curl -s -X POST http://127.0.0.1:8000/login \
+  -d "username=nobody" -d "password=whatever-password"
+```
+
+**Understand this before moving forward:** describe the login trip end-to-end — form data in, user lookup, hash verify, identical error for both failures, token out with `sub` and `exp` — and say why the payload of a token must never be treated as secret.
+
+## Protecting Endpoints
+
+A token is only useful if endpoints demand it. This section makes arbitrary endpoints **require authentication**: no token, no entry.
+
+The mechanism, from the protected endpoint's point of view:
+
+```text
+Client                                            FastAPI backend
+  │                                                    │
+  │  1. GET /tasks/12                                  │
+  │     Authorization: Bearer <token>                  │
+  │ ─────────────────────────────────────────────────► │
+  │                                                    │ 2. oauth2_scheme reads the
+  │                                                    │    Authorization header (or 401)
+  │                                                    │ 3. get_current_user decodes the
+  │                                                    │    JWT: signature + expiry, then
+  │                                                    │    loads the user from the DB
+  │  4. 200 (or 401)                                   │ 5. the endpoint itself then runs
+  │ ◄────────────────────────────────────────────────── │    its OWN authorization checks
+```
+
+Your first protected endpoint, in `main.py`:
+
+```python
+@app.get("/users/me", response_model=UserOut)
+def read_me(current_user: User = Depends(get_current_user)):
+    return current_user
+```
+
+Simple on purpose: it does nothing but *prove* the dependency worked — `current_user` already contains the full user row when the function starts. The intelligence lives in `get_current_user`:
+
+```python
+def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    session: Session = Depends(get_session),
+) -> User:
+    credentials_error = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])
+    except InvalidTokenError:
+        raise credentials_error
+
+    user_id = payload.get("sub")
+    if user_id is None:
+        raise credentials_error
+
+    user = session.get(User, int(user_id))
+    if user is None:
+        raise credentials_error
+    return user
+```
+
+Why each line is a security decision, not a convenience:
+
+- **`token: str = Depends(oauth2_scheme)`** — the gate at the door. If the `Authorization` header is missing or malformed, `oauth2_scheme` answers `401` before your code runs. Otherwise it hands you the raw token string.
+- **`jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])`** — the signature check. PyJWT rebuilds the signature with the same secret and compares; anything not signed by your server raises `InvalidTokenError`. **The `algorithms=[ALGORITHM]` list is not decorative** — pinning the algorithm prevents classic confusion attacks that slip in weaker algorithms when it is left unset. This is official FastAPI tutorial behavior, copied deliberately.
+- **The single `InvalidTokenError` catch** — one exception class covers garbage tokens, wrong signatures, *and* expired tokens (expiry is a subclass of the same error). All of them reduce to the same `401`. There is no code path where a bad token is treated as a good one, and no code path that distinguishes "expired" loudly in an internal detail leak.
+- **`session.get(User, int(user_id))`** — the token says "user 12", and the server *re-checks* that against the database. A token for a deleted user is worthless because there is no row to find. (Lazy-loaded users, cache staleness, and "should I hit the DB every request?" are questions for the Beyond section — the correct default for a beginner is: always look the user up.)
+- **`sub` must be a string** — JWT audiences and tooling expect `sub` as text, so `create_access_token` did `str(user.id)` and here you convert back. This is why the coercion line exists.
+
+The same dependency, chained: you can already see how this composes. `get_current_user` depends on `oauth2_scheme` and `get_session`; any endpoint that wants the current user just depends on `get_current_user`. In the next sections that one dependency powers both ownership checks and role checks — the pattern is called dependency composition, and it is how FastAPI keeps security logic out of the route bodies.
+
+Test it now: hit the endpoint from Swagger using the Authorize button (`/docs`), paste the login token, and `/users/me` returns alice's public data. Then try it without any token — `401`.
+
+**Understand this before moving forward:** trace the five numbered boxes in the diagram above for a request that arrives without a token, with a forged token, and with a valid token — and say which box answers `401` in each case.
+
+## Getting the Current User
+
+The previous section's `get_current_user` is the *entire* authentication layer, so it deserves its own checkpoint:
+
+- **It converts "there is a token" into "there is a user."** That single conversion is the difference between a system that checks *whether the client sent something* and a system that knows *who is talking*.
+- **It never trusts the token by itself.** Three independent proofs happen inside: header present, signature valid and expiry honored (`jwt.decode`), and the row exists in the database. The token is a *claim*, not evidence; the DB row is evidence.
+- **It is reusable everywhere.** Because it is a `Depends`, you attach a user to *any* endpoint by writing `current_user: User = Depends(get_current_user)` and letting FastAPI run the whole chain (token → decode → fetch) for you. No copying. No forgetting. The official FastAPI security tutorial builds this exact dependency and calls it "*get current user*".
+- **Naming is load-bearing.** This is `get_current_user`, not `get_current_authenticated_person_who_can_do_anything`. Authentication ends here. From this line down, every route function must remember: *an authenticated user is not yet authorized to do anything.*
+
+Holding that thought is actually the entire next section.
+
+**Understand this before moving forward:** with the code closed, write the signature of `get_current_user` and list the three proofs it performs, then explain why `/tasks/` routes should NOT simply assume an authenticated user can see every task.
+
+## User-Owned Resources
+
+This is the crux of the whole task. It is also the lesson that separates "authentication added" from "security done."
+
+### The security problem
+
+Here is a plausible-looking task endpoint — the one this section exists to destroy:
+
+```python
+# INSECURE — do not write this
+@app.get("/tasks/{task_id}", response_model=TaskOut)
+def get_task(task_id: int, current_user: User = Depends(get_current_user)):
+    task = session.get(Task, task_id)
+    if task is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return task
+```
+
+It requires a *token*. It even verifies the user against the database. And it is still broken, because of one missing question. **The endpoint confirms the caller is authenticated — but never checks whether the task belongs to them.**
+
+Walk the damage. Alice logs in, gets a valid token, and creates task 25. Bob logs in too — he is *also* a perfectly authenticated user. Bob now sends `GET /tasks/25` with *Bob's* valid token. The endpoint looks up task 25, finds it, and returns it. Alice's private task, delivered to Bob. It is not a matter of guessing a magic URL — task ids are sequential integers, so enumerating `10..200` is trivial. This exact class of bug has a name and an entire OWASP reference: **Insecure Direct Object Reference** (IDOR), the most common member of the broken-access-control family that tops OWASP's Top 10.
+
+The distinction the task keeps hammering:
+
+> **Authentication asks "is this you?" Authorization asks "may *you* touch *this*?"**
+
+Bob is authenticated. What fails is *authorization for this specific resource*. The failure mode is not `401` (Bob's identity is fine) — his request is validly made by an authenticated user and must be rejected as forbidden: `403`. This is exactly the "authenticated but not authorized" case the very first concept section promised.
+
+### The fix: make ownership part of the dependency
+
+FastAPI makes the check hard to forget by folding it into the request's dependency chain:
+
+```python
+def get_own_task(
+    task_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+) -> Task:
+    task = session.get(Task, task_id)
+    if task is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+    if task.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this task",
+        )
+    return task
+```
+
+And now every task-by-id endpoint stops doing its own access control and *depends on the check*:
+
+```python
+@app.get("/tasks/{task_id}", response_model=TaskOut)
+def get_task(task: Task = Depends(get_own_task)):
+    return task
+```
+
+What changed, and why the shape matters:
+
+- **One dependency, three gates, run before the route function executes.** The dependency loads the task, rejects `404` if it does not exist, rejects `403` if the owner is someone else, and only then hands a *validated-and-owned* task to the route. The route function cannot receive an unowned task — there is no code path left open for a developer to forget the check later.
+- **The comparison is `task.owner_id != current_user.id`** — the only statement in this whole app that expresses "is this resource yours?" The column from the Database User Model section and the dependency from the current-user section collide exactly here.
+- **403 vs 404, chosen deliberately.** A non-existent task (404) and someone else's task (403) are different facts, and this API says so out loud. Some APIs return 404 for both to avoid confirming that the resource exists at all — a defensible choice, but for a learning API the *honest* 403 teaches you, in tests, that the authorization layer really fired. OWASP's authorization guidance is to perform access control on every request, server-side; both styles satisfy it.
+
+Now the other task endpoints — same dependency, same insistence:
+
+```python
+@app.post("/tasks/", response_model=TaskOut, status_code=status.HTTP_201_CREATED)
+def create_task(
+    task_in: TaskCreate,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    task = Task(**task_in.model_dump(), owner_id=current_user.id)
+    session.add(task)
+    session.commit()
+    session.refresh(task)
+    return task
+
+
+@app.get("/tasks/", response_model=list[TaskOut])
+def list_my_tasks(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    return session.exec(select(Task).where(Task.owner_id == current_user.id)).all()
+
+
+@app.put("/tasks/{task_id}", response_model=TaskOut)
+def update_task(
+    task_in: TaskCreate,
+    task: Task = Depends(get_own_task),
+    session: Session = Depends(get_session),
+):
+    for field, value in task_in.model_dump().items():
+        setattr(task, field, value)
+    session.add(task)
+    session.commit()
+    session.refresh(task)
+    return task
+
+
+@app.delete("/tasks/{task_id}")
+def delete_task(task: Task = Depends(get_own_task), session: Session = Depends(get_session)):
+    session.delete(task)
+    session.commit()
+    return {"ok": True}
+```
+
+Four behaviors, four security properties:
+
+- **Create** — the crucial line is `owner_id=current_user.id `. The client *cannot* choose the owner, because `TaskCreate` has no `owner_id` field. The owner comes from the identity the server authenticated. This is the "do not trust the client" rule in action: the client sends a title, the server decides who owns the task.
+- **List** — `where(Task.owner_id == current_user.id)` makes "my tasks" literally the SQL query. A user never learns how many tasks other users have, let alone what they contain.
+- **Update / Delete** — they take the *validated-and-owned* task via `get_own_task`. Bob's `DELETE /tasks/25` (Alice's task) hits the `403` inside the dependency before any deletion happens. There is no per-route repetition of "is this yours?" — it is structurally impossible to skip.
+- **The old task endpoints you built in tasks 1 and 2 are the victim here.** Your previous `/tasks/` routes did not know about `current_user` at all. Notice how small the change surface was: the paths, response shapes, and status codes barely moved; what changed is *who is allowed to reach them*.
+
+<Callout kind="danger" title="Client-side checks are decorations, not security">
+Hiding the "delete" button in a frontend is not access control. A user can always craft a raw HTTP request with curl — the frontend is irrelevant. Server-side checks, in the dependency that runs before your route, are the only thing that counts. OWASP's authorization guidance says exactly this: perform access control checks on the server, for every request, on the specific object being accessed.
+</Callout>
+
+After adding these, restart uvicorn and re-verify the flow with two users — Swagger's Authorize button can only hold one token, so use two curl sessions and two files:
+
+```bash
+# alice registers and logs in
+curl -s -X POST http://127.0.0.1:8000/register \
+  -H "Content-Type: application/json" \
+  -d '{"username":"alice","email":"alice@example.com","password":"alice-supersecret"}' > /dev/null
+ALICE_TOKEN=$(curl -s -X POST http://127.0.0.1:8000/login \
+  -d "username=alice" -d "password=alice-supersecret" | python -c "import sys,json;print(json.load(sys.stdin)['access_token'])")
+
+# alice creates a task and remembers its id
+ALICE_TASK=$(curl -s -X POST http://127.0.0.1:8000/tasks/ -H "Authorization: Bearer $ALICE_TOKEN" \
+  -H "Content-Type: application/json" -d '{"title":"Private"}')
+echo "$ALICE_TASK"
+
+# bob registers and logs in
+curl -s -X POST http://127.0.0.1:8000/register \
+  -H "Content-Type: application/json" \
+  -d '{"username":"bob","email":"bob@example.com","password":"bob-supersecret"}' > /dev/null
+BOB_TOKEN=$(curl -s -X POST http://127.0.0.1:8000/login \
+  -d "username=bob" -d "password=bob-supersecret" | python -c "import sys,json;print(json.load(sys.stdin)['access_token'])")
+
+# bob tries to read alice's task -> 403
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8000/tasks/1 -H "Authorization: Bearer $BOB_TOKEN"
+
+# alice reads her own task -> 200
+curl -s http://127.0.0.1:8000/tasks/1 -H "Authorization: Bearer $ALICE_TOKEN"
+```
+
+The `403` from Bob's request, and the `200` from Alice's, are the visible proof that IDOR is fixed. This pair of responses will also be a test at the end of the task.
+
+**Understand this before moving forward:** reproduce, in your own words, the attack on the "INSECURE" endpoint at the top of this section — who is authenticated, who is unauthorized, and which HTTP status answers — then say where `owner_id` is set and where it is checked.
+
+## Authorization and Roles
+
+Ownership is one kind of authorization. The other is **role-based access control (RBAC)**: even for resources you do not "own," some actions are reserved for a class of privileged users. In this task: the `admin` role.
+
+### What a role is
+
+A role is a simple attribute on the user: the `role` column from the user model. `"user"` is the default for everyone who registers; `"admin"` is a designation that only some accounts have. That is the whole data model of RBAC — a single string on the user row. The sophistication is all in *how the API reads that attribute and gates actions on it*.
+
+The design decisions are deliberately minimal:
+
+- **The role lives in the database**, because the database is the server's source of truth. It is never accepted from the client (no `role` field in `UserCreate`), and never read from the token payload. The token may only say *who* you are; the database says *what* you may do. (Some systems cache role claims inside tokens — that is an optimization with a correct-answer expiry problem, and out of scope. Reading the DB is unambiguously correct, if slightly slower.)
+- **Two roles, no hierarchy machinery.** This task teaches the concept: `user` and `admin`, with explicitly enumerated admin operations. Do not design an enterprise permission-matrix framework here; that is a *beyond* topic.
+
+### An admin-only operation
+
+Give admins something real to do: view every registered user. Normal users must not see the roster. A dependency expresses the rule once:
+
+```python
+def require_admin(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin privileges required",
+        )
+    return current_user
+```
+
+Then the endpoint:
+
+```python
+@app.get("/users/", response_model=list[UserOut])
+def list_users(
+    current_user: User = Depends(require_admin),
+    session: Session = Depends(get_session),
+):
+    return session.exec(select(User).order_by(User.id)).all()
+```
+
+Trace the composition: `require_admin` depends on `get_current_user` (authentication), then adds its own check (authorization). An unauthenticated caller dies at `401` before `require_admin` even runs; an authenticated non-admin dies at `403`; only an authenticated admin reaches the query. Same pattern as ownership — two gates in a row, both before the route body.
+
+Note that an admin-only operation can also *still* respect ownership: for example, an admin endpoint `DELETE /tasks/{task_id}` that can delete any task, verified against the same `get_own_task`-style dependency but with an admin bypass. Not required for this task — the roster endpoint above is plenty of RBAC — but the pattern composes the same way, which is the point.
+
+### What happens to a normal user
+
+A logged-in `user` who calls `GET /users/` receives:
+
+```json
+{"detail": "Admin privileges required"}
+```
+
+with status `403 Forbidden`. One status code, one clear sentence, nothing leaked about the roster. This is the request flow the whole section is about:
+
+```text
+normal user, valid token ──► get_current_user: 401?  no, identity is fine
+                              require_admin:     role == "admin"?  no ──► 403
+```
+
+The tests at the end of the task will nail down: admin reaches the roster (`200`), normal user is pushed back (`403`), and unauthenticated callers never get that far (`401`).
+
+**Understand this before moving forward:** state where a user's role is stored, why it cannot be taken from the client or trusted on the client, and — walking the two-gate dependency — where a normal user's `GET /users/` request stops and with which status code.
+
+## Authentication and Authorization Errors
+
+By now you have used four status codes that beginners habitually blur. Pin them down once, with the exact cases from this task:
+
+| Status | Name | What it means | Example in this API |
+|--------|------|---------------|---------------------|
+| **401** | Unauthorized | *The identity gate failed.* No credentials, or credentials that do not prove who you are. | Missing token, forged token, expired token, wrong password at login |
+| **403** | Forbidden | *The identity gate passed, the permission gate failed.* You are authenticated but may not do this. | Normal user calling `GET /users/`, Bob reading Alice's task |
+| **404** | Not Found | The resource does not exist (or you were not shown it). | `GET /tasks/99999` |
+| **422** | Validation Error | The request data does not match the schema. | `password` too short, bad email, blank task title |
+
+The two that look alike are the ones to keep straight:
+
+- **401 says "I don't know who you are."** Fix: present valid credentials/token.
+- **403 says "I know exactly who you are — and you can't."** Fix: get permission, or act on a resource you may access.
+
+They are mutually exclusive gates, and a single request can pass the first and fail the second — that is the entire ownership/roles story. One more practical rule for your own APIs: anything a `403` ought to hide, a `404` hides better. If the very *existence* of a resource is sensitive, some APIs answer `404` for both "does not exist" and "belongs to someone else." This task deliberately uses honest `403` so the authorization layer is visible in your tests; the *alternative* is in the Beyond section.
+
+<Callout kind="danger" title="Do not expose the reason an authentication failed">
+When `/login` rejects a request, the message is `Incorrect username or password` — not `User not found` or `Wrong password`. The same applies to `Could not validate credentials` on bad tokens. Distinguishing "the user doesn't exist" from "the password is wrong" hands an attacker a user-enumeration oracle. When in doubt, make the error blurrier, not clearer.
+</Callout>
+
+**Understand this before moving forward:** for each of `401`, `403`, `404`, `422`, give one real request from this task that triggers it — and explain the sentence "authenticated does not mean authorized" using `401` vs `403` only.
+
+## Testing Authentication
+
+Reading about security is easy; *proving* it is the job. This section and the next turn every security property you built into tests. The rule stated once, and it will cost you a mistake if you forget it:
+
+> **You must test the rejected cases as hard as the accepted ones.** A test suite that only proves registration and login work is a test suite that would let you delete every authorization check and stay green.
+
+Create `test_auth.py` next to `main.py`. First, the single most important line in the file, and why it must be the *first* line:
+
+```python
+import os
+
+os.environ["JWT_SECRET"] = "test-only-secret"
+os.environ["DATABASE_URL"] = "sqlite:///./test_tasks.db"
+
+from datetime import datetime, timedelta, timezone
+
+import jwt
+from fastapi.testclient import TestClient
+from sqlmodel import SQLModel, Session, select
+
+import main  # noqa: E402  (imports need the env vars set above)
+from db import engine
+from models import User
+from main import app
+
+client = TestClient(app)
+
+
+def reset_db():
+    SQLModel.metadata.drop_all(engine)
+    SQLModel.metadata.create_all(engine)
+
+
+def register(username: str, email: str, password: str):
+    return client.post("/register", json={"username": username, "email": email, "password": password})
+
+
+def login(username: str, password: str):
+    return client.post("/login", data={"username": username, "password": password})
+
+
+def auth_header(token: str):
+    return {"Authorization": f"Bearer {token}"}
+```
+
+Why this shape:
+
+- **Environment first, imports second.** `main.py` reads `JWT_SECRET` and `db.py` reads `DATABASE_URL` at *module import time*. If the file imported `main` first, the app would have already read whatever was in the real environment (or crashed on the missing secret). Setting both env vars before the import is the test saying: *"for this run, use a throwaway secret and a throwaway database."* This is the same portability trick task 2 used for `DATABASE_URL` — now applied to the secret too.
+- **`reset_db()` returns every test to a pristine database.** `drop_all` + `create_all` rebuilds the tables. Each test starts alone; no test depends on another test's leftovers. State leakage between tests is the classic cause of "passes locally, fails in CI."
+- **Three helpers say what the tests mean** — `register`, `login`, `auth_header` — so the tests below read like a security checklist, not like HTTP plumbing.
+
+### The authentication tests
+
+Now the checks that each one exists to prove:
+
+```python
+def test_register_creates_user():
+    reset_db()
+    response = register("alice", "alice@example.com", "alice-supersecret")
+    assert response.status_code == 201
+    data = response.json()
+    assert data["username"] == "alice"
+    assert data["role"] == "user"
+    assert "password" not in data
+    assert "hashed_password" not in data
+
+
+def test_password_is_stored_hashed_not_plaintext():
+    reset_db()
+    register("alice", "alice@example.com", "alice-supersecret")
+    with Session(engine) as session:
+        user = session.exec(select(User).where(User.username == "alice")).first()
+    assert user.hashed_password != "alice-supersecret"
+    assert user.hashed_password.startswith("$argon2id$")
+
+
+def test_register_rejects_taken_username():
+    reset_db()
+    register("alice", "alice@example.com", "alice-supersecret")
+    response = register("alice", "other@example.com", "another-secret-1")
+    assert response.status_code == 409
+
+
+def test_register_rejects_short_password():
+    reset_db()
+    response = register("alice", "alice@example.com", "short")
+    assert response.status_code == 422
+
+
+def test_login_returns_access_token():
+    reset_db()
+    register("alice", "alice@example.com", "alice-supersecret")
+    response = login("alice", "alice-supersecret")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["token_type"] == "bearer"
+    assert data["access_token"]
+
+
+def test_login_rejects_wrong_password():
+    reset_db()
+    register("alice", "alice@example.com", "alice-supersecret")
+    response = login("alice", "wrong-password")
+    assert response.status_code == 401
+
+
+def test_protected_endpoint_requires_token():
+    reset_db()
+    response = client.get("/users/me")
+    assert response.status_code == 401
+
+
+def test_protected_endpoint_rejects_invalid_token():
+    reset_db()
+    response = client.get("/users/me", headers=auth_header("not-a-real-token"))
+    assert response.status_code == 401
+
+
+def test_protected_endpoint_rejects_expired_token():
+    reset_db()
+    register("alice", "alice@example.com", "alice-supersecret")
+    expired = jwt.encode(
+        {"sub": "1", "exp": datetime.now(timezone.utc) - timedelta(minutes=1)},
+        "test-only-secret",
+        algorithm="HS256",
+    )
+    response = client.get("/users/me", headers=auth_header(expired))
+    assert response.status_code == 401
+
+
+def test_valid_token_reaches_protected_endpoint():
+    reset_db()
+    register("alice", "alice@example.com", "alice-supersecret")
+    token = login("alice", "alice-supersecret").json()["access_token"]
+    response = client.get("/users/me", headers=auth_header(token))
+    assert response.status_code == 200
+    assert response.json()["username"] == "alice"
+```
+
+Read a few of them as a security reviewer would, not as a test consumer:
+
+- `test_password_is_stored_hashed_not_plaintext` answers the *single most important* question of this whole task in one assertion: the column begins with `$argon2id$` and never contains the literal password. This test is a permanent alarm the day someone "simplifies" the hashing.
+- `test_protected_endpoint_rejects_expired_token` builds a token with `exp` in the past and signs it *with the same test secret* — a perfectly forged, correctly signed, merely old token. The `401` proves the server honors expiry, not just signatures.
+- The missing / invalid / expired trio is the "already-logged-in tests are not enough" principle in miniature: three ways to be rejected, all asserted.
+
+## Testing Authorization
+
+Authentication tests prove the gates exist. Authorization tests prove the gates *decide correctly*. These are the tests that would have failed on the INSECURE endpoint from the ownership section.
+
+```python
+def test_user_can_access_own_task():
+    reset_db()
+    register("alice", "alice@example.com", "alice-supersecret")
+    token = login("alice", "alice-supersecret").json()["access_token"]
+    created = client.post(
+        "/tasks/", json={"title": "My private task"}, headers=auth_header(token)
+    ).json()
+    response = client.get(f"/tasks/{created['id']}", headers=auth_header(token))
+    assert response.status_code == 200
+
+
+def test_user_cannot_access_another_users_task():
+    reset_db()
+    register("alice", "alice@example.com", "alice-supersecret")
+    register("bob", "bob@example.com", "bob-supersecret")
+    alice_token = login("alice", "alice-supersecret").json()["access_token"]
+    bob_token = login("bob", "bob-supersecret").json()["access_token"]
+    created = client.post(
+        "/tasks/", json={"title": "Alice's private task"}, headers=auth_header(alice_token)
+    ).json()
+    response = client.get(f"/tasks/{created['id']}", headers=auth_header(bob_token))
+    assert response.status_code == 403
+
+
+def test_task_list_returns_only_your_own_tasks():
+    reset_db()
+    register("alice", "alice@example.com", "alice-supersecret")
+    register("bob", "bob@example.com", "bob-supersecret")
+    alice_token = login("alice", "alice-supersecret").json()["access_token"]
+    bob_token = login("bob", "bob-supersecret").json()["access_token"]
+    client.post("/tasks/", json={"title": "Alice task"}, headers=auth_header(alice_token))
+    client.post("/tasks/", json={"title": "Bob task"}, headers=auth_header(bob_token))
+    response = client.get("/tasks/", headers=auth_header(alice_token))
+    assert [task["title"] for task in response.json()] == ["Alice task"]
+
+
+def test_bob_cannot_update_or_delete_alices_task():
+    reset_db()
+    register("alice", "alice@example.com", "alice-supersecret")
+    register("bob", "bob@example.com", "bob-supersecret")
+    alice_token = login("alice", "alice-supersecret").json()["access_token"]
+    bob_token = login("bob", "bob-supersecret").json()["access_token"]
+    created = client.post(
+        "/tasks/", json={"title": "Alice's private task"}, headers=auth_header(alice_token)
+    ).json()
+    upd = client.put(
+        f"/tasks/{created['id']}",
+        json={"title": "Hijacked"},
+        headers=auth_header(bob_token),
+    )
+    delete = client.delete(f"/tasks/{created['id']}", headers=auth_header(bob_token))
+    assert upd.status_code == 403
+    assert delete.status_code == 403
+
+
+def test_admin_session_reaches_admin_endpoint():
+    reset_db()
+    register("root", "root@example.com", "root-supersecret")
+    register("alice", "alice@example.com", "alice-supersecret")
+    with Session(engine) as session:
+        admin = session.exec(select(User).where(User.username == "root")).first()
+        admin.role = "admin"
+        session.add(admin)
+        session.commit()
+    admin_token = login("root", "root-supersecret").json()["access_token"]
+    response = client.get("/users/", headers=auth_header(admin_token))
+    assert response.status_code == 200
+    assert len(response.json()) == 2
+
+
+def test_normal_user_is_denied_admin_endpoint():
+    reset_db()
+    register("alice", "alice@example.com", "alice-supersecret")
+    alice_token = login("alice", "alice-supersecret").json()["access_token"]
+    response = client.get("/users/", headers=auth_header(alice_token))
+    assert response.status_code == 403
+
+
+def test_unauthenticated_caller_is_denied_admin_endpoint():
+    reset_db()
+    response = client.get("/users/")
+    assert response.status_code == 401
+```
+
+Match each test to a security property:
+
+- **Ownership, the four directions.** Own-task `200`; cross-user read `403`; cross-user update and delete both `403`; the list endpoint leaks nothing from other users. A codebase that later deletes one `owner_id` check will turn a specific test red — the check is not "covered by code," it is *pinned by tests*.
+- **Role checks in both directions.** The admin test *promotes* the user's role directly in the database first (`admin.role = "admin"` in a session) — because there is no public "make me admin" endpoint, and the test must not depend on one. Then it proves the roster returns and reports both users. The normal-user test proves `403`. The unauthenticated test proves the identity gate fires before the role gate, `401`.
+- **They run in seconds and need nothing installed but pytest.** Because tests use their own SQLite file and their own secret, the whole suite is portable — which is exactly what the CI section relies on.
+
+Run the whole suite:
+
+```bash
+pytest
+```
+
+You should see your older task tests *and* the new ones, all green. Then do the security-checker's favourite exercise — **break a guard, watch the red**:
+
+1. In `get_own_task`, change `task.owner_id != current_user.id` to `False` (or delete the `if` line), re-run `pytest`.
+2. `test_user_cannot_access_another_users_task` and friends turn red. That red is the authorization layer working — in reverse.
+3. Restore the guard and confirm green again.
+
+If the idea "tests should prove access control" still feels abstract, run that same experiment on the role check: change `require_admin` to never raise, and watch the normal-user test fail. That is what the OWASP Authorization Testing Automation reference means by testing the matrix — you just did it by hand.
+
+**Understand this before moving forward:** name the four ownership directions tested above, explain why the admin test modifies the database instead of calling an API, and recount what turned red when you broke the owner check.
+
+## Running Everything with Docker + PostgreSQL
+
+Task 2 already made the stack run in containers with PostgreSQL. Nothing about that foundation changes — this task only adds *data* (a users table) and *one new environment variable* (the JWT secret) on top of it. So this section is short on purpose: it upgrades the existing pieces, references the previous task instead of re-teaching it, and then verifies the full system.
+
+### What changes in the compose stack
+
+1. **The database gains the tables automatically.** `SQLModel.metadata.create_all(db.engine)` (in a small startup step, `main.py` imports `models` and calls create_all as in task 2) creates `user` and `task` on whatever database `DATABASE_URL` points at — including the PostgreSQL service from `compose.yaml`. No migration tooling is added in this task.
+2. **One environment variable reaches the API service.** The app refused to start without `JWT_SECRET`. The Compose file must supply it. In `compose.yaml`, under the `api` service's `environment:` block:
+
+```yaml
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+psycopg2://taskuser:taskpassword@db:5432/tasks
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in your .env file}
+```
+
+The `${JWT_SECRET:?...}` syntax makes Compose itself refuse to start if the variable is missing — the same fail-fast rule as the Python `raise RuntimeError`, enforced one layer earlier. Put the real value in your local `.env` (gitignored, exactly as task 2 taught):
+
+```bash
+# generate once, paste into .env — never commit it
+openssl rand -hex 32
+```
+
+```text
+DATABASE_URL=postgresql+psycopg2://taskuser:taskpassword@db:5432/tasks
+JWT_SECRET=9f2aa3c0f129d7e6...  (your generated 64-char value)
+```
+
+And in `.env.example` (the safe-to-commit documentation file), add the placeholder and its meaning:
+
+```text
+JWT_SECRET=  # openssl rand -hex 32 — the signing key for access tokens. NEVER commit the real value.
+```
+
+### The "works locally but 401 in Docker" trap
+
+Here is the failure this section exists to pre-empt, and it is the number one Docker+JWT beginner bug:
+
+- Your app reads `JWT_SECRET` **once, at process start**, into the module-level `JWT_SECRET`.
+- If you set a different `JWT_SECRET` locally than inside the container, tokens signed by one process are rejected by the other — a perfectly valid token, loudly `401`d.
+- The symptom is always the same: *works in one environment, dies in the other.*
+
+The handshake that keeps every environment consistent: **the same `JWT_SECRET` value in your local `.env`, your Docker Compose `environment:`, and your CI secrets.** When tokens misbehave across environments, check the secret value first — it is the most common cause, and the troubleshooting table at the end repeats it for that reason. (Changing `JWT_SECRET` at runtime is the *other* failure mode: the process cached the old value until restart. Secrets are start-time configuration, not hot-swap.)
+
+### Run and verify the whole thing
+
+```bash
+docker compose up --build -d
+docker compose ps            # both services Up, db healthy
+curl -s http://localhost:8000/openapi.json | python3 -c "import json,sys; spec=json.load(sys.stdin); print('fastapi' in json.dumps(spec).lower())"
+```
+
+More surgically, run the four-step proof exactly as task 2 taught, now touching users and password hashes:
+
+```bash
+docker compose exec db psql -U taskuser -d tasks
+```
+
+```sql
+SELECT username, role, left(hashed_password, 12) AS hash_prefix FROM "user";
+```
+
+You will see the registered usernames, their roles, and the self-describing `$argon2id$...` prefix — *proof at the storage layer* that the API is hashing, and that PostgreSQL is genuinely the database behind authentication. Then:
+
+```bash
+docker compose down          # containers gone, volume stays
+docker compose up -d         # fresh containers, same data volume
+curl -s http://localhost:8000/tasks/   # with a fresh token — users survive, tasks survive
+```
+
+Both the users and the tasks live in the named volume from task 2: containers are disposable, the data is not — and now the "data" includes identities.
+
+**Understand this before moving forward:** state the two changes this task made to the Docker story (a new environment variable; two new tables), and explain in one sentence the failure mode each of `${JWT_SECRET:?...}` and "same secret everywhere" prevents.
+
+## Authentication Tests in CI/CD
+
+The CI pipeline from task 2 needs **zero new infrastructure** to cover authentication — which is the quiet payoff of the portable-tests design. Walk the line of trust:
+
+```text
+Code change ──► pytest locally ──► git push ──► GitHub Actions:
+                    │                    test job runs the SAME pytest (SQLite, test secret)
+                    ▼                    │ all green ──► docker job builds the image
+             authentication tests         │ all green ──► publish job (main only)
+             authorization tests          ▼
+                                         (deployment — out of scope, as before)
+```
+
+Why it just works, and what to verify:
+
+- Tests set their own `JWT_SECRET` and `DATABASE_URL` *inside the test file, before importing the app*. They need nothing from the environment, no PostgreSQL service, no secrets. The existing `ci.yml` — checkout, `setup-python`, `pip install -r requirements.txt`, `pytest` — runs them unchanged.
+- `requirements.txt` must list the new runtime packages so the runner installs them: `pwdlib[argon2]`, `pyjwt`, `python-multipart`, and `email-validator` if you used `EmailStr`. If the runner's `pip install` succeeds, the suite runs.
+- No `JWT_SECRET` is needed in GitHub Secrets for the *tests* (the test file plants its own throwaway value). It becomes relevant only the day the pipeline *builds or runs the image* that consumes a real secret in production — a deployment concern outside this task.
+
+Verify it the task-2 way, from both directions:
+
+1. Push the updated project including `test_auth.py`; open Actions and watch the `test` job: authentication and authorization tests run alongside the old suite, on a clean runner, and go green.
+2. **Deliberately break a guard and push** (reuse the ownership experiment from the testing section). The run turns red at the exact authorization test you broke — your CI is now guarding security behavior, not just "does it import."
+
+GitHub keeps each run's full log: the failing test names file and line. That is the same debugging workflow task 2 gave you, now pointed at security regressions.
+
+**Understand this before moving forward:** explain why adding auth tests to the *existing* pipeline — no new steps, no new services, no new secrets — was possible, and what the two-directional red/green exercise demonstrated about your CI's role in security.
+
+## Security Practices
+
+A short, beginner-portioned checklist drawn from what you just built, each item mapped to the OWASP references at the end. Read it as *second nature*, not as a theory table:
+
+| Practice | Why | Where you did it |
+|----------|-----|------------------|
+| **Never store plaintext passwords** | A leaked database must not leak working credentials | `hashed_password` column, Argon2, `test_password_is_stored_hashed_not_plaintext` |
+| **Never hard-code JWT secrets** | A committed secret is a public secret — anyone can forge tokens | `JWT_SECRET` from env, `RuntimeError` on missing, Compose `${JWT_SECRET:?...}` |
+| **Do not trust the client** | Request data is attacker input; identity and roles come from the server | `owner_id=current_user.id`, no `role` in `UserCreate`, role read from DB |
+| **Enforce authorization on the server** | The frontend is decoration; the API is the only gate that matters | `get_own_task`, `require_admin` dependencies |
+| **Check resource ownership** | IDs are enumerable; ownership is the fix for IDOR | `task.owner_id != current_user.id` → 403 |
+| **Do not expose unnecessary sensitive information** | Response shapes are at the attacker's eye level | `UserOut` excludes `hashed_password`; one blurred login error |
+| **Validate input** | Bad input must die before your logic runs | Pydantic constraints → automatic `422` |
+| **Test denied access, not just access** | An untested guard is a guard that will be deleted | The full auth/authorization suites, plus the break-it-on-purpose exercise |
+| **Reject with the right code** | 401 vs 403 vs 404 vs 422 tell the client and the logs what failed — and what to hide | The errors section, pinned by tests |
+| **Keep login timing uniform** | Username probing via response-time leaks is real | `DUMMY_HASH` verify on unknown users |
+
+And one practice that belongs outside the codebase for now: **serve the API over HTTPS in any real deployment.** Tokens travel in request headers; HTTPS is the envelope that keeps them private in transit. FastAPI's deployment docs cover it; it is deployment scope, not this task's scope — but the moment you put a user-facing API on the internet with a login endpoint, it becomes the *next* task's first item.
+
+<Callout kind="danger" title="The one-liner that defeats every practice above">
+Adding `role`, `password`, or a user id directly from the request body, trusting a token payload's claim without the database, or deleting one ownership check — any one of these silently reopens the whole blast radius. The tests exist precisely so each half-remembered shortcut turns a red test instead of a breach.
+</Callout>
+
+**Understand this before moving forward:** pick any three rows of the table and give the concrete line of code (or test) from this task that implements them.
+
+## Troubleshooting
+
+The debugging section, in the same shape as the previous tasks — every failure mode this exact assignment produces:
+
+| Symptom | What it means | What to check | How to fix / debug |
+|---------|---------------|---------------|--------------------|
+| `401` "Could not validate credentials" when you sent no token | The endpoint requires authentication and you gave none | The request headers; did you include `Authorization: Bearer ...`? Swagger's Authorize button | Send the token header. Checkbox: only protected endpoints need it — public routes should not be protected |
+| `401` with a token you just got from `/login` | Bad signature, wrong secret, or malformed token | Decode the token's header/payload (base64) to see `alg` and `exp`; check which secret signed it | Confirm the same `JWT_SECRET` in the process answering the request and the process that issued the token; restart after changing the env var |
+| `401` when the token is old | Expired — and that is correct behaviour | `exp` claim vs current time | Log in again for a fresh token; lengthen `ACCESS_TOKEN_EXPIRE_MINUTES` only for a real reason |
+| `403` on an endpoint you expect to use | Authenticated, but not authorized for *this* resource/action | Which gate rejected it: ownership (`get_own_task`) or role (`require_admin`)? | If it is another user's task or a non-admin action, that is the guard working. For legitimate needs, fix the role/ownership, not the guard |
+| Password verification always fails | Hash mismatch — wrong password, or wrong column hashed | Confirm you verify against `hashed_password` and store the *hash* of the submitted password at registration; confirm the DB row is `$argon2id$...` | Re-register the user after schema changes; never store the plaintext column |
+| `JWT_SECRET` not set → app crashes at startup | The fail-fast guard working: the app refuses to run with a missing secret | `.env` exists? Compose `environment:` sets it? | `openssl rand -hex 32` once, put the same value in `.env` and Compose; never commit it |
+| "User not found" class errors in the database | The session can't find the row — typo'd username or no row exists | Query the table directly (`psql` / sqlite) for the username; check case and whitespace | The token's `sub` identifies by id, not username — keep `sub` stable across renames |
+| Works locally but `401` in Docker | Different secrets between environments (the classic) | Compare the exact `JWT_SECRET` string in local `.env` vs the container's env | Set one value everywhere; `docker compose config` prints the interpolated stack; rebuild the container after changing env |
+| Tests pass one-by-one but fail together | Test-state leakage: a shared database or module-level state crossing tests | Do tests isolate with a database reset per test? Does any test rely on ordering? | Ensure `reset_db()` runs in each test; never depend on another test's created user/task |
+| A user can read/edit another user's task | The ownership check is missing or bypassed from a code path | Does every per-task endpoint use `get_own_task` (or its own check)? Is `owner_id` set from the token, not the body? | Route every `/tasks/{id}` through the ownership dependency; set `owner_id=current_user.id` on create |
+| `422` on `/login` | `OAuth2PasswordRequestForm` needs form data, not JSON | Content-Type and body shape of the request | Send `data=` (form) not `json=`. If login fails in Swagger, use the Authorize flow, not the raw JSON editor |
+| Login says "Incorrect username or password" for a user you know exists | Either the password is wrong, or the lookup/verify chain is subtly off | Which half — lookup (`authenticate_user` returns None for bad username too) or verify — is hard to tell *because the API blurs it on purpose* | That blur is correct security. Reproduce with the correct password; if it still fails, check which column stores the hash |
+| Registration says "already exists" for the same username | The duplicate check (and/or unique constraint) working as intended | Is that username genuinely taken? | That is correct behaviour — `409` is the right answer for a real duplicate |
+
+The universal loop from the previous tasks applies unchanged: **read the error → change exactly one thing → rerun → repeat.** For `401`/`403` specifically, remember the two-gate model: a `401` is about *who you are*, a `403` is about *what you may touch* — diagnosing a `403` as a token problem is the single most common debugging error in this exact task.
+
+## Final Verification
+
+The whole task as a checklist. Anything unchecked means "finish that section first":
+
+<Checklist items={[
+  "User can register via POST /register (201)",
+  "Password is stored as an Argon2 hash — confirmed in the database, not plaintext",
+  "User can log in via POST /login and receives an access_token",
+  "Login returns 401 for a wrong password (and for an unknown username, same message)",
+  "Protected endpoint rejects unauthenticated requests with 401",
+  "Valid token allows access to a protected endpoint",
+  "User can access their own tasks",
+  "User cannot access another user's tasks (403)",
+  "Admin-only endpoint rejects normal users (403)",
+  "Admin can access the allowed admin endpoint",
+  "Authentication tests pass (register, login, missing/invalid/expired token)",
+  "Authorization tests pass (ownership in all directions, role checks)",
+  "Docker environment works (docker compose up --build -d)",
+  "PostgreSQL works (users and tasks survive down/up)",
+  "CI passes — including the new authentication and authorization tests"
+]} />
+
+## Independent Practice: Employee Management API
+
+The transfer test. Build a **different** API — employees, not tasks — and implement authentication and authorization in it from a specification, without a solution in front of you. This is how the previous paths ended, and this one is no different: the entire value is in the doing.
+
+<PracticeProject title="Independent Practice — Employee Management API">
+Build a complete Employee Management API with authentication and authorization, using the same patterns you just implemented: registration, login, JWT access tokens, a current-user dependency, ownership access control, and role-based authorization — then run it with Docker + PostgreSQL and keep it green in CI. Read the requirements, implement it yourself, and do not look up a full solution.
+</PracticeProject>
+
+### Project Description
+
+Your company keeps a small employee directory. Only signed-in employees may read it, only an admin may change who has which role, and every employee can manage their *own* profile but nobody else's. No frontend — the API, its automatic docs, and its tests, exactly like the guided project.
+
+### Functional Requirements
+
+- Registration and login work exactly as in the guided task, with the same security posture (hashed passwords, JWT tokens, blurred errors).
+- A signed-in employee can view their own profile.
+- A signed-in employee can list employees in their own department.
+- A signed-in employee can edit their own profile.
+- Nobody may edit or delete a *different* employee's profile.
+- An admin can list all employees, and can promote or demote any employee's role.
+
+### User Roles
+
+Two roles, exactly like the guided task:
+
+- `employee` — the default role for anyone who registers. May act on their own profile and read their department.
+- `admin` — the same capabilities, plus roster-wide operations (list everyone, change roles).
+
+### Required Endpoints
+
+| Method | Path | Behavior |
+|--------|------|----------|
+| `POST` | `/register` | Create an employee account, return `201`. |
+| `POST` | `/login` | Return `{access_token, token_type}` for valid credentials, `401` otherwise. |
+| `GET` | `/employees/me` | The current employee's own profile, `200`. Requires a token. |
+| `GET` | `/employees/` | Your department's employees, `200`. Requires a token. Only `admin` sees everyone. **You decide and document how department vs admin scope works.** |
+| `GET` | `/employees/{employee_id}` | One employee, `200`, or `404` if missing. Only your own record — or, if you are `admin`, anyone's. **This is your ownership/scope decision.** |
+| `PUT` | `/employees/{employee_id}` | Update your own profile, `200`. A different employee's profile → `403`. |
+| `DELETE` | `/employees/{employee_id}` | Delete your own account, `200 {"ok": true}`. Admin may also delete others' accounts. |
+| `PATCH`/`POST` | `/admin/employees/{employee_id}/role` | Admin-only: set a user's role. Non-admin → `403`. You choose the exact verb and path shape. |
+
+### Authentication Requirements
+
+- Passwords stored as Argon2 hashes (via `pwdlib`), never plaintext.
+- JWT access tokens signed with an env-provided `JWT_SECRET`, with an expiry.
+- A `get_current_user`-style dependency that verifies signature, expiry, and database existence.
+- The user model has its own email as the login identifier if you prefer — decide and keep it consistent. (`OAuth2PasswordRequestForm`'s field is still named `username` on the wire; map it internally as you wish.)
+
+### Authorization Rules
+
+- **Do not simply check "is logged in."** Each protected endpoint must decide on *this* resource: ownership for profiles, department scope for lists, admin role for role changes — all server-side.
+- The `/employees/me` and ownership endpoints must reject an authenticated non-owner with `403`, not `200`.
+- No client-supplied field decides identity, ownership, or role.
+
+### Database Requirements
+
+- SQLModel `Employee` table carrying the profile fields *and* `hashed_password` and `role`, plus `department`.
+- `DATABASE_URL` fallback for local/testing, PostgreSQL in Compose — exactly the task 2 pattern.
+
+### Validation Requirements
+
+- Pydantic constraints: profile fields sensible (`full_name` length, `email` via `EmailStr`, `department` from a fixed list), password `min_length=8` — anything that breaks a rule returns `422`.
+
+### Error Expectations
+
+- `401` for missing/invalid/expired tokens and bad credentials; one blurred login error.
+- `403` for authenticated-but-forbidden (someone else's profile, non-admin role change).
+- `404` for missing employees.
+- `422` for validation failures.
+
+### Testing Requirements
+
+Your `test_auth.py`-equivalent must cover **at least**:
+
+- Registration (success, duplicate, short password), login (success, wrong password)
+- Missing / invalid / expired token on a protected endpoint
+- Accessing your own profile; accessing another employee's profile → `403`
+- Updating another employee's profile → `403`
+- Admin listing everyone; non-admin listing everyone → only their department
+- Role change: admin succeeds, employee → `403`
+- Password stored as a hash, not plaintext
+- A deliberate-failure exercise: break one ownership check and watch the exact test turn red, then restore
+
+### Docker + CI Requirements
+
+- `compose.yaml` for the API + PostgreSQL, `JWT_SECRET` provided via `.env` interpolation, named volume, healthcheck — identical in shape to the guided task.
+- `ci.yml` running the full suite on every push/pull request with the same two-job shape from task 2 (tests, then image build `needs`-gated).
+
+### Acceptance Criteria
+
+- `docker compose up --build -d` brings up API + database; registration, login, and the protected endpoints work inside the stack.
+- A user cannot read/edit another user's profile at the HTTP level — verified by tests, not by "the frontend hides it."
+- Admin-only actions return `403` for employees and work for admins.
+- `pytest` is green locally and in CI; you successfully watched a deliberately broken authorization test go red.
+- A short `README.md` documents the endpoints, the `JWT_SECRET` variable, and how to run the stack.
+
+### Suggested Deliverables
+
+- The project folder: app modules, `compose.yaml`, `.env.example`, `test_*.py`, `ci.yml`.
+- A short write-up (a few paragraphs) answering: *What did you have to decide that the guided task decided for you? Which endpoint's authorization rule was the hardest, and why? Which part of the guided task did you briefly re-derive instead of copying?*
+
+<Callout kind="warning" title="Do not provide yourself a solution">
+This project is a translation test: can you build auth and authorization in a *new* domain without a solution open next to you? When stuck, go back to what you built in this task and reason about *which dependency it maps onto* — and use the official resources below. Copying a finished employee API would turn a security proficiency test into a typing exercise.
+</Callout>
+
+## Curated Resources
+
+For each resource: **what it is, why it is useful, when to open it, and what to focus on.** The official documentation is the technical source of truth — when this page and the docs disagree, the docs win.
+
+First, the two lessons you are standing on, built on this site:
+
+**[FastAPI: A Guided Learning Path](/docs/learning-paths/fastapi)** — where the Task Management API, its endpoints, and its testing patterns came from. Refresh here whenever a route/schema detail in this task is unclear.
+
+**[Docker & CI/CD: A Guided Learning Path](/docs/learning-paths/docker-cicd)** — where the Compose stack, PostgreSQL, and the exact `ci.yml` used by this task came from. Reference it for every "from the previous task" assumption in the Docker and CI sections.
+
+<ResourceItem
+  label="FastAPI: Security — First Steps"
+  href="https://fastapi.tiangolo.com/tutorial/security/first-steps/"
+  why="The official introduction to OAuth2PasswordBearer — the mechanism this task leans on for every protected endpoint."
+  when="Before writing your first protected endpoint, and again if the Authorize button in Swagger behaves unexpectedly."
+  focus="The password flow, how the Authorization header is read, and what the security scheme does to the automatic docs."
+/>
+
+<ResourceItem
+  label="FastAPI: Get Current User"
+  href="https://fastapi.tiangolo.com/tutorial/security/get-current-user"
+  why="The canonical definition of the get_current_user dependency and how it turns a token into a user."
+  when="While writing or debugging the current-user dependency."
+  focus="Returning the user model, the details of the USERS model, and how the dependency talks to the rest of the app."
+/>
+
+<ResourceItem
+  label="FastAPI: Simple OAuth2 with Password and Bearer"
+  href="https://fastapi.tiangolo.com/tutorial/security/simple-oauth2/"
+  why="The official login-endpoint chapter: OAuth2PasswordRequestForm, form-data credentials, and the username/password field names the spec fixes."
+  when="While writing POST /login."
+  focus="The form dependency, why the fields are literally username and password, and the bearer-token response shape."
+/>
+
+<ResourceItem
+  label="FastAPI: OAuth2 with Password (and hashing), Bearer with JWT tokens"
+  href="https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/"
+  why="The official tutorial this task follows: pwdlib + Argon2 password hashing, PyJWT, JWT_SECRET, and the complete working example."
+  when="Alongside the Password Hashing, Login, and Protecting Endpoints sections — it is the canonical version of what you are building."
+  focus="Why password hashing exists, setting the secret, and the full authenticate-user + get-current-user loop."
+/>
+
+<ResourceItem
+  label="FastAPI: Testing"
+  href="https://fastapi.tiangolo.com/tutorial/testing/"
+  why="The official TestClient + pytest reference — same testing mechanics this task's auth suites rely on."
+  when="While writing or debugging any test in test_auth.py."
+  focus="TestClient usage and how to pass headers, including the Authorization header shape used in every auth test."
+/>
+
+<ResourceItem
+  label="FastAPI: Dependencies"
+  href="https://fastapi.tiangolo.com/tutorial/dependencies/"
+  why="The official deep dive into Depends — the mechanism that makes get_current_user, get_own_task, and require_admin compose."
+  when="Once the dependency chain (token → user → ownership → role) feels like magic rather than plumbing."
+  focus="Dependency composition and shared dependencies."
+/>
+
+<ResourceItem
+  label="PyJWT documentation"
+  href="https://pyjwt.readthedocs.io/en/stable/"
+  why="The library that encodes and decodes your JWT claims — this is where sub/exp semantics and exceptions are specified."
+  when="When a decode exception surprises you, or you want the full claim and exception reference."
+  focus="encode/decode parameters and the InvalidTokenError exception family."
+/>
+
+<ResourceItem
+  label="pwdlib"
+  href="https://frankie567.github.io/pwdlib/"
+  why="The official homepage of the password-hashing library this task uses for Argon2."
+  when="If you question the hashing API, or want the full PasswordHash reference."
+  focus="PasswordHash.recommended(), hash(), and verify()."
+/>
+
+<ResourceItem
+  label="OWASP: Authentication Cheat Sheet"
+  href="https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html"
+  why="The authoritative, practical checklist for what authentication should and should not do — the 'why' underneath your hashing and login rules."
+  when="As a sanity-check while writing the registration/login endpoints and to expand on blurring errors."
+  focus="Password storage, login guidance, and error messages that do not leak which half of the credentials failed."
+/>
+
+<ResourceItem
+  label="OWASP: Authorization Cheat Sheet"
+  href="https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html"
+  why="The formal guidance behind this task's ownership and role checks — server-side access control on every request."
+  when="While writing get_own_task and require_admin, and when explaining 403 vs 404 choices to a colleague."
+  focus="Lookup IDs, where authorization checks must live, and the IDOR prevention guidance."
+/>
+
+<ResourceItem
+  label="OWASP: Authorization Testing Automation Cheat Sheet"
+  href="https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Testing_Automation_Cheat_Sheet.html"
+  why="Explains the authorization matrix — the formal version of this task's 'test every denied case' rule."
+  when="When designing your independent project's test list, and any time you build a new endpoint that guards resources."
+  focus="Modeling role/resource combinations you must test, including the denied ones."
+/>
+
+<ResourceItem
+  label="OWASP: Insecure Direct Object Reference Prevention Cheat Sheet"
+  href="https://cheatsheetseries.owasp.org/cheatsheets/Insecure_Direct_Object_Reference_Prevention_Cheat_Sheet.html"
+  why="The class of bug the User-Owned Resources section fixes, with the documented prevention patterns."
+  when="The moment you write any endpoint that looks up a resource by id."
+  focus="The reference-direct-object patterns and why sequential ids make enumeration trivial."
+/>
+
+## Beyond This Learning Path
+
+You now have identity and access control that holds up under inspection. The deliberate next steps, in value order:
+
+1. **OAuth2 scopes** — the official tutorial's advanced chapter turns fine-grained claims ("read", "write") into permission strings inside tokens; the next rung of RBAC.
+2. **Refresh tokens** — short-lived access tokens plus a longer-lived, revocable refresh token; how real systems stop stolen tokens from being useful forever.
+3. **Third-party login (OAuth2/OIDC)** — "login with GitHub/Google": your API becomes the *relying party* instead of the identity provider.
+4. **Password policy** — blocklists of common passwords, plain-password checks never, and rate-limiting login attempts (bottling brute force).
+5. **HTTPS in a real deployment** — the absolute prerequisite for ever putting a login endpoint on the internet; FastAPI's deployment guides cover it.
+6. **Authorization matrix testing in CI** — the OWASP Testing Automation pattern turned into a data-driven suite, so new endpoints get their denied-cases tests by construction, not by memory.
+
+The single most valuable follow-up is the **expiry-and-revocation pair**: the token model you built is exactly right for a beginner, and exactly the thing a production team extends first.
+
+## A Note on How This Task Is Built
+
+This is the deliberate third rung of a three-part ladder. Task 1 taught you to *write* a backend; task 2 taught you to *package, run, and automate* it; this task taught you to *know who is calling it and what they may touch*. Every section followed the same four beats — explain, show, do, verify, move forward — and every security claim defers to the official resources above as the source of truth, with OWASP as the reference for *why* each guard exists. When you finish with a multi-user Task API, an authenticated Employee API you built alone, and the reflex of writing a denied-access test next to every new protected endpoint, you have crossed from "I wrote a backend" to "I wrote a backend worth putting users in front of." That crossing — not any single token — is what this task exists to grow.

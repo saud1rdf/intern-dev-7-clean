@@ -31,6 +31,19 @@ const learningPaths = [
     descriptionAr:
       'ضع مشروع FastAPI الذي بنيته سابقاً في حاوية، وأضف PostgreSQL، وأتمتة الاختبارات بـ GitHub Actions.',
   },
+  {
+    step: 'Learning Path 3',
+    stepAr: 'المسار الثالث',
+    href: '/docs/learning-paths/authentication-authorization',
+    meta: 'Security • JWT • Backend • Intermediate',
+    title: 'Authentication & Authorization: A Guided Learning Path',
+    titleEn: 'Authentication & Authorization: A Guided Learning Path',
+    titleAr: 'المصادقة والتفويض: مسار تعلّم موجّه',
+    descriptionEn:
+      'Add users, registration, login, hashed passwords, JWT access tokens, ownership checks, and roles to the Task Management API you already built — guarded by authentication and authorization tests.',
+    descriptionAr:
+      'أضف المستخدمين والتسجيل وتسجيل الدخول وكلمات المرور المشفرة ورموز JWT وفحوصات الملكية والأدوار إلى مشروع إدارة المهام، مع اختبارات للمصادقة والتفويض.',
+  },
 ];
 
 export default function LearningPathSection() {
