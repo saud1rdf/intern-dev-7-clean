@@ -1,9 +1,10 @@
 import { notFound, redirect } from 'next/navigation';
-import { getDocBySlug, extractHeadings } from '@/lib/docs';
+import { getDocBySlug, extractHeadings, extractHeadingsAr, type DocResult } from '@/lib/docs';
 import { parseCategoryArticles, categoryFileExists } from '@/lib/articleParser';
 import { getCategoryBySlug } from '@/lib/categories';
 import DocsSidebar from '@/components/docs/DocsSidebar';
 import TableOfContents from '@/components/docs/TableOfContents';
+import LanguageGate from '@/components/docs/LanguageGate';
 import CategoryArticles from '@/components/docs/CategoryArticles';
 import DocContent from './DocContent';
 
@@ -58,6 +59,12 @@ export async function generateMetadata(props: PageProps) {
     }
   }
 
+  if (slug[slug.length - 1].endsWith('.ar')) {
+    return {
+      title: 'Documentation Not Found',
+    };
+  }
+
   const doc = getDocBySlug(slug);
 
   if (!doc) {
@@ -96,6 +103,12 @@ export default async function DocPage(props: PageProps) {
     notFound();
   }
 
+  const lastSegment = slug[slug.length - 1];
+
+  if (lastSegment.endsWith('.ar')) {
+    notFound();
+  }
+
   const doc = getDocBySlug(slug);
 
   if (!doc) {
@@ -104,42 +117,71 @@ export default async function DocPage(props: PageProps) {
 
   const headings = extractHeadings(doc.content);
 
+  const arabicVariant = getDocBySlug([...slug.slice(0, -1), `${lastSegment}.ar`]);
+
+  if (arabicVariant) {
+    const arabicHeadings = extractHeadingsAr(arabicVariant.content);
+
+    return (
+      <div className="min-h-screen bg-white dark:bg-gray-950">
+        <DocsSidebar />
+        <main className="lg:pl-64">
+          <div className="mx-auto max-w-3xl px-6 py-8 lg:px-8">
+            <LanguageGate
+              en={<DocArticle doc={doc} categorySlug={slug[0]} />}
+              ar={<DocArticle doc={arabicVariant} categorySlug={slug[0]} />}
+            />
+          </div>
+        </main>
+        <TableOfContents headings={headings} headingsAr={arabicHeadings} />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
       <DocsSidebar />
       <main className="lg:pl-64">
         <div className="mx-auto max-w-3xl px-6 py-8 lg:px-8">
-          <nav className="mb-6 flex items-center text-sm text-gray-500 font-sans">
-            <a href="/docs" className="hover:text-blue-600">
-              Docs
-            </a>
-            <span className="mx-2">/</span>
-            <span className="capitalize text-gray-900 dark:text-gray-200">
-              {slug[0].replace(/-/g, ' ')}
-            </span>
-            <span className="mx-2">/</span>
-            <span className="text-gray-900 dark:text-gray-200">
-              {doc.frontmatter.title}
-            </span>
-          </nav>
-
-          <article className="prose prose-neutral max-w-none dark:prose-invert prose-headings:scroll-mt-24 prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline dark:prose-a:text-blue-400 prose-pre:bg-gray-900 prose-pre:border prose-pre:border-gray-800">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-              {doc.frontmatter.title}
-            </h1>
-            <p className="mt-2 text-lg text-gray-600 dark:text-gray-400">
-              {doc.frontmatter.summary}
-            </p>
-            <div className="mt-4 flex items-center gap-4 text-sm text-gray-500">
-              <span>{doc.frontmatter.readingTime} min read</span>
-            </div>
-            <hr className="my-8 border-gray-200 dark:border-gray-800" />
-
-            <DocContent content={doc.content} />
-          </article>
+          <DocArticle doc={doc} categorySlug={slug[0]} />
         </div>
       </main>
       <TableOfContents headings={headings} />
     </div>
+  );
+}
+
+function DocArticle({ doc, categorySlug }: { doc: DocResult; categorySlug: string }) {
+  return (
+    <>
+      <nav className="mb-6 flex items-center text-sm text-gray-500 font-sans">
+        <a href="/docs" className="hover:text-blue-600">
+          Docs
+        </a>
+        <span className="mx-2">/</span>
+        <span className="capitalize text-gray-900 dark:text-gray-200">
+          {categorySlug.replace(/-/g, ' ')}
+        </span>
+        <span className="mx-2">/</span>
+        <span className="text-gray-900 dark:text-gray-200">
+          {doc.frontmatter.title}
+        </span>
+      </nav>
+
+      <article className="prose prose-neutral max-w-none dark:prose-invert prose-headings:scroll-mt-24 prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline dark:prose-a:text-blue-400 prose-pre:bg-gray-900 prose-pre:border prose-pre:border-gray-800">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+          {doc.frontmatter.title}
+        </h1>
+        <p className="mt-2 text-lg text-gray-600 dark:text-gray-400">
+          {doc.frontmatter.summary}
+        </p>
+        <div className="mt-4 flex items-center gap-4 text-sm text-gray-500">
+          <span>{doc.frontmatter.readingTime} min read</span>
+        </div>
+        <hr className="my-8 border-gray-200 dark:border-gray-800" />
+
+        <DocContent content={doc.content} />
+      </article>
+    </>
   );
 }

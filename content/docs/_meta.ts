@@ -21,6 +21,7 @@ export const docsMeta: DocsMeta = [
       { title: "FastAPI: A Guided Learning Path", slug: "fastapi" },
       { title: "Docker & CI/CD: A Guided Learning Path", slug: "docker-cicd" },
       { title: "Authentication & Authorization: A Guided Learning Path", slug: "authentication-authorization" },
+      { title: "API Testing with FastAPI & Pytest: A Guided Learning Path", slug: "api-testing" },
     ],
   },
   {

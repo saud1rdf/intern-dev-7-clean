@@ -197,3 +197,30 @@ export function extractHeadings(content: string): Array<{ text: string; level: n
   
   return headings;
 }
+
+/**
+ * Extract table of contents from Arabic markdown content
+ * Preserves non-ASCII (Arabic) characters in generated slugs so that
+ * Arabic headings map to unique, stable anchors instead of empty strings.
+ * @param content - Markdown content
+ * @returns Array of headings with text, level, and slug
+ */
+export function extractHeadingsAr(content: string): Array<{ text: string; level: number; slug: string }> {
+  const headingRegex = /^(#{2,3})\s+(.+)$/gm;
+  const headings: Array<{ text: string; level: number; slug: string }> = [];
+  
+  let match;
+  while ((match = headingRegex.exec(content)) !== null) {
+    const level = match[1].length;
+    const text = match[2].trim();
+    const slug = text
+      .toLowerCase()
+      .replace(/[^a-z0-9\u0600-\u06FF\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+$/, '');
+    
+    headings.push({ text, level, slug });
+  }
+  
+  return headings;
+}

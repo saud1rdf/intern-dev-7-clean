@@ -1,0 +1,1120 @@
+---
+title: "API Testing with FastAPI & Pytest: A Guided Learning Path"
+slug: "api-testing"
+category: "learning-paths"
+summary: "A guided fourth learning path: take the Task Management API you already built — now multi-user, access-controlled, containerized, and automated — and professionalize the last layer every real team insists on: a complete, trustworthy API testing suite with pytest, TestClient, fixtures, an isolated test database, and coverage of the rejected as well as the accepted cases — finishing with an independent project built entirely on your own."
+readingTime: 75
+---
+
+# API Testing with FastAPI & Pytest: A Guided Learning Path
+
+This is the **fourth technical task** in your internship. You already have a serious backend: in the [first learning path](/docs/learning-paths/fastapi) you built the Task Management API; in the [second](/docs/learning-paths/docker-cicd) you containerized it, gave it PostgreSQL, and automated tests in CI; in the [third](/docs/learning-paths/authentication-authorization) you added users, JWTs, ownership, and roles. Every feature works. So this task is not about writing new features at all.
+
+This task asks a different, uncomfortable question: **how do you *prove* the API still works tomorrow?**
+
+Not "prove to me you read the code." Proof that survives a developer leaving, a dependency upgrading, a database migrating, and a Friday-night refactor that seemed harmless. That proof is a **professional test suite** — and the gap between "I wrote tests because the tutorial said so" and "I maintain a test suite a team can trust" is the single biggest leap in a junior developer's career.
+
+Follow the sections in order. Each big practical section follows the same four beats as all previous paths:
+
+**Explain → Show → Do → Verify → Move forward**
+
+Move on only when you pass the checkpoint at the end of the section.
+
+## What You Will Build
+
+By the end of this task the **same Task Management API** has been given what professionals call *coverage you can count on*:
+
+| Piece | What it is | Why it is in the picture |
+|-------|-----------|--------------------------|
+| **A `tests/` directory** | Professional test layout inside `task-api/` | Tests become a deliverable of the same quality as the API itself |
+| **Pytest configuration** | `pytest.ini` + a root `conftest.py` | Declares where tests live and how the project is found on the import path |
+| **Test fixtures** | Shared setup in `tests/conftest.py` | The `client`, a pristine database, and authenticated headers without repetition |
+| **An isolated test database** | Environment-first setup pointing at SQLite | Tests never touch your real (PostgreSQL) data — same trick task 3 used |
+| **CRUD tests** | Create, read, list, update, delete, filter | Every happy path pinned by an assertion |
+| **Validation tests** | Blank titles, wrong types, missing fields | The `422` rules you declared in Pydantic, locked in forever |
+| **Auth + authorization tests** | `401`, `403`, ownership, roles | Takes over and expands the `test_auth.py` work |
+| **A failable suite you understand** | You break a test and read the red | The skill the whole task is really about |
+
+The final layout, one picture:
+
+```text
+task-api/
+├── main.py               # your API — unchanged by this task
+├── models.py             # Task + User tables
+├── db.py                 # DATABASE_URL engine + session
+├── security.py           # hashing + JWT
+├── requirements.txt
+├── .env.example
+├── Dockerfile
+├── compose.yaml          # app + PostgreSQL
+├── .github/workflows/ci.yml   # already runs pytest on every push
+├── pytest.ini            # NEW: pytest configuration
+├── conftest.py           # NEW (root): makes the project importable
+└── tests/                # NEW: the professional suite
+    ├── conftest.py       # fixtures: client, clean database, auth header factory
+    ├── test_health.py    # GET /
+    ├── test_tasks.py     # CRUD + validation + 404 + ownership
+    └── test_auth.py      # 401s, tokens, roles (grown from task 3's suite)
+```
+
+Nothing in the API changes. Everything around the API becomes verifiable.
+
+## What You Will Learn
+
+<LearningObjectives items={[
+  "Explain what automated tests actually protect, and why 'it works' is not evidence",
+  "Place API testing in the testing pyramid and contrast it with unit, integration, and end-to-end tests",
+  "Explain how pytest discovers tests, what a fixture is, and why fixtures exist at all",
+  "Use TestClient as an in-process HTTP client: methods, json= payloads, headers, and status codes",
+  "Organize a real project's tests into a tests/ directory with pytest configuration",
+  "Set environment variables before imports so tests use an isolated database and secret",
+  "Write complete CRUD tests including every rejected case: 422, 404, 401, 403",
+  "Structure shared setup as pytest fixtures with function scope and autouse cleanup",
+  "Explain why tests must be independent and why order must never matter",
+  "Read a failing test's output and use it to locate the broken behaviour in under a minute",
+  "Confirm the same suite runs in Docker and in the existing CI workflow unchanged",
+  "Design and write a complete, professional test suite for an unguided project on your own"
+]} />
+
+## What You Already Know
+
+This task reuses nearly everything from the three previous ones — nothing here is new technology:
+
+| From task 1 (FastAPI) | How it is reused here |
+|------------------------|-----------------------|
+| `TestClient` + pytest | The core of every test you will write |
+| Pydantic validation, `HTTPException`, status codes | The exact behaviours your tests assert |
+| The five CRUD endpoints | The happy paths and 404s under test |
+
+| From task 2 (Docker + CI/CD) | How it is reused here |
+|------------------------------|-----------------------|
+| `DATABASE_URL`, SQLite-for-tests portability | The isolated test database |
+| The `ci.yml` workflow running `pytest` | Your finished suite runs there automatically |
+| `compose.yaml` + PostgreSQL | What your tests must *stay away from* |
+
+| From task 3 (Auth & Authz) | How it is reused here |
+|-----------------------------|-----------------------|
+| Environment-before-import, `reset_db()`, `register`/`login`/`auth_header` helpers | Upgraded into proper pytest fixtures |
+| The whole `test_auth.py` suite | Restructured, expanded, and pinned |
+| Ownership + roles (`403`) | The authorization matrix, tested in full |
+
+If any idea feels shaky, the previous pages are linked throughout this one. This task teaches *discipline on top of knowledge you already have* — the mock-free, real-request testing style real FastAPI teams use.
+
+## Prerequisites
+
+You should already have, from the three previous tasks:
+
+- **The finished Task Management API** from task 3 — SQLModel tables, `DATABASE_URL`, `db.py`, `security.py`, `compose.yaml`, `ci.yml`, and a passing `pytest` suite (`test_main.py` + `test_auth.py`). This is your vehicle.
+- **pytest and httpx installed** — `pytest` from task 1, `httpx` comes with `fastapi[standard]`. Confirm with `pip list | grep -E "pytest|httpx"`.
+
+No new package is required for this task. The professional testing features you are about to use (fixtures, autouse, factories, `tests/` discovery, `pytest.ini`) are all in the pytest you already have.
+
+### Environment check
+
+Confirm the project still runs and tests green before you touch anything:
+
+```bash
+source .venv/bin/activate
+pytest
+```
+
+You should see `test_main.py` and `test_auth.py` all green, ending with something like `... passed`. That green baseline is what this task grows into — everything below is the same tests, organised professionally and multiplied until nothing is left unasserted.
+
+**Understand this before moving forward:** the project is green, you know where `main.py` lives, what `DATABASE_URL` does, and why the auth tests set environment variables *before* importing the app.
+
+## Why Teams Write Automated Tests
+
+Let's settle the *why* first, because a suite written without believing in it will quietly rot.
+
+The honest reason is not "tests are good practice." It is **memory and defense**. Three threats attack every codebase, and automated tests are the cheapest known defence.
+
+**1. You will forget.** Two months from now you will not remember why the ownership check raises `403` and not `404`, or why blank titles return `422`. The tests you write today *are* that memory — written as executable specifications, outliving the developer who wrote them.
+
+**2. The change that breaks nothing obvious.** A dependency bumps a version. A query is "optimised." A helper is extracted. Nothing *looks* broken… until a user hits the exactly-wrong input. Automated tests are the only affordable way to know, in seconds, that everything you promised still holds.
+
+**3. The team.** When someone else (or the CI machine) runs your code, they cannot ask you. They read the tests to learn what the API promises — and they trust a red/green verdict far more than "it worked on my machine."
+
+Now the discipline: **a test that cannot fail is decoration.** If your suite would stay green after someone deleted the authorization checks, it is testing nothing. This task therefore has a fixed rule:
+
+> **You must test the rejected cases as hard as the accepted ones.** Every `200`/`201` has a `422`/`401`/`403`/`404` sibling. A suite that only proves the happy path runs is a suite that would let every guard be deleted and stay green.
+
+That rule is the beating heart of this whole task. It was already introduced in task 3; here it becomes the entire methodology.
+
+## What "API Testing" Means
+
+Before writing anything, place this work on a map so you can explain it in an interview.
+
+The **testing pyramid** ranks tests by how much they trust and how much they cost:
+
+```text
+          ▲  end-to-end (browser, full stack)      few, slow, fragile
+         / \
+        / E \
+       /──────\
+      /   e2e   \
+     /───────────\
+    / integration (multiple components)            some, medium
+   /───────────────\
+  /      unit (one function, one behaviour)         many, fast, cheap
+ /───────────────────\
+```
+
+Where do API tests sit? They are a special, unusually valuable kind of **integration test**: the whole FastAPI app runs in-process, real HTTP requests go through the real routing, real validation, real database session, and real JSON responses — while nothing outside the process (no real server, no real PostgreSQL, no network) is needed. That combination — *whole system, no infrastructure* — is why TestClient tests are fast enough to run a hundred of them in seconds.
+
+Three quick distinctions, because these words get used loosely on the job:
+
+- **Unit test** — one function, one behaviour, dependencies replaced. Fast, but it does not prove the API works; it proves a function.
+- **API / integration test** — your app handles a real HTTP request end to end (this task). Proves the contract: method + path + payload → status + body.
+- **End-to-end test** — a browser clicks through the real deployed UI. Slow, flaky, and out of scope for a backend task.
+
+The task you are doing — **API testing** — is the professional's reliability workhorse, and it is the exact layer your three previous tasks already began. This task finishes the job properly.
+
+## pytest, the Toolbox
+
+Everything you are about to build runs on pytest, which you already met in task 1. A tiny refresher of the three ideas that do all the work:
+
+**Discovery.** `pytest` walks a folder, finds `test_*.py` files, and inside them runs every function whose name starts with `test_`. That's the whole contract. It explains two rules you will see respected in every professional repo:
+
+- Test files live under `tests/` (the default search root) or carry the `test_` prefix.
+- Helper code that is *not* a test lives in files without that prefix, or in `conftest.py` — so pytest never mistakes a helper for a test.
+
+**Assertions.** A test is a sequence of `assert` statements. The test passes if no assert fails, and fails on the first one that does. The failure output — `assert 200 == 404` — names the two values and the file:line, which *is* your starting point when debugging.
+
+**Fixtures.** If several tests need the same setup (a client, a logged-in user, a clean database), you do not copy that setup into each test. A fixture is a function with `@pytest.fixture` that *provides* something on demand. A test asks for it by declaring it as a parameter, and pytest orchestrates setup and teardown. Fixtures are the difference between ten lines of boilerplate per test and a one-word test body.
+
+That's the whole toolbox. Everything else in this task is combinations of these three ideas.
+
+### The environment, one more time
+
+One thing overrides this whole toolbox: your `main.py` and `db.py` read configuration from the environment when the module is **imported**. So the very first lines of your test setup *must* set the test environment before anything imports the app. This exact pattern appeared at the top of `test_auth.py` in task 3:
+
+```python
+os.environ["JWT_SECRET"] = "test-only-secret"
+os.environ["DATABASE_URL"] = "sqlite:///./test_tasks.db"
+```
+
+Where does it move in a professional layout? Into `tests/conftest.py`, which pytest imports *before any test module*. Same trick, better home.
+
+## Set Up the Professional Test Layout
+
+Time to build. Work in your `task-api/` project folder.
+
+### Step 1 — Create the pytest configuration
+
+Create `pytest.ini` next to `main.py`:
+
+```ini
+[pytest]
+pythonpath = .
+testpaths = tests
+```
+
+Two rows, two guarantees:
+
+- `pythonpath = .` — tells pytest to put the project root on `sys.path`. Without it, a test inside `tests/` doing `import main` fails with `ModuleNotFoundError`, because Python looks in the test's own folder first. (An empty `conftest.py` at the project root achieves the same thing — some teams prefer it — but `pythonpath` is explicit and self-documenting.)
+- `testpaths = tests` — the default place pytest looks for tests. Your two old test files are about to move here.
+
+### Step 2 — Move the old suites into `tests/`
+
+The previous tasks placed `test_main.py` and `test_auth.py` next to `main.py` — right for a one-file project, wrong for a growing one. A professional repo keeps tests in their own folder so the project root shows only application code.
+
+```bash
+mkdir tests
+git mv test_main.py tests/test_tasks.py
+git mv test_auth.py  tests/test_auth.py
+```
+
+(`git mv` keeps history. If you did not commit task 3, plain `mv` is fine.)
+
+Now run the suite **before changing anything else**:
+
+```bash
+pytest
+```
+
+If the move broke anything, this is the moment to see it — pytest will report collection or import errors loudly. Two things to expect:
+
+- Any *helpers* in those files (like `register`, `login`, `reset_db`) that are shared will migrate to `tests/conftest.py` in the next step.
+- The suites may still pass as-is — that's fine. Renaming `test_main.py` to `tests/test_tasks.py` does not change what pytest finds; the tidy-up happens in the next steps.
+
+### Step 3 — The fixtures: `tests/conftest.py`
+
+Now the rewrite that makes the suite maintainable. Create `tests/conftest.py`:
+
+```python
+import os
+
+os.environ["JWT_SECRET"] = "test-only-secret"
+os.environ["DATABASE_URL"] = "sqlite:///./test_tasks.db"
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlmodel import SQLModel
+
+from db import engine
+import main
+
+client = TestClient(main.app)
+
+
+@pytest.fixture(autouse=True)
+def clean_database():
+    SQLModel.metadata.drop_all(engine)
+    SQLModel.metadata.create_all(engine)
+    yield
+
+
+@pytest.fixture
+def auth_headers():
+    def _make(username: str, password: str) -> dict:
+        resp = client.post(
+            "/register",
+            json={"username": username, "email": f"{username}@example.com", "password": password},
+        )
+        assert resp.status_code == 201, resp.text
+        token = client.post(
+            "/login", data={"username": username, "password": password}
+        ).json()["access_token"]
+        return {"Authorization": f"Bearer {token}"}
+
+    return _make
+```
+
+Walk through every line, because this file is the heart of the task:
+
+- **Environment before imports.** `JWT_SECRET` and `DATABASE_URL` are set before `main` or `db` are imported, exactly as in task 3 — now understood as a permanent rule, not a trick.
+- **The shared `client`.** One `TestClient` for the whole suite. It is built from `main.app` and never opens a socket.
+- **`clean_database` is `autouse=True`.** It runs **before every test, automatically**, and `yield` marks where the test runs. `drop_all` + `create_all` rebuilds the tables, so every test starts against a pristine database. No test can depend on another test's leftovers — the property in the next section.
+- **`auth_headers` is a factory fixture.** It returns a *function*, and each test calls it to register a fresh user and receive that user's `Authorization` header. Tests read like a checklist: `headers = auth_headers("alice", "alice-supersecret")`. The `assert resp.status_code == 201, resp.text` inside makes a failed registration fail loudly with the response body attached.
+
+<Callout kind="warning" title="Environment-first is a module-level rule">
+The two `os.environ` lines must stay at the *top level* of `conftest.py`, before the imports — not inside a function and not inside a fixture. `main.py` reads the secret and `db.py` reads the database URL at import time, and pytest imports `conftest.py` before any test file. A lazy `setenv` inside a fixture would run *after* the app already locked in its real configuration.
+</Callout>
+
+### Step 4 — Verify the refactor works
+
+Run the whole suite:
+
+```bash
+pytest
+```
+
+The old suites should stay green. Now make the new infrastructure prove itself: add one deliberately failing assertion temporarily and confirm the failure names the test and line, then restore it.
+
+**Understand this before moving forward:** you can say why env vars must be set before imports, what `autouse=True` means, what a factory fixture is, and why `testpaths` plus `pythonpath` are in `pytest.ini`.
+
+## The First Tests: Health and Read
+
+Now the suite itself. Create `tests/test_health.py`:
+
+```python
+def test_root_returns_message():
+    from conftest import client
+
+    resp = client.get("/")
+
+    assert resp.status_code == 200
+    assert resp.json() == {"message": "Task Manager API is running"}
+```
+
+Run just this file:
+
+```bash
+pytest tests/test_health.py
+```
+
+One test, one dot, green.
+
+**What each piece means:**
+
+- `client` comes from `tests/conftest.py` — pytest exposes it under the plain name `conftest` for imports, so tests share the fixture value without repeating the setup.
+- `resp.json()` is the parsed response body — compare it directly with a dict.
+- Asserting the *exact* body (`==`) is right when the response is a fixed contract (here, this site's health message). When the body contains generated data — an `id`, a timestamp — assert the specific fields instead of the whole body.
+
+**Why start here:** the root endpoint is the cheapest request in the app and the one every deployment monitor hits. If this red, nothing else matters — the app is not even serving. It is also the flattest possible first TestClient request: no body, no auth, no database.
+
+### Test one task by id
+
+Add to `tests/test_tasks.py` your first read-with-auth test — replace the old `test_get_one_task` and friends with the full set that follows. First, the happy path:
+
+```python
+def test_get_one_task(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    created = client.post(
+        "/tasks/", json={"title": "Write report", "description": "Final version"}, headers=headers
+    ).json()
+    resp = client.get(f"/tasks/{created['id']}", headers=headers)
+
+    assert resp.status_code == 200
+    assert resp.json()["description"] == "Final version"
+```
+
+Run the two files:
+
+```bash
+pytest tests/test_health.py tests/test_tasks.py
+```
+
+**What this added:**
+
+- The fixture parameter `auth_headers` — pytest injects it because the test declared it.
+- The pattern that will repeat in every test: **arrange** (create the data you need), **act** (the request under test), **assert** (the verdict). Arranging by calling your own API is how API tests stay honest — they exercise the real create endpoint before testing the read one.
+
+<Callout kind="tip" title="Name tests after the behaviour, not the route">
+Name a test for what it *proves* — `test_get_one_task_returns_full_details` — not for the path it calls. When a test fails, its name is the first thing a teammate reads, and "behaviour, not route" keeps names meaningful as routes change.
+</Callout>
+
+**Understand this before moving forward:** you can describe the arrange–act–assert pattern, and you know where `client` comes from in a test file.
+
+## Creating Tasks: Happy Path and Validation
+
+Creation is where the API's contract gets interesting, because it has *rules*. Test the rules as hard as the happy path.
+
+### The happy path
+
+```python
+def test_create_task(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    resp = client.post("/tasks/", json={"title": "Buy groceries"}, headers=headers)
+
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["title"] == "Buy groceries"
+    assert data["completed"] is False
+    assert isinstance(data["id"], int)
+    assert "description" in data
+```
+
+Every assertion is a promise from the Pydantic model and the endpoint: 201, the title round-trips, `completed` defaults to `False`, the id is a real integer, and the response includes the optional `description` field (as `null`) — so clients can rely on that key existing.
+
+### The rejected cases — where the value is
+
+Now the rule from the introduction, in practice. The API declares these rules in `TaskCreate`:
+
+```python
+class TaskCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=120)
+    description: str | None = None
+    completed: bool = False
+```
+
+Every one of those lines is a *promise*. Pin each promise with a test:
+
+```python
+def test_create_requires_title(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    resp = client.post("/tasks/", json={"description": "missing title"}, headers=headers)
+
+    assert resp.status_code == 422
+
+
+def test_create_rejects_blank_title(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    resp = client.post("/tasks/", json={"title": ""}, headers=headers)
+
+    assert resp.status_code == 422
+
+
+def test_create_rejects_too_long_title(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    resp = client.post("/tasks/", json={"title": "x" * 121}, headers=headers)
+
+    assert resp.status_code == 422
+
+
+def test_create_rejects_wrong_type_for_completed(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    resp = client.post("/tasks/", json={"title": "Task", "completed": "yes"}, headers=headers)
+
+    assert resp.status_code == 422
+```
+
+Four requests, four `422`s. Notice what you are *not* doing: repeating the FastAPI-generated error JSON. The shape of a 422 body differs across FastAPI versions, and asserting the exact error text couples your tests to a message string that may change. Pin the *status* and, when it matters, the *field* — not the wording.
+
+**Why these four matter:** they are the four interesting failure modes of one small model — missing field, empty string, too-long string, wrong type. Together they lock `min_length`, `max_length`, missing-field behaviour, and Pydantic's type coercion, so a future change that accidentally allows blank titles turns a test red immediately.
+
+### Checkpoint
+
+Run everything so far:
+
+```bash
+pytest
+```
+
+**Understand this before moving forward:** you can list the validation rules on `TaskCreate`, and you can say why the failure tests assert the status code rather than FastAPI's exact error text.
+
+## The 404s and Invalid IDs
+
+Two failure directions remain for reads, and beginners routinely merge them. Test both:
+
+```python
+def test_get_missing_task_returns_404(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    resp = client.get("/tasks/999999", headers=headers)
+
+    assert resp.status_code == 404
+    assert resp.json() == {"detail": "Task not found"}
+
+
+def test_get_task_with_non_integer_id_returns_422(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    resp = client.get("/tasks/not-a-number", headers=headers)
+
+    assert resp.status_code == 422
+```
+
+Two different answers to two different questions:
+
+- `/tasks/999999` — the id is a valid integer, but **no such task exists**. Answer: `404`, and the body's `detail` is worth asserting here because it is the app's own fixed string (`"Task not found"`), not generated text.
+- `/tasks/not-a-number` — the id never had a chance: the path parameter is typed `int`, so validation fails at the door with `422` *before any lookup*. This is Pydantic still working — same rule you tested in the create endpoint, now on a path parameter.
+
+<Callout kind="info" title="404 vs 422 — say it once, forever">
+**422** = the request could not be understood (bad type, missing field, invalid value). **404** = the request was understood, but the resource does not exist. Every teammate you ever have will appreciate a codebase whose error responses respect that split — and now the tests enforce it.
+</Callout>
+
+**Understand this before moving forward:** given a failing lookup URL, you can predict whether the answer is `422` or `404` and why.
+
+## Update, Delete, and the List
+
+### Update, with and without replacement
+
+`PUT /tasks/{task_id}` replaces the task with the sent payload:
+
+```python
+def test_update_task_replaces_fields(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    created = client.post("/tasks/", json={"title": "Old title"}, headers=headers).json()
+    resp = client.put(
+        f"/tasks/{created['id']}",
+        json={"title": "New title", "description": "Rewritten"},
+        headers=headers,
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["title"] == "New title"
+    assert resp.json()["description"] == "Rewritten"
+
+
+def test_update_missing_task_returns_404(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    resp = client.put(
+        "/tasks/999999",
+        json={"title": "No such task"},
+        headers=headers,
+    )
+
+    assert resp.status_code == 404
+
+
+def test_update_rejects_blank_title(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    created = client.post("/tasks/", json={"title": "Valid first"}, headers=headers).json()
+    resp = client.put(f"/tasks/{created['id']}", json={"title": ""}, headers=headers)
+
+    assert resp.status_code == 422
+```
+
+**The bug this catches, in advance:** a naive implementation of update might delete then re-insert — turning a "replace" into a "delete + create" that changes the id. The tests above would catch a returning `201`/new id instantly, because they assert both the status *and* the preserved identity (`created['id']` in the URL, unchanged in the body).
+
+### Delete
+
+```python
+def test_delete_task(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    created = client.post("/tasks/", json={"title": "Temporary"}, headers=headers).json()
+    resp = client.delete(f"/tasks/{created['id']}", headers=headers)
+
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True}
+
+
+def test_delete_missing_task_returns_404(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    resp = client.delete("/tasks/999999", headers=headers)
+
+    assert resp.status_code == 404
+```
+
+Notice `test_delete_task` proves *both* halves of a delete: the response *and* that the task is really gone. Add the second half:
+
+```python
+def test_deleted_task_is_really_gone(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    created = client.post("/tasks/", json={"title": "Temporary"}, headers=headers).json()
+    client.delete(f"/tasks/{created['id']}", headers=headers)
+    resp = client.get(f"/tasks/{created['id']}", headers=headers)
+
+    assert resp.status_code == 404
+```
+
+A delete that answers `{"ok": true}` but leaves the row behind is a delete that only *pretends*. This test is the one that catches it.
+
+### The list with filters
+
+```python
+def test_list_returns_created_tasks(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    client.post("/tasks/", json={"title": "One"}, headers=headers)
+    client.post("/tasks/", json={"title": "Two", "completed": True}, headers=headers)
+
+    resp = client.get("/tasks/", headers=headers)
+
+    assert resp.status_code == 200
+    assert {t["title"] for t in resp.json()} == {"One", "Two"}
+
+
+def test_list_filters_by_completed(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    client.post("/tasks/", json={"title": "Open"}, headers=headers)
+    client.post("/tasks/", json={"title": "Done one", "completed": True}, headers=headers)
+
+    open_tasks = client.get("/tasks/?completed=false", headers=headers).json()
+    done_tasks = client.get("/tasks/?completed=true", headers=headers).json()
+
+    assert [t["title"] for t in open_tasks] == ["Open"]
+    assert [t["title"] for t in done_tasks] == ["Done one"]
+```
+
+Two details worth keeping:
+
+- `{t["title"] for t in resp.json()}` — a set, so the test does not depend on the database's return order. If your API later adds ordering, this test stays stable.
+- Both filter directions are asserted. One direction passes even if the query parameter is quietly ignored; testing both pins the filter.
+
+**Understand this before moving forward:** you can say what a `PUT` against a missing id returns, why `test_deleted_task_is_really_gone` exists, and why the list tests use a set of titles.
+
+## Authentication and Authorization Tests
+
+The auth suite from task 3 was the reason the environment trick worked; now it becomes the reason the *suite* works. Recreate it with the fixtures — these are the tests that must never go green by accident.
+
+### The 401 family
+
+```python
+import os
+from datetime import datetime, timedelta, timezone
+
+import jwt
+from conftest import client
+
+
+def test_protected_endpoint_requires_token():
+    resp = client.get("/users/me")
+
+    assert resp.status_code == 401
+
+
+def test_protected_endpoint_rejects_invalid_token():
+    resp = client.get("/users/me", headers={"Authorization": "Bearer not-a-real-token"})
+
+    assert resp.status_code == 401
+
+
+def test_protected_endpoint_rejects_expired_token():
+    expired = jwt.encode(
+        {"sub": "1", "exp": datetime.now(timezone.utc) - timedelta(minutes=1)},
+        os.environ["JWT_SECRET"],
+        algorithm="HS256",
+    )
+    resp = client.get("/users/me", headers={"Authorization": f"Bearer {expired}"})
+
+    assert resp.status_code == 401
+
+
+def test_valid_token_reaches_protected_endpoint(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    resp = client.get("/users/me", headers=headers)
+
+    assert resp.status_code == 200
+    assert resp.json()["username"] == "alice"
+
+
+def test_login_rejects_wrong_password():
+    client.post(
+        "/register",
+        json={"username": "alice", "email": "alice@example.com", "password": "alice-supersecret"},
+    )
+    resp = client.post("/login", data={"username": "alice", "password": "wrong-password"})
+
+    assert resp.status_code == 401
+```
+
+**What each proves:**
+
+- Missing token → `401`. The gate exists.
+- Invalid token → `401`. The gate rejects garbage, not just empty headers.
+- **Expired token → `401`.** This test builds a correctly *signed* token whose `exp` is in the past and signs it with the same test secret — so it passes signature *and* decoding, and only expiry rejects it. That is the subtle middle case most suites miss.
+- **Valid token → `200` with the right user.** The positive control that keeps the other three honest.
+- Wrong password → `401`, even though the user exists. (Task 3 deliberately blurs which half failed, so you do not leak whether a username is registered.)
+
+The whole family, one line of doctrine: **missing, invalid, expired, right.** If a later change turns off any check, exactly one test turns red and names it.
+
+### The reset and the secret — why this works in one file
+
+Notice the expired-token test reads `os.environ["JWT_SECRET"]`. The token must be signed with the *same secret* the app is running under in this test run — and thanks to conftest, both live in the same process with the same test value. A hardcoded `"test-only-secret"` string would also work, but reading the env var keeps the test honest when the secret changes.
+
+The database is rebuilt before every test by `clean_database`, so `test_login_rejects_wrong_password` finding no leftovers is guaranteed — not lucky.
+
+### The authorization matrix
+
+These are the tests task 3 taught you to dread skipping. Ownership and roles, every edge:
+
+```python
+def test_user_can_access_own_task(auth_headers):
+    alice = auth_headers("alice", "alice-supersecret")
+    created = client.post("/tasks/", json={"title": "Mine"}, headers=alice).json()
+
+    resp = client.get(f"/tasks/{created['id']}", headers=alice)
+
+    assert resp.status_code == 200
+
+
+def test_user_cannot_read_another_users_task(auth_headers):
+    alice = auth_headers("alice", "alice-supersecret")
+    bob = auth_headers("bob", "bob-supersecret")
+    created = client.post("/tasks/", json={"title": "Alice's"}, headers=alice).json()
+
+    resp = client.get(f"/tasks/{created['id']}", headers=bob)
+
+    assert resp.status_code == 403
+
+
+def test_user_cannot_update_or_delete_another_users_task(auth_headers):
+    alice = auth_headers("alice", "alice-supersecret")
+    bob = auth_headers("bob", "bob-supersecret")
+    created = client.post("/tasks/", json={"title": "Alice's"}, headers=alice).json()
+
+    upd = client.put(f"/tasks/{created['id']}", json={"title": "Hijacked"}, headers=bob)
+    delete = client.delete(f"/tasks/{created['id']}", headers=bob)
+
+    assert upd.status_code == 403
+    assert delete.status_code == 403
+
+
+def test_list_returns_only_own_tasks(auth_headers):
+    alice = auth_headers("alice", "alice-supersecret")
+    bob = auth_headers("bob", "bob-supersecret")
+    client.post("/tasks/", json={"title": "Alice task"}, headers=alice)
+    client.post("/tasks/", json={"title": "Bob task"}, headers=bob)
+
+    resp = client.get("/tasks/", headers=alice)
+
+    assert resp.json() == []
+```
+
+Wait — the last test asserts `[]`, and that is the point. `GET /tasks/` is scoped to the current user, so Alice sees none of Bob's tasks. Note the deliberate difference from the earlier `test_list_returns_created_tasks`: list isolation is asserted *cross-user*, because that is the behaviour the ownership layer owns.
+
+Then the role matrix — the admin test promotes the user directly in the database, exactly as task 3 did, because there is no public "make me admin" endpoint:
+
+```python
+from sqlmodel import Session, select
+
+from db import engine
+from models import User
+
+
+def test_admin_reaches_admin_endpoint(auth_headers):
+    root = auth_headers("root", "root-supersecret")
+    alice = auth_headers("alice", "alice-supersecret")
+    with Session(engine) as session:
+        admin = session.exec(select(User).where(User.username == "root")).first()
+        admin.role = "admin"
+        session.add(admin)
+        session.commit()
+
+    resp = client.get("/users/", headers=root)
+
+    assert resp.status_code == 200
+    assert len(resp.json()) == 2
+
+
+def test_normal_user_is_denied_admin_endpoint(auth_headers):
+    alice = auth_headers("alice", "alice-supersecret")
+
+    resp = client.get("/users/", headers=alice)
+
+    assert resp.status_code == 403
+
+
+def test_unauthenticated_caller_is_denied_admin_endpoint():
+    resp = client.get("/users/")
+
+    assert resp.status_code == 401
+```
+
+The roles matrix, four corners: admin `200`; normal user `403`; no token `401`; and — the fourth corner that catches the ordering bug — a token whose *format is valid but whose role is low* hits the role check only after identity passed. That ordering (`401` before `403`) is itself pinned: an unauthenticated call hits the identity gate first.
+
+### Break a guard, watch the red
+
+The one exercise that turns "these look reasonable" into "I have seen the safety net trip". Choose one:
+
+1. In `get_own_task`, change the ownership `if` to never match — `test_user_cannot_read_another_users_task` and the other ownership tests turn red.
+2. In the admin dependency, remove the `raise` for non-admins — `test_normal_user_is_denied_admin_endpoint` turns red.
+3. In `main.py`, remove the `Depends` protecting `/tasks/` — half the suite turns red instantly.
+
+Run `pytest` and watch the failures name *the exact behaviour you broke*. Restore each change and confirm green.
+
+<Callout kind="danger" title="A suite that stayed green through all three experiments is fake">
+If you broke all three guards and nothing turned red, your suite is not testing these behaviours — it is decoration. Fix the tests before moving on. This is the difference between a suite a team trusts and a suite a team ignores.
+</Callout>
+
+**Understand this before moving forward:** you can recount which test catches a deleted ownership check, why the expired-token test signs its own token, and the order in which `401` and `403` gates fire.
+
+## Fixtures Done Properly
+
+You now use three kinds of fixture; name them precisely before moving on, because they will dominate your independent project:
+
+| Fixture | Kind | What it provides | Scope |
+|---------|------|------------------|-------|
+| `client` | plain (module-level object) | The shared TestClient | whole suite |
+| `clean_database` | `autouse=True` | A pristine database before every test | function — once *per test* |
+| `auth_headers` | factory | A fresh user's Authorization header on demand | function |
+
+Three rules transfer to every project you will ever test:
+
+1. **Scope defaults to function** — pytest runs a fixture once per test that uses it. The `clean_database` teardown (via `yield`) and the next test's setup guarantee isolation. You rarely need `scope="session"`; reach for it only for genuinely expensive, read-only setup.
+2. **Laziness** — a fixture body runs only when a test *requests* it. An autouse fixture always runs; everything else runs on demand, so unused setup costs nothing.
+3. **Factories for parameterised data** — when the "thing" varies per test (which user? which password?), return a function, as `auth_headers` does. Fixing the *creation* in the fixture and letting the *test* choose the values keeps 20 auth-setup lines out of 40 tests.
+
+<Callout kind="info" title="Why fixtures instead of a shared helper called from each test?">
+A helper func you call from each test works — until a test forgets to call it, or needs slightly different teardown, and the suite silently drifts. Fixtures make setup *declared, injected, and torn down* by the framework, impossible to forget, and they compose. That is the entire reason the professional world standardized on them.
+</Callout>
+
+**Understand this before moving forward:** given a new setup need (say, "a task that already exists"), you can decide whether it belongs in a fixture, a helper, or the test itself.
+
+## The Isolated Test Database
+
+The last infrastructure idea, and the one task 2 and 3 began: **tests must never touch real data.**
+
+Your `tests/conftest.py` sets, before anything imports the app:
+
+```python
+os.environ["DATABASE_URL"] = "sqlite:///./test_tasks.db"
+```
+
+That single line buys everything:
+
+- **The app under test runs on SQLite in a throwaway file.** Real task data — the PostgreSQL rows in your Compose stack — is never read, never written.
+- **`clean_database` rebuilds the schema per test**, so tests are deterministic. No state leaks, no "passes in my terminal, fails in CI."
+- **The suite needs nothing installed but Python and pytest.** No Docker, no PostgreSQL, no running server — which is exactly why CI can run it on a blank machine.
+
+Two popup dangers to hear clearly:
+
+- **Your app under test must actually read that env var.** If `db.py` builds the engine from a hardcoded URL or reads `DATABASE_URL` only at request time, the isolation silently fails. Verify once: unplug the Compose stack (`docker compose down`), run `pytest` — if your suite still passes, your tests genuinely never touched PostgreSQL.
+- **The SQLite file itself is disposable test junk.** It belongs in `.gitignore` (add `test_tasks.db` if task 3 did not). Regenerate — never commit it.
+
+But do not mistake this for "SQLite forever". Real projects run these same tests against the real database type in CI (a Postgres service container), and only the SqlAlchemy `DATABASE_URL` value changes. The *pattern* — environment-first, isolated database, rebuilt per test — is what transfers; the filename is trivia.
+
+**Understand this before moving forward:** you can prove your tests never hit the real database, and say in one sentence what `docker compose down` has to do with proving it.
+
+## Test Independence
+
+One iron rule explains almost every "weird" CI failure a junior ever meets:
+
+> **Tests must never depend on order, on each other, or on leftovers.**
+
+Concretely, this suite obeys it because:
+
+- **`clean_database` reset per test** — the eighth test in the file cannot see what the third test created. Without this, the suite passes in your terminal (tests run in file order) and fails in CI — or vice versa — with no code change at all. That is the classic "works on my machine, red in CI".
+- **No shared application state leaked through objects.** The `client` is shared, but every request is stateless from the server's perspective; shared *data* is what is forbidden, and the reset removes it.
+- **Factories create their own users.** Two tests never reuse the same account, so registration conflicts are impossible by construction.
+
+The habit that makes independence stick, adopted from task 3's OWASP reading: **always think of a test's starting state as empty** and pass whatever the test specifically needs, explicitly.
+
+**Understand this before moving forward:** you can explain why removing `clean_database` would eventually turn the suite red, and why that would take longer to appear locally than in CI.
+
+## Running the Suite and Reading Failures
+
+Green means nothing until you can read red. This is the professional debugger's muscle, and it is trainable in five minutes.
+
+Run the whole suite:
+
+```bash
+pytest
+```
+
+You should end with something like `... passed` and a list of dots. The dot count *is* your coverage, growing with every test in this task.
+
+Now make a real failure. In `tests/test_tasks.py`, change one assertion to a wrong status:
+
+```python
+def test_create_task(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    resp = client.post("/tasks/", json={"title": "Buy groceries"}, headers=headers)
+
+    assert resp.status_code == 500   # deliberately wrong, real value is 201
+```
+
+Run `pytest` again and read the block. Three regions, three answers:
+
+```text
+_________________________ test_create_task _________________________
+
+    def test_create_task(auth_headers):
+        headers = auth_headers("alice", "alice-supersecret")
+        resp = client.post("/tasks/", json={"title": "Buy groceries"}, headers=headers)
+
+>       assert resp.status_code == 500   # deliberately wrong, real value is 201
+E       assert 201 == 500
+E         +201
+E         -500
+
+tests/test_tasks.py:12: AssertionError
+```
+
+- **The header** names the failing test — everything between the `___` bars identifies this exact failure.
+- **The `>` line inside the body** is the exact statement that failed, with its line number.
+- **The `E assert 201 == 500`** is the verdict — actual vs expected. In a request test, the *most useful* trick when the status surprises you: run the request in an interactive session and inspect `resp.text` — the JSON error body — which the failure block does not show:
+
+```bash
+python -c "from fastapi.testclient import TestClient; import main; 
+r = TestClient(main.app).post('/tasks/', json={'title': 'x'});
+print(r.status_code, r.text)"
+```
+
+That one-liner (run from the project root, env vars set if needed) prints the server's *reason* — usually the `detail` explaining the rejected request.
+
+Restore `201`, confirm green. You have now done the entire skill: reproduce the failure, read the block, locate the line, inspect the actual response, fix, re-green.
+
+<Callout kind="tip" title="Run one failing (or one file) at a time">
+`pytest tests/test_tasks.py` runs one file; `pytest tests/test_tasks.py::test_create_task` runs one test; `pytest -k "delete"` runs every test whose name contains "delete". When a suite is red, shrink the surface first — the fastest debugger is a single test.
+</Callout>
+
+**Understand this before moving forward:** given a failure block, you can state which test, which statement, and which values — and you have reproduced a red suite on purpose, twice.
+
+## The Suite in Docker and CI
+
+Everything so far must survive the reality of the previous two tasks.
+
+**Docker + PostgreSQL.** Your Compose stack runs the app against real PostgreSQL — but your *tests* deliberately do not. The suite uses its own SQLite file and needs no container at all. Concretely:
+
+- With the stack stopped (`docker compose down`), the suite still passes — that is the isolation invariant, proven.
+- This does not make the Docker work pointless; it makes the tests *portable*. The container packaging and the CI automation are built on exactly this portability, as task 2 explained.
+
+**CI — your suite is already in the pipeline.** Task 2's `ci.yml` includes a step `run: pytest`. Every test you just wrote is discovered automatically and runs on every push and pull request, on a clean machine, for free:
+
+```yaml
+      - name: Run tests
+        run: pytest
+```
+
+What changed is not the pipeline — it is what the pipeline *proves*. Before this task, CI verified "the API builds and its small suite passes." After it, CI verifies the entire contract: every CRUD promise, every validation rule, every 401/403 guard, every ownership edge — on a machine that has never met your laptop.
+
+Commit and push, then open the Actions tab and watch the run:
+
+1. Push your refactored, expanded suite.
+2. The `CI` workflow triggers (if `pytest.ini` plus the new `tests/` directory are included in the push — confirm with `git add tests/ pytest.ini conftest.py`).
+3. Green: the clean machine installed deps and ran the whole suite. Red: open the failed `Run tests` step — the pytest failure block is there, exactly the format you learned to read above.
+
+Then do the lever you know from task 2: break a test deliberately, push, and watch CI go red — then send the fix and watch it recover. A pipeline whose red you have seen is a tool; one you have never seen fail is a wish.
+
+**Understand this before moving forward:** you can explain why the same test file runs both in a container-build and in CI, and what the CI verification covers that it did not cover before this task.
+
+## Common Mistakes and How to Avoid Them
+
+Four mistakes dominate junior test suites. Each has a one-line guard:
+
+<Callout kind="danger" title="Setting env vars after imports">
+Writing `os.environ[...] = ...` lower in the file, below the `import main` line — the app already read its real config at import time, and your "isolated" database is not isolated. Rule: env-top, imports-after, always.
+</Callout>
+
+<Callout kind="danger" title="Testing only the happy path">
+`test_create_task` passes, everything green — and the suite would stay green if someone deleted every validation and every authorization guard. The rejected cases (422/401/403/404) are not optional extras; they are the majority of the value.
+</Callout>
+
+<Callout kind="danger" title="Asserting whole response bodies with generated fields">
+`assert resp.json() == {"id": ..., "title": ...}` breaks the moment ids, timestamps, or ordering change — and teaches you to ignore failures. Pin behaviour: status code plus the fields the contract forbids changing.
+</Callout>
+
+<Callout kind="danger" title="Making tests depend on each other">
+Test 3 relies on the user created by test 2. Works today, red tomorrow, impossible to debug in CI. The autouse reset is not a convenience — it is the discipline that keeps every test honest.
+</Callout>
+
+Plus two environment gotchas specific to this task:
+
+<Callout kind="warning" title="Pressent case: httpx missing">
+TestClient is built on **httpx**. If collection fails or the very first call errors about an HTTPX dependency, run `pip install httpx` (or `pip install "fastapi[standard]"`). Task 1 installed it, but a fresh `requirements.txt` regen can drop it.
+</Callout>
+
+<Callout kind="warning" title="Import error after moving tests">
+A `ModuleNotFoundError: No module named 'main'` right after the move means pytest cannot see the project root — your `pytest.ini` `pythonpath = .` (with pytest 7+) or a root-level `conftest.py` is missing. That is the number-one breaker of a first `git mv`.
+</Callout>
+
+## Troubleshooting
+
+| Symptom | Most likely cause | Fix |
+|---------|-------------------|-----|
+| `No module named 'main'` | Project root not on `sys.path` | Add `pythonpath = .` to `pytest.ini` or an empty root `conftest.py` |
+| Test never runs (0 tests collected) | Filename/function name misses the `test_` prefix, or lives outside `testpaths` | Rename file/fn; check `pytest --collect-only` |
+| Tests pass locally, fail in CI | Order/leftover dependence — a test forgot the reset, or shared state | Rely on the autouse `clean_database`; never cross-test data |
+| `201` when `422` was expected | Model changed (e.g. blank title now allowed) | This is a *real* contract break you just caught — fix app or assertion after deciding which is right |
+| `401`/`403` unexpected | Token secret mismatch or role not promoted in DB | Confirm env-top secret matches, and set `role = "admin"` in a session as the tests do |
+| `sqlite3.OperationalError: table already exists` | Two engines created on the same file | One `DATABASE_URL` (the env var) at conftest top; don't import `db` twice before setting it |
+| Run is slow to start | First `pip install` on a cold CI machine | Normal; only the environment phase is slow, tests stay seconds |
+
+When nothing above fits, shrink to one test (`pytest tests/test_tasks.py::test_create_task`) and read its whole failure block — the answer is in the output, as the reading-failures section drilled.
+
+## Final Verification
+
+Run this loud checklist before you call the task done:
+
+<Checklist items={[
+  "pytest runs green from the project root with the Docker/PostgreSQL stack completely stopped",
+  "The suite lives in tests/ with test_health.py, test_tasks.py, and test_auth.py, plus pytest.ini and a conftest.py holding environment-first setup, an autouse clean-database fixture, and an auth-header factory",
+  "Every CRUD promise is pinned: create 201, get/list 200, update 200, delete 200 with a gone-after check, and the completed filter in both directions",
+  "Every rejected case is pinned: missing/blank/too-long title and wrong type (422), missing and non-integer ids (404 and 422), auth 401s (missing/invalid/expired), ownership 403s, and the full role matrix",
+  "You broke a guard (ownership, role, or protection), watched the exact test turn red, then restored it to green",
+  "You read a full failure block and located the assertion and line in under a minute",
+  "The suite ran in CI on a push, and you have watched CI go red and recover at least once",
+  "test_tasks.db is git-ignored, never committed",
+  "git mv (or mv) kept history, and the final push shows the new tests/ folder in the repository's Actions run"
+]} />
+
+**You move on only when every box is checked — and especially when the isolation box (suite green with the stack stopped) is true, because that is the claim the whole suite makes.**
+
+## Independent Practice: Employee Management API
+
+This is where the training wheels come off — the same pattern as the previous three paths. Build the Employee Management API platform **yourself**, from scratch, with the same stack you used for tasks 1–4: FastAPI, SQLModel, PostgreSQL via compose, JWT auth, and CI. None of the solution is written for you here. What follows is the *specification* — and note what the emphasis is: in this task, the tests are the deliverable.
+
+### Project Description
+
+An **Employee Management API** where authenticated employees belong to departments and carry roles, and managers/HR perform administrative operations on them. You decide the exact fields (name, email, department, salary, role…), but the contract must be testable.
+
+### Functional Requirements
+
+- CRUD for employees: create, list, get one, update, delete.
+- Employees are tied to the authenticated user who created them, or centralized for admins — you choose the model, but state it and *test it consistently*.
+- List supports filtering (by department or hire date) and a health/root endpoint.
+- Validation: name required and non-blank; email valid; rating/salary numeric with sensible bounds.
+
+### Authentication and Authorization Rules
+
+- Registration and login returning a JWT (`register`, `login`).
+- Every non-public endpoint requires a valid, non-expired token.
+- An admin role can reach admin-only endpoints; normal users cannot.
+- Ownership rule (your choice, must be stated): either users only touch their own employees, or all users read all and only admins write — pick one, justify it, and test both the allowed and denied sides.
+
+### Test Requirements (the heart of this task)
+
+- A `tests/` directory with `conftest.py`: environment-first setup, an autouse pristine-database fixture, and headers helpers.
+- At least **one test per rejected case** as well as per happy path: missing/blank/invalid fields (`422`), missing resources (`404`), unauthenticated (`401`), and forbidden (`403`) where applicable.
+- Tests for token expiry and invalid tokens.
+- Test independence: no test may depend on data another test created; run the suite with a shuffled order (via `pytest-randomly`) to prove it.
+- Full isolation: the suite must stay green with the PostgreSQL stack stopped.
+- At least one test that **breaks on purpose** is documented in a README (show what a failing run looks like).
+
+### Acceptance Criteria
+
+- `pytest` is green locally with no containers running.
+- CI (`ci.yml`) runs the suite and goes **red when you push a deliberately broken test**, then green after the fix.
+- The auth and authorization tests would catch the three guards being deleted (try it, restore it — describe what turned red in your README).
+- The suite is readable: test names state behaviour, fixtures remove repetition, and no test asserts a full generated body.
+
+### Suggested Deliverables
+
+1. The complete project in a GitHub repository (code, tests, `compose.yaml`, `ci.yml`, README).
+2. A README section titled **"Testing"** documenting: what each suite covers, how to run it, the isolation claim, and one walkthrough of a deliberately broken test (with the red output).
+3. A short review note: which rejected-case test is the one you are proudest of, and why.
+
+## Reference Project
+
+A real-world map worth studying before or while you build your independent project — **only as a map, never as a thing to copy**.
+
+**`iammikek/fastAPI-101`** — https://github.com/iammikek/fastAPI-101
+
+What it is: a complete, public FastAPI reference project by an external author (not created by this site) exercising the exact stack you have been learning — FastAPI, pytest with TestClient, test fixtures, a test database, Docker, PostgreSQL, and CI/CD wiring.
+
+Why it is a good map for this task: you can watch how a *different* author made the same decisions you are making — where they put `conftest.py`, how they structure fixtures, which rejected cases they remember to test, and how they connect the test suite to Docker and CI. Seeing a second implementer's trade-offs is precisely the "reading other people's code" skill the internship wants.
+
+What to inspect, in order:
+
+- **The tests directory and conftest** — how fixtures are named and scoped, and how the test database is wired through environment.
+- **The auth/API tests** — which negative cases (401/403/404/422) they considered, and which they skipped. Your job is not to clone their list; it is to notice what a second opinion adds.
+- **The CI workflow** — how the same suite runs on a clean machine and what they gate on it.
+
+<Callout kind="danger" title="Do NOT copy the reference project">
+This repository is a *study guide*, not source material. Copying its code wholesale would skip the entire point of the independent task — building the decisions yourself. When you sit down to write `conftest.py`, close the tab and write from your own head, then open it again to compare your choices, not to paste theirs. The same rule applied to every reference in the earlier paths.
+</Callout>
+
+## Curated Resources
+
+For each resource: **what it is, why it is useful, when to open it, and what to focus on.** The official documentation is the technical source of truth — when this page and the docs disagree, the docs win.
+
+First, the three lessons you are standing on, built on this site:
+
+**[FastAPI: A Guided Learning Path](/docs/learning-paths/fastapi)** — where `TestClient`, pytest, Pydantic validation, and the CRUD endpoints under test all came from. Re-open it whenever an expected behaviour in this task is unclear.
+
+**[Docker & CI/CD: A Guided Learning Path](/docs/learning-paths/docker-cicd)** — where the portability idea, the Compose stack, and the exact `ci.yml` running your suite came from.
+
+**[Authentication & Authorization: A Guided Learning Path](/docs/learning-paths/authentication-authorization)** — where environment-before-import, `reset_db`, the auth helpers, and the entire 401/403 matrix were born. The fixtures in this task are that suite, grown up.
+
+<ResourceItem
+  label="FastAPI: Testing"
+  href="https://fastapi.tiangolo.com/tutorial/testing/"
+  why="The official chapter on testing FastAPI applications with TestClient — the canonical description of everything this task builds."
+  when="Before writing your first tests/*.py file, and again whenever TestClient behaviour surprises you."
+  focus="TestClient usage, dependency overrides, and how tests reach into the app without a server."
+/>
+
+<ResourceItem
+  label="FastAPI: TestClient (reference)"
+  href="https://fastapi.tiangolo.com/reference/testclient/"
+  why="The precise API of TestClient: every method, parameter, and return shape — the authoritative map for any request you need to make."
+  when="While writing any test that needs an unusual header, parameter, or payload form."
+  focus="Method signatures (get/post/put/delete, json=, data=, headers=, params=) and response attributes (status_code, json(), text)."
+/>
+
+<ResourceItem
+  label="pytest: How to use fixtures"
+  href="https://docs.pytest.org/en/stable/how-to/fixtures.html"
+  why="The official fixture guide — scope, autouse, factories, teardown, and composition; the exact tools conftest.py in this task uses."
+  when="When you want a fixture that has a factory, a scope, or a teardown you have not written before."
+  focus='Fixture parameters, yield-based teardown, autouse, and when scope="session" is (and is not) appropriate.'
+/>
+
+<ResourceItem
+  label="pytest: How to write and report assertions"
+  href="https://docs.pytest.org/en/stable/how-to/assert.html"
+  why="The official treatment of assert — including readable failure messages and the differences between strict equality and membership checks."
+  when="When a failing assertion's output is not immediately telling you what changed."
+  focus="Readable assertion reporting and the assertion introspection pytest performs."
+/>
+
+<ResourceItem
+  label="HTTPX: Requests (client reference)"
+  href="https://www.python-httpx.org/"
+  why="The HTTP library beneath TestClient. Reading its request semantics makes TestClient calls stop feeling magical."
+  when="When a TestClient call fails in a way that smells like raw HTTP (timeouts, redirects, headers)."
+  focus="How requests are built from method + url + params + headers + json — the same shapes TestClient accepts."
+/>
+
+<ResourceItem
+  label="OWASP: Authorization Testing Automation Cheat Sheet"
+  href="https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Testing_Automation_Cheat_Sheet.html"
+  why="The professional formalization of this task's 'test every denied case' rule — the authorization matrix as a discipline."
+  when="When designing your independent project's test list, and any time you add a resource-scoped endpoint."
+  focus="Modeling role/resource combinations you must test, including the denied ones."
+/>
+
+<ResourceItem
+  label="pytest-randomly"
+  href="https://pypi.org/project/pytest-randomly/"
+  why="Runs your tests in random order in CI, catching exactly the test-independence bugs this task's checklist flags."
+  when="In your independent project, after the suite is green — the tool that proves 'no test depends on another.'"
+  focus="Enabling random ordering and reading a failure it surfaces: a test that only passed because a sibling ran first."
+/>
+
+## Beyond This Learning Path
+
+The discipline now exists; the deliberate next steps, in value order:
+
+1. **Coverage measurement** — add `pytest-cov` and read the report line by line: the unvisited branches are almost always the rejected cases you skipped.
+2. **Parameterized tests** — one test function, many inputs: a table of invalid payloads becomes five `@pytest.mark.parametrize` rows instead of five near-identical functions.
+3. **Testing against real PostgreSQL** — replace the SQLite line with a Postgres service container in CI. The pattern is identical; only `DATABASE_URL` changes, and you will have confidence the SQL your app actually runs is the SQL your tests verify.
+4. **Test doubles only where they pay** — dependency overrides for slow third-party clients (email, SMS). The discipline task 3 modeled: use the real thing where cheap, mock only what is genuinely expensive.
+5. **Rate limiting and brute-force tests** — your login now has guards; test the guards: too many failed logins, then lockout.
+6. **Mutation testing** — a tool that deletes lines of app code and checks your suite turns red. The "break a guard" experiment from this task, automated across the whole codebase.
+
+The single most valuable follow-up is **coverage that measures the rejected cases**: once you can see, per line, that every 401/403/404/422 branch is exercised, the habit this task installed becomes self-auditing.
+
+## A Note on How This Task Is Built
+
+This is the deliberate fourth rung of the ladder. Task 1 taught you to *write* a backend; task 2 to *package, run, and automate* it; task 3 to *know who calls it and what they may touch*; this task taught you to **prove every one of those promises with a suite a team can trust**. Nothing in the API changed — everything around it became executable specification. Every section ran the same four beats — explain, show, do, verify, move forward — and every claim deferred to the official resources above as the source of truth, with OWASP carrying the *why* of the denied-case discipline. When you finish with a Task API whose every validation rule, every 401/403 guard, and every ownership edge is pinned by a test you wrote, understood, and once watched turn red on purpose — and an Employee API whose suite is its proudest deliverable — you have crossed from "I write code" to "I prove my code still works when I am gone." That proof — not the number of tests — is what this task exists to grow.

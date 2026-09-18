@@ -38,6 +38,14 @@ body {
   font-family: "Inter", system-ui, sans-serif;
 }
 
+/* Keep code blocks and inline code left-to-right inside right-to-left layouts */
+[dir="rtl"] pre,
+[dir="rtl"] code {
+  direction: ltr;
+  unicode-bidi: isolate;
+  text-align: left;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

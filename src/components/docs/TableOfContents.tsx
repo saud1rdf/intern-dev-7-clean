@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useLanguage } from '@/components/providers/LanguageProvider';
 
 interface Heading {
   text: string;
@@ -11,15 +12,18 @@ interface Heading {
 
 interface TableOfContentsProps {
   headings: Heading[];
+  headingsAr?: Heading[];
 }
 
-export default function TableOfContents({ headings }: TableOfContentsProps) {
+export default function TableOfContents({ headings, headingsAr }: TableOfContentsProps) {
+  const { language } = useLanguage();
+  const active = language === 'ar' && headingsAr ? headingsAr : headings;
   const [activeId, setActiveId] = useState<string>('');
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
     // Only show TOC if there are headings
-    setIsVisible(headings.length > 0);
+    setIsVisible(active.length > 0);
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -35,7 +39,7 @@ export default function TableOfContents({ headings }: TableOfContentsProps) {
       }
     );
 
-    headings.forEach((heading) => {
+    active.forEach((heading) => {
       const element = document.getElementById(heading.slug);
       if (element) {
         observer.observe(element);
@@ -45,7 +49,7 @@ export default function TableOfContents({ headings }: TableOfContentsProps) {
     return () => {
       observer.disconnect();
     };
-  }, [headings]);
+  }, [active]);
 
   if (!isVisible) {
     return null;
@@ -55,11 +59,11 @@ export default function TableOfContents({ headings }: TableOfContentsProps) {
     <aside className="fixed top-20 right-8 z-30 hidden h-[calc(100vh-5rem)] w-64 overflow-y-auto xl:block">
       <div className="border-l border-gray-200 pl-4 dark:border-gray-800">
         <h4 className="mb-3 text-sm font-semibold text-gray-900 dark:text-gray-100">
-          On This Page
+          {language === 'ar' ? 'على هذه الصفحة' : 'On This Page'}
         </h4>
         <nav>
           <ul className="space-y-2 text-sm">
-            {headings.map((heading) => (
+            {active.map((heading) => (
               <li
                 key={heading.slug}
                 style={{ paddingLeft: (heading.level - 2) * 12 }}

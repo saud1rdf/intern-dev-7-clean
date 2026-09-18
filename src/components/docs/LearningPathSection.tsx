@@ -44,6 +44,19 @@ const learningPaths = [
     descriptionAr:
       'أضف المستخدمين والتسجيل وتسجيل الدخول وكلمات المرور المشفرة ورموز JWT وفحوصات الملكية والأدوار إلى مشروع إدارة المهام، مع اختبارات للمصادقة والتفويض.',
   },
+  {
+    step: 'Learning Path 4',
+    stepAr: 'المسار الرابع',
+    href: '/docs/learning-paths/api-testing',
+    meta: 'Testing • pytest • Backend • Intermediate',
+    title: 'API Testing with FastAPI & Pytest: A Guided Learning Path',
+    titleEn: 'API Testing with FastAPI & Pytest: A Guided Learning Path',
+    titleAr: 'اختبار واجهات برمجة التطبيقات مع FastAPI و pytest: مسار تعلّم موجّه',
+    descriptionEn:
+      'Professionalize the Task Management API you already built with a complete, trustworthy test suite: pytest, TestClient, fixtures, an isolated test database, and full coverage of the rejected cases — including a practice project built entirely on your own.',
+    descriptionAr:
+      'اجعل لمشروع إدارة المهام الذي بنيته مجموعة اختبارات احترافية يعتمد عليها: pytest و TestClient و Fixtures وقاعدة بيانات معزولة وتغطية كاملة للحالات المرفوضة، مع مشروع تجربة عملي تبني اختباراته بنفسك.',
+  },
 ];
 
 export default function LearningPathSection() {

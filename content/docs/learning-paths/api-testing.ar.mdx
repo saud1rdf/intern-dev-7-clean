@@ -1,0 +1,1120 @@
+---
+title: "اختبار واجهات برمجة التطبيقات مع FastAPI و pytest: مسار تعلّم موجّه"
+slug: "api-testing"
+category: "learning-paths"
+summary: "مسار رابع موجّه: خُذ مشروع إدارة المهام الذي بنيته سابقاً — أصبح الآن متعدد المستخدمين ومحمياً بالتحكم في الوصول ومُعبّأ في حاويات ومُؤتمتاً — واجعله يكتسب الطبقة الأخيرة التي يصرّ عليها كل فريق حقيقي: مجموعة اختبارات احترافية ومتكاملة للواجهة باستخدام pytest و TestClient و Fixtures وقاعدة بيانات اختبار معزولة، تغطي الحالات المرفوضة كما المقبولة، وتنتهي بمشروع مستقل تبني اختباراته بنفسك."
+readingTime: 75
+---
+
+# اختبار واجهات برمجة التطبيقات مع FastAPI و pytest: مسار تعلّم موجّه
+
+هذه هي **المهمة التقنية الرابعة** في فترة التدريب. أنت تملك الآن نظاماً خلفياً حقيقياً: في [المسار الأول](/docs/learning-paths/fastapi) بنيت واجهة إدارة المهام، وفي [المسار الثاني](/docs/learning-paths/docker-cicd) وضعتها في حاوية وأضفت PostgreSQL وأتمتّ اختيارها في CI، وفي [المسار الثالث](/docs/learning-paths/authentication-authorization) أضفت المستخدمين ورموز JWT والملكية والأدوار. كل ميزة تعمل الآن. لذلك هذه المهمة لا تتعلق بكتابة ميزات جديدة إطلاقاً.
+
+هذه المهمة تطرح سؤالاً مختلفاً وغير مريح: **كيف تُثبت أن الواجهة ما زالت تعمل غداً؟**
+
+ليس "أُثبت لك أنني قرأت الكود". بل إثبات ينجو من مغادرة مطوّر، ومن ترقية اعتماد، ومن ترحيل قاعدة بيانات، ومن إعادة هيكلة ليلة الجمعة التي بدت غير ضارة. هذا الإثبات هو **مجموعة اختبارات احترافية** — والفجوة بين "كتبت اختبارات لأن الدرس قال ذلك" و"أُدير مجموعة اختبارات يستطيع فريق أن يثق بها" هي أكبر قفزة في مسيرة أي مطوّر مبتدئ.
+
+اتبع المقاطع بالترتيب. كل مقطع عملي كبير يتبع النمط ذاته الذي اتبعته المسارات السابقة:
+
+**اشرح ← اعرض ← نفّذ ← تحقّق ← انتقل للأمام**
+
+لا تنتقل إلا بعد اجتياز نقطة التحقق في نهاية المقطع.
+
+## ما الذي ستبنيه
+
+في نهاية هذه المهمة يحصل **مشروع إدارة المهام ذاته** على ما يسمّيه المحترفون *تغطية يمكنك الاعتماد عليها*:
+
+| الجزء | ما هو | لماذا هو في الصورة |
+|-------|------|--------------------|
+| **مجلد `tests/`** | توزيع احترافي للاختبارات داخل `task-api/` | الاختبارات تصبح مخرَجاً بنفس جودة الواجهة نفسها |
+| **إعدادات pytest** | `pytest.ini` + ملف `conftest.py` في الجذر | يصرّحان بمكان الاختبارات وكيف تجد المشروع على مسار الاستيراد |
+| **Fixtures للاختبارات** | إعدادات مشتركة في `tests/conftest.py` | العميل `client` وقاعدة بيانات نظيفة ورؤوس مصادقة دون تكرار |
+| **قاعدة بيانات اختبار معزولة** | إعداد البيئة قبل الاستيرادات لتصب على SQLite | الاختبارات لا تلمس بياناتك الحقيقية (PostgreSQL) أبداً — نفس حيلة المهمة الثالثة |
+| **اختبارات CRUD** | إنشاء وقراءة وعرض وتحديث وحذف وتصفية | كل مسار سعيد مثبَّت بتحقّق |
+| **اختبارات التحقق** | عناوين فارغة وأنواع خاطئة وحقول ناقصة | قواعد `422` التي أعلنتها في Pydantic، مثبتة إلى الأبد |
+| **اختبارات المصادقة والتفويض** | `401` و `403` والملكية والأدوار | تتلقف وتوسّع عمل `test_auth.py` |
+| **مجموعة قابلة للفشل تفهمها** | تكسر اختباراً وتقرأ الاحمرار | المهارة التي تدور حولها المهمة كلها |
+
+التوزيع النهائي، في صورة واحدة:
+
+```text
+task-api/
+├── main.py               # الواجهة — لم تتغير في هذه المهمة
+├── models.py             # جدولا Task و User
+├── db.py                 # محرك DATABASE_URL والجلسة
+├── security.py           # التجزئة و JWT
+├── requirements.txt
+├── .env.example
+├── Dockerfile
+├── compose.yaml          # الواجهة + PostgreSQL
+├── .github/workflows/ci.yml   # يشغّل pytest مع كل push
+├── pytest.ini            # جديد: إعدادات pytest
+├── conftest.py           # جديد (في الجذر): يجعل المشروع قابلاً للاستيراد
+└── tests/                # جديد: المجموعة الاحترافية
+    ├── conftest.py       # fixtures: client، قاعدة بيانات نظيفة، مُنشئ رؤوس المصادقة
+    ├── test_health.py    # GET /
+    ├── test_tasks.py     # CRUD + التحقق + 404 + الملكية
+    └── test_auth.py      # قيم 401 والرموز والأدوار (نمت من مجموعة المهمة الثالثة)
+```
+
+لا يتغير شيء في الواجهة. كل ما حول الواجهة يصبح قابلاً للتحقق.
+
+## ما الذي ستتعلمه
+
+<LearningObjectives items={[
+  "تشرح ما الذي تحميه الاختبارات الآلية فعلاً، ولماذا عبارة «إنه يعمل» ليست دليلاً",
+  "تضع اختبار الواجهة في هرم الاختبارات وتقارنه باختبارات الوحدات والتكامل ومن النهاية إلى النهاية",
+  "تشرح كيف يكتشف pytest الاختبارات، وما هو الـ Fixture، ولماذا وُجد أصلاً",
+  "تستخدم TestClient كعميل HTTP داخل العملية: الدوال و json= والرؤوس وأكواد الحالة",
+  "تنظّم اختبارات مشروع حقيقي في مجلد tests/ مع إعدادات pytest",
+  "تضبط متغيرات البيئة قبل الاستيرادات لتستخدم الاختبارات قاعدة بيانات وسرّاً معزولين",
+  "تكتب اختبارات CRUD كاملة بما فيها كل حالة مرفوضة: 422 و 404 و 401 و 403",
+  "تبني الإعدادات المشتركة كـ pytest fixtures مع نطاق دالة وتنظيف تلقائي",
+  "تشرح لماذا يجب أن تكون الاختبارات مستقلة ولماذا يجب ألا يعتمد الترتيب أبداً",
+  "تقرأ مخرجات اختبار فاشل وتستخدمها لتحديد السلوك المكسور في أقل من دقيقة",
+  "تتحقق من أن المجموعة نفسها تعمل داخل Docker وفي سير عمل CI القائم دون تغيير",
+  "تصمّم وتكتب مجموعة اختبارات احترافية كاملة لمشروع غير موجّه بمفردك"
+]} />
+
+## ما الذي تعرفه مسبقاً
+
+هذه المهمة تعيد استخدام كل شيء تقريباً من المهام الثلاث السابقة — لا توجد تقنية جديدة هنا:
+
+| من المهمة 1 (FastAPI) | كيف يُعاد استخدامه هنا |
+|------------------------|------------------------|
+| `TestClient` + pytest | قلب كل اختبار ستكتبه |
+| التحقق عبر Pydantic و HTTPException وأكواد الحالة | السلوكيات الدقيقة التي تتحقق منها اختباراتك |
+| نقاط النهاية الخمس للـ CRUD | المسارات السعيدة وحالات 404 قيد الاختبار |
+
+| من المهمة 2 (Docker + CI/CD) | كيف يُعاد استخدامه هنا |
+|------------------------------|------------------------|
+| `DATABASE_URL` وقابلية النقل عبر SQLite للاختبارات | قاعدة بيانات الاختبار المعزولة |
+| سير عمل `ci.yml` الذي يشغّل `pytest` | مجموعتك المكتملة تعمل هناك تلقائياً |
+| `compose.yaml` + PostgreSQL | ما يجب أن تبقى اختباراتك *بعيدة عنه* |
+
+| من المهمة 3 (المصادقة والتفويض) | كيف يُعاد استخدامه هنا |
+|-----------------------------|------------------------|
+| البيئة قبل الاستيراد و `reset_db()` ومساعدا `register`/`login` و `auth_header` | تُرقّى إلى pytest fixtures حقيقية |
+| مجموعة `test_auth.py` كلها | تُعاد هيكلتها وتُوسّع وتُثبَّت |
+| الملكية والأدوار (`403`) | مصفوفة التفويض، مختبرة بالكامل |
+
+إذا شعرت أن أي فكرة مهتزّة، فالصفحات السابقة مرتبطة في جميع أنحاء هذا الملف. هذه المهمة تعلّم *الانضباط فوق معرفة تملكها أصلاً* — أسلوب الاختبار الحقيقي بدون mocks وبطلبات حقيقية الذي يستخدمه فرق FastAPI المحترفة.
+
+## المتطلبات المسبقة
+
+يجب أن تملك مسبقاً، من المهام الثلاث السابقة:
+
+- **واجهة إدارة المهام المكتملة** من المهمة الثالثة — جداول SQLModel و `DATABASE_URL` و `db.py` و `security.py` و `compose.yaml` و `ci.yml` ومجموعة `pytest` ناجحة (`test_main.py` + `test_auth.py`). هذه هي وسيلتك.
+- **pytest و httpx مثبّتان** — `pytest` من المهمة الأولى، و `httpx` يأتي مع `fastapi[standard]`. تأكد عبر `pip list | grep -E "pytest|httpx"`.
+
+لا حاجة لأي حزمة جديدة في هذه المهمة. ميزات الاختبار الاحترافية التي ستستخدمها (fixtures و autouse و factories واكتشاف `tests/` و `pytest.ini`) كلها موجودة في pytest الذي تملكه أصلاً.
+
+### فحص البيئة
+
+أكد أن المشروع ما زال يعمل واختباراته خضراء قبل أن تلمس أي شيء:
+
+```bash
+source .venv/bin/activate
+pytest
+```
+
+يجب أن ترى `test_main.py` و `test_auth.py` كلاهما أخضر، وينتهي الناتج بشيء مثل `... passed`. هذا الأساس الأخضر هو ما تنمو إليه هذه المهمة — كل ما يلي هو الاختبارات نفسها، منظَّمة باحترافية ومضاعفة حتى لا يبقى شيء بغير تحقّق.
+
+**افهم هذا قبل الانتقال للأمام:** المشروع أخضر، وتعرف أين يقع `main.py`، وما الذي يفعله `DATABASE_URL`، ولماذا تضع اختبارات المصادقة متغيرات البيئة *قبل* استيراد التطبيق.
+
+## لماذا يكتب الفريق اختبارات آلية
+
+لنحسم *السبب* أولاً، لأن مجموعة اختبارات مكتوبة دون إيمان بها ستتعفّن بصمت.
+
+السبب الصادق ليس "الاختبارات ممارسة جيدة". إنه **الذاكرة والدفاع**. ثلاثة تهديدات تهاجم كل كود، والاختبارات الآلية هي أرخص دفاع معروف.
+
+**1. ستنسى.** بعد شهرين لن تتذكر لماذا يرفع فحص الملكية `403` وليس `404`، أو لماذا أعادت العناوين الفارغة `422`. الاختبارات التي تكتبها اليوم *هي* تلك الذاكرة — مكتوبة كمواصفات قابلة للتنفيذ، وتنجو من المطوّر الذي كتبها.
+
+**2. التغيير الذي لا يكسّر شيئاً ظاهرياً.** ترتفع نسخة اعتماد. تُحسَّن استعلام. يُستخرج مساعد. لا شيء يبدو *مكسوراً*… حتى يصطدم مستخدم بالإدخال الخاطئ تماماً. الاختبارات الآلية هي الطريقة الوحيدة الميسورة لتعرف، خلال ثوانٍ، أن كل ما وعدت به ما زال قائماً.
+
+**3. الفريق.** عندما يشغّل شخص آخر (أو جهاز CI) كودك، لا يستطيعون سؤالك. يقرؤون الاختبارات ليعرفوا ما تعد به الواجهة — ويثقون بحكم أخضر/أحمر أكثر بكثير من عبارة "كان يعمل على جهازي".
+
+والآن الانضباط: **الاختبار الذي لا يمكن أن يفشل هو ديكور.** إذا كانت مجموعتك ستبقى خضراء بعد أن يحذف شخص فحوصات التفويض، فهي لا تختبر شيئاً. لذلك تتبع هذه المهمة قاعدة ثابتة:
+
+> **يجب أن تختبر الحالات المرفوضة بنفس شدّة المقبولة.** لكل `200`/`201` شقيقٌ من `422`/`401`/`403`/`404`. المجموعة التي تُثبت المسار السعيد فقط هي مجموعة تسمح بحذف كل حارس وتبقى خضراء.
+
+تلك القاعدة هي نبض هذه المهمة كلها. لقد عُرفت في المهمة الثالثة؛ هنا تصبح المنهجية بأكملها.
+
+## ماذا يعني "اختبار الواجهة"
+
+قبل كتابة أي شيء، ضع هذا العمل على خريطة لتستطيع شرحه في مقابلة.
+
+**هرم الاختبارات** يرتّب الاختبارات حسب مقدار ما تثق به وتكلفته:
+
+```text
+          ▲  من النهاية إلى النهاية (متصفح، كامل السلسلة)    قليلة، بطيئة، هشّة
+         / \
+        / E \
+       /──────\
+      /   e2e   \
+     /───────────\
+    / تكامل (عدة مكونات)                       بعض، متوسطة
+   /───────────────\
+  /    وحدة (دالة واحدة، سلوك واحد)              كثيرة، سريعة، رخيصة
+ /───────────────────\
+```
+
+أين تقع اختبارات الواجهة؟ هي نوع خاص من **اختبار التكامل** ذو قيمة استثنائية: التطبيق الحقيقي يعمل داخل العملية، والطلبات الحقيقية تمر عبر التوجيه الحقيقي والتحقق الحقيقي وجلسة قاعدة البيانات الحقيقية والاستجابات JSON الحقيقية — بينما لا يحتاج أي شيء خارج العملية (لا خادم حقيقي، ولا PostgreSQL حقيقي، ولا شبكة). هذا المزيج — *النظام كله دون بنية تحتية* — هو سبب سرعة اختبارات TestClient لدرجة تشغيل مئة منها في ثوانٍ.
+
+ثلاثة تمييزات سريعة، لأن هذه الكلمات تُستخدم على نحو فضفاض في العمل:
+
+- **اختبار الوحدة** — دالة واحدة، سلوك واحد، تُستبدل الاعتماديات. سريع، لكنه لا يثبت أن الواجهة تعمل؛ يثبت دالة.
+- **اختبار الواجهة / التكامل** — يتعامل تطبيقك مع طلب HTTP حقيقي من البداية إلى النهاية (هذه المهمة). يثبت العقد: الدالة + المسار + الحمولة ← الحالة + الجسم.
+- **اختبار النهاية إلى النهاية** — متصفح ينقر عبر واجهة المستخدم المنشورة فعلاً. بطيء، هش، وخارج نطاق مهمة خلفية.
+
+المهمة التي تقوم بها — **اختبار الواجهة** — هي حصان الموثوقية عند المحترفين، وهي بالضبط الطبقة التي بدأتها مهامك الثلاث السابقة. هذه المهمة تُكمل العمل كما يجب.
+
+## pytest، صندوق الأدوات
+
+كل ما ستبنيه يعمل على pytest، الذي عرفته في المهمة الأولى. تذكير سريع بالأفكار الثلاثة التي تؤدي كل العمل:
+
+**الاكتشاف.** يمشي `pytest` عبر مجلد، ويجد ملفات `test_*.py`، وتشغّل فيه كل دالة اسمها يبدأ بـ `test_`. هذا هو العقد كله. وهو يفسّر قاعدتين ستراهما محترمين في كل مستودع احترافي:
+
+- ملفات الاختبار تسكن تحت `tests/` (جذر البحث الافتراضي) أو تحمل البادئة `test_`.
+- الكود المساعد الذي *ليس* اختباراً يسكن في ملفات بدون تلك البادئة، أو في `conftest.py` — حتى لا يظنّ pytest أن المساعد اختبار.
+
+**التحقّقات.** الاختبار هو سلسلة عبارات `assert`. ينجح الاختبار إذا لم يفشل أي `assert`، ويفشل عند أول واحد يفشل. مخرجات الفشل — `assert 200 == 404` — تسمّي القيمتين والملف:السطر، وهي نقطة بدايتك عند التصحيح.
+
+**Fixtures.** إذا احتاجت عدة اختبارات الإعداد نفسه (عميل، مستخدم مسجّل الدخول، قاعدة بيانات نظيفة)، فأنت لا تنسخ ذلك الإعداد في كل اختبار. الـ Fixture هو دالة مع `@pytest.fixture` *توفّر* شيئاً عند الطلب. يطلبه الاختبار بإعلانه معاملاً، وينسّق pytest الإعداد والتنظيف. الـ Fixtures هي الفرق بين عشرات أسطر القوالب لكل اختبار وجسم اختبار بكلمة واحدة.
+
+هذا هو صندوق الأدوات كله. كل ما تبقى في هذه المهمة هو توليفات من هذه الأفكار الثلاثة.
+
+### البيئة، مرة أخيرة
+
+شيء واحد يتقدّم على صندوق الأدوات كله: `main.py` و `db.py` يقرآن الإعداد من البيئة عند **استيراد** الوحدة. لذلك يجب أن تكون الأسطر الأولى من إعداد اختبارك *تضبط* بيئة الاختبار قبل أن يستورد أي شيء التطبيق. هذا النمط نفسه ظهر في أعلى `test_auth.py` في المهمة الثالثة:
+
+```python
+os.environ["JWT_SECRET"] = "test-only-secret"
+os.environ["DATABASE_URL"] = "sqlite:///./test_tasks.db"
+```
+
+أين ينتقل في التوزيع الاحترافي؟ إلى `tests/conftest.py`، الذي يستورده pytest *قبل أي وحدة اختبار*. نفس الحيلة، وبيت أفضل.
+
+## جهّز التوزيع الاحترافي للاختبارات
+
+حان وقت البناء. اعمل في مجلد مشروعك `task-api/`.
+
+### الخطوة 1 — أنشئ إعدادات pytest
+
+أنشئ `pytest.ini` بجانب `main.py`:
+
+```ini
+[pytest]
+pythonpath = .
+testpaths = tests
+```
+
+سطران، وضمانتان:
+
+- `pythonpath = .` — تخبر pytest أن يضع جذر المشروع على `sys.path`. بدونها يفشل استيراد `import main` داخل `tests/` برسالة `ModuleNotFoundError`، لأن بايثون ينظر في مجلد الاختبار نفسها أولاً. (ملف `conftest.py` فارغ في جذر المشروع يحقق الأمر نفسه — بعض الفرق تفضّله — لكن `pythonpath` صريح ويشرح نفسه بنفسه).
+- `testpaths = tests` — المكان الافتراضي الذي يبحث فيه pytest عن الاختبارات. ملفا اختبارك القديمان على وشك الانتقال إلى هنا.
+
+### الخطوة 2 — انقل المجموعتين القديمتين إلى `tests/`
+
+المهام السابقة وضعت `test_main.py` و `test_auth.py` بجانب `main.py` — صحيح لمشروع من ملف واحد، خاطئ لمشروع ينمو. المستودع الاحترافي يبقي الاختبارات في مجلدها الخاص بحيث لا يُظهر جذر المشروع إلا كود التطبيق.
+
+```bash
+mkdir tests
+git mv test_main.py tests/test_tasks.py
+git mv test_auth.py  tests/test_auth.py
+```
+
+(`git mv` يحفظ التاريخ. إذا لم تكن قد التزمتَ المهمة الثالثة، فـ `mv` عادي يكفي.)
+
+الآن شغّل المجموعة **قبل تغيير أي شيء آخر**:
+
+```bash
+pytest
+```
+
+إذا كسر النقل أي شيء، فهذه هي اللحظة لتراه — سيُعلن pytest بدقة عن أخطاء الجمع أو الاستيراد. توقع أمرين:
+
+- أي *مساعد* في هذين الملفين (مثل `register` و `login` و `reset_db`) المشترك بين الاختبارات سينتقل إلى `tests/conftest.py` في الخطوة التالية.
+- قد تنجح المجموعتان كما هما — هذا جيد. تغيير اسم `test_main.py` إلى `tests/test_tasks.py` لا يغيّر ما يجده pytest؛ الترتيب يحدث في الخطوات التالية.
+
+### الخطوة 3 — الـ Fixtures: `tests/conftest.py`
+
+الآن إعادة الكتابة التي تجعل المجموعة قابلة للصيانة. أنشئ `tests/conftest.py`:
+
+```python
+import os
+
+os.environ["JWT_SECRET"] = "test-only-secret"
+os.environ["DATABASE_URL"] = "sqlite:///./test_tasks.db"
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlmodel import SQLModel
+
+from db import engine
+import main
+
+client = TestClient(main.app)
+
+
+@pytest.fixture(autouse=True)
+def clean_database():
+    SQLModel.metadata.drop_all(engine)
+    SQLModel.metadata.create_all(engine)
+    yield
+
+
+@pytest.fixture
+def auth_headers():
+    def _make(username: str, password: str) -> dict:
+        resp = client.post(
+            "/register",
+            json={"username": username, "email": f"{username}@example.com", "password": password},
+        )
+        assert resp.status_code == 201, resp.text
+        token = client.post(
+            "/login", data={"username": username, "password": password}
+        ).json()["access_token"]
+        return {"Authorization": f"Bearer {token}"}
+
+    return _make
+```
+
+اقرأ كل سطر، لأن هذا الملف هو قلب المهمة:
+
+- **البيئة قبل الاستيرادات.** تُضبط `JWT_SECRET` و `DATABASE_URL` قبل استيراد `main` أو `db`، تماماً كما في المهمة الثالثة — تُفهم الآن كقاعدة دائمة لا حيلة.
+- **العميل المشترك.** `TestClient` واحد للمجموعة كلها. بُني من `main.app` ولا يفتح مقبساً أبداً.
+- **`clean_database` هو `autouse=True`.** يعمل **قبل كل اختبار، تلقائياً**، و `yield` يعلّم مكان تشغيل الاختبار. `drop_all` + `create_all` يعيد بناء الجداول، فيبدأ كل اختبار مقابل قاعدة بيانات سليمة. لا يمكن لأي اختبار أن يعتمد على بقايا اختبار آخر — الخاصية في المقطع التالي.
+- **`auth_headers` هو افكتوري Fixture.** يعيد *دالة*، وكل اختبار يستدعيها لتسجيل مستخدم جديد وتلقي رأس `Authorization` الخاص بذلك المستخدم. تُقرأ الاختبارات كقائمة فحص: `headers = auth_headers("alice", "alice-supersecret")`. وعبارة `assert resp.status_code == 201, resp.text` الداخلية تجعل فشل التسجيل فشلاً عالياً مع إرفاق نص الاستجابة.
+
+<Callout kind="warning" title="البيئة قبل كل شيء هي قاعدة مستوى الوحدة">
+يجب أن يبقى سطرا `os.environ` في *المستوى الأعلى* من `conftest.py` قبل الاستيرادات — لا داخل دالة ولا داخل Fixture. فـ `main.py` يقرأ السر و `db.py` يقرأ رابط قاعدة البيانات في وقت الاستيراد، ويستورد pytest ملف `conftest.py` قبل أي ملف اختبار. فـ `setenv` كسول داخل Fixture سيعمل *بعد* أن يكون التطبيق قد ثبّت إعداده الحقيقي.
+</Callout>
+
+### الخطوة 4 — تحقق من نجاح إعادة الهيكلة
+
+شغّل المجموعة كلها:
+
+```bash
+pytest
+```
+
+يجب أن تبقى المجموعتان القديمتان خضراوين. الآن اجعل البنية الجديدة تثبت نفسها: أضف مؤقتاً تحقّقاً فاشلاً عمداً وتأكد أن الفشل يسمّي الاختبار والسطر، ثم أعد الحالة.
+
+**افهم هذا قبل الانتقال للأمام:** تستطيع أن تشرح لماذا يجب ضبط متغيرات البيئة قبل الاستيرادات، وماذا يعني `autouse=True`، وما هو الـ Fixture الافكتوري، ولماذا `testpaths` و `pythonpath` موجودان في `pytest.ini`.
+
+## الاختبارات الأولى: الصحة والقراءة
+
+الآن المجموعة نفسها. أنشئ `tests/test_health.py`:
+
+```python
+def test_root_returns_message():
+    from conftest import client
+
+    resp = client.get("/")
+
+    assert resp.status_code == 200
+    assert resp.json() == {"message": "Task Manager API is running"}
+```
+
+شغّل هذا الملف فقط:
+
+```bash
+pytest tests/test_health.py
+```
+
+اختبار واحد، نقطة واحدة، أخضر.
+
+**ماذا يعني كل جزء:**
+
+- يأتي `client` من `tests/conftest.py` — يوفّره pytest تحت الاسم البسيط `conftest` للاستيرادات، فتتشارك الاختبارات قيمة الـ Fixture دون تكرار الإعداد.
+- `resp.json()` هو جسم الاستجابة المحلَّل — قارنه بديكت مباشرة.
+- التحقق من الجسم *بالضبط* (`==`) صحيح عندما يكون الاستجابة عقداً ثابتاً (هنا رسالة الصحة الخاصة بهذا الموقع). عندما يحتوي الجسم بيانات مولّدة — `id` أو طابع زمني — تحقق من الحقول المحددة بدل الجسم كله.
+
+**لماذا نبدأ من هنا:** نقطة نهاية الجذر هي أرخص طلب في التطبيق وهو الذي يضربه كل راصد نشر. إذا احمرّ هذا، لا شيء آخر يهم — التطبيق لا يخدم أصلاً. وهو أيضاً أبسط طلب TestClient ممكن: لا جسم، لا مصادقة، لا قاعدة بيانات.
+
+### اختبر مهمة واحدة بالمعرّف
+
+أضف إلى `tests/test_tasks.py` أول اختبار قراءة مع مصادقة — استبدل `test_get_one_task` القديم وأصدقاءه بالمجموعة الكاملة التالية. أولاً المسار السعيد:
+
+```python
+def test_get_one_task(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    created = client.post(
+        "/tasks/", json={"title": "Write report", "description": "Final version"}, headers=headers
+    ).json()
+    resp = client.get(f"/tasks/{created['id']}", headers=headers)
+
+    assert resp.status_code == 200
+    assert resp.json()["description"] == "Final version"
+```
+
+شغّل الملفين:
+
+```bash
+pytest tests/test_health.py tests/test_tasks.py
+```
+
+**ما الذي أُضيف:**
+
+- معامل الـ Fixture `auth_headers` — يحقنه pytest لأن الاختبار أعلنه.
+- النمط الذي سيتكرر في كل اختبار: **رتّب** (أنشئ البيانات التي تحتاجها)، **نفّذ** (الطلب قيد الاختبار)، **تحقّق** (الحكم). الترتيب باستدعاء واجهتك الخاصة هو ما يُبقي اختبارات الواجهة صادقة — فهي تشغّل نقطة الإنشاء الحقيقية قبل اختبار نقطة القراءة.
+
+<Callout kind="tip" title="سمِّ الاختبارات حسب السلوك لا حسب المسار">
+سمِّ الاختبار لما *يُثبته* — `test_get_one_task_returns_full_details` — لا للمسار الذي يستدعيه. عندما يفشل اختبار، اسمه أول ما يقرأه زميل، و"السلوك لا المسار" يبقي الأسماء ذات معنى مع تغيّر المسارات.
+</Callout>
+
+**افهم هذا قبل الانتقال للأمام:** تستطيع وصف نمط رتّب–نفّذ–تحقّق، وتعرف من أين يأتي `client` في ملف اختبار.
+
+## إنشاء المهام: المسار السعيد والتحقق
+
+الإنشاء هو المكان الذي يصبح فيه عقد الواجهة مثيراً للاهتمام، لأنه يحمل *قواعد*. اختبر القواعد بنفس شدّة المسار السعيد.
+
+### المسار السعيد
+
+```python
+def test_create_task(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    resp = client.post("/tasks/", json={"title": "Buy groceries"}, headers=headers)
+
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["title"] == "Buy groceries"
+    assert data["completed"] is False
+    assert isinstance(data["id"], int)
+    assert "description" in data
+```
+
+كل تحقّق وعد من نموذج Pydantic ومن نقطة النهاية: 201، العنوان يعود كما أُرسل، `completed` افتراضياً `False`، المعرف عدد صحيح حقيقي، والاستجابة تتضمن حقل `description` الاختياري (بقيمة `null`) — فيعتمد العملاء على وجود المفتاح.
+
+### الحالات المرفوضة — حيث القيمة
+
+الآن قاعدة المقدمة، عملياً. تعلن الواجهة هذه القواعد في `TaskCreate`:
+
+```python
+class TaskCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=120)
+    description: str | None = None
+    completed: bool = False
+```
+
+كل سطر من هذه *وعد*. ثبّت كل وعد باختبار:
+
+```python
+def test_create_requires_title(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    resp = client.post("/tasks/", json={"description": "missing title"}, headers=headers)
+
+    assert resp.status_code == 422
+
+
+def test_create_rejects_blank_title(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    resp = client.post("/tasks/", json={"title": ""}, headers=headers)
+
+    assert resp.status_code == 422
+
+
+def test_create_rejects_too_long_title(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    resp = client.post("/tasks/", json={"title": "x" * 121}, headers=headers)
+
+    assert resp.status_code == 422
+
+
+def test_create_rejects_wrong_type_for_completed(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    resp = client.post("/tasks/", json={"title": "Task", "completed": "yes"}, headers=headers)
+
+    assert resp.status_code == 422
+```
+
+أربعة طلبات، وأربع `422`. لاحظ ما الذي *لا* تفعله: لا تكرر JSON الخطأ المولّد من FastAPI. شكل جسم 422 يختلف بين نسخ FastAPI، والتحقق من نص الخطأ الدقيق يربط اختباراتك بسلسلة رسائل قد تتغير. اثبّت *الحالة* وعند الأهمية *الحقل* — لا الصياغة.
+
+**لماذا تهم هذه الأربعة:** هي أنماط الفشل الأربعة المثيرة لاهتمام نموذج صغير واحد — حقل ناقص، سلسلة فارغة، سلسلة أطول من اللازم، نوع خاطئ. تحبس معاً `min_length` و `max_length` وسلوك الحقل الناقص وفرض الأنواع في Pydantic، فأي تغيير مستقبلي يسمح بالعناوين الفارغة عن غير قصد يحوّل اختباراً إلى أحمر فوراً.
+
+### نقطة التحقق
+
+شغّل كل ما سبق:
+
+```bash
+pytest
+```
+
+**افهم هذا قبل الانتقال للأمام:** تستطيع سرد قواعد التحقق على `TaskCreate`، وتستطيع أن تشرح لماذا تتحقق اختبارات الفشل من رمز الحالة لا من نص خطأ FastAPI الدقيق.
+
+## الأخطاء 404 والمعرّفات غير الصالحة
+
+بقي اتجاهان للفشل في القراءة، ويميز المبتدئون بينهما بشكل خاطئ عادةً. اختبر كليهما:
+
+```python
+def test_get_missing_task_returns_404(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    resp = client.get("/tasks/999999", headers=headers)
+
+    assert resp.status_code == 404
+    assert resp.json() == {"detail": "Task not found"}
+
+
+def test_get_task_with_non_integer_id_returns_422(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    resp = client.get("/tasks/not-a-number", headers=headers)
+
+    assert resp.status_code == 422
+```
+
+إجابتان مختلفتان لسؤالين مختلفين:
+
+- `/tasks/999999` — المعرّف عدد صحيح صالح، لكن **لا توجد مهمة كذا**. الإجابة: `404`، وقيمة `detail` في الجسم تستحق التحقق هنا لأنها سلسلة التطبيق الثابتة (`"Task not found"`)، لا نص مولّد.
+- `/tasks/not-a-number` — المعرّف لم تكن له فرصة أصلاً: معامل المسار مكتوب `int`، فيفشل التحقق عند الباب بـ `422` *قبل أي بحث*. هذه ما زالت Pydantic تعمل — نفس القاعدة التي اختبرتها في نقطة الإنشاء، الآن على معامل مسار.
+
+<Callout kind="info" title="404 مقابل 422 — قلْها مرة وتُحفظ دائماً">
+**422** = الطلب لا يمكن فهمه (نوع خاطئ، حقل ناقص، قيمة غير صالحة). **404** = الطلب فُهم، لكن المورد غير موجود. كل زميل سيكون لك في أي وقت يقدّر قاعدة بيانات تستجيب أخطاؤها وفق هذا التقسيم — والآن الاختبارات تفرضه.
+</Callout>
+
+**افهم هذا قبل الانتقال للأمام:** عند إعطائك رابط بحث فاشل، تستطيع توقّع هل الإجابة `422` أم `404` ولماذا.
+
+## التحديث والحذف والقائمة
+
+### التحديث، بالاستبدال وبدونه
+
+`PUT /tasks/{task_id}` يستبدل المهمة بالحمولة المرسلة:
+
+```python
+def test_update_task_replaces_fields(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    created = client.post("/tasks/", json={"title": "Old title"}, headers=headers).json()
+    resp = client.put(
+        f"/tasks/{created['id']}",
+        json={"title": "New title", "description": "Rewritten"},
+        headers=headers,
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["title"] == "New title"
+    assert resp.json()["description"] == "Rewritten"
+
+
+def test_update_missing_task_returns_404(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    resp = client.put(
+        "/tasks/999999",
+        json={"title": "No such task"},
+        headers=headers,
+    )
+
+    assert resp.status_code == 404
+
+
+def test_update_rejects_blank_title(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    created = client.post("/tasks/", json={"title": "Valid first"}, headers=headers).json()
+    resp = client.put(f"/tasks/{created['id']}", json={"title": ""}, headers=headers)
+
+    assert resp.status_code == 422
+```
+
+**الخطأ الذي تلتقطه مسبقاً:** تطبيقٌ ساذج قد ينفّذ التحديث بالحذف ثم الإعادة — محوّلاً "الاستبدال" إلى "حذف وإنشاء" يغيّر المعرف. الاختبارات أعلاه سترصد فوراً إرجاع `201` أو معرفاً جديداً، لأنها تتحقق من الحالة *ومن* الهوية المحفوظة (`created['id']` في الرابط، بلا تغيير في الجسم).
+
+### الحذف
+
+```python
+def test_delete_task(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    created = client.post("/tasks/", json={"title": "Temporary"}, headers=headers).json()
+    resp = client.delete(f"/tasks/{created['id']}", headers=headers)
+
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True}
+
+
+def test_delete_missing_task_returns_404(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    resp = client.delete("/tasks/999999", headers=headers)
+
+    assert resp.status_code == 404
+```
+
+لاحظ أن `test_delete_task` يثبت نصفي الحذف: الاستجابة *و* أن المهمة اختفت فعلاً. أضف النصف الثاني:
+
+```python
+def test_deleted_task_is_really_gone(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    created = client.post("/tasks/", json={"title": "Temporary"}, headers=headers).json()
+    client.delete(f"/tasks/{created['id']}", headers=headers)
+    resp = client.get(f"/tasks/{created['id']}", headers=headers)
+
+    assert resp.status_code == 404
+```
+
+الحذف الذي يجيب `{"ok": true}` ويترك الصف في مكانه حذفٌ *يتظاهر فقط*. هذا الاختبار هو الذي يلتقطه.
+
+### القائمة مع الفلاتر
+
+```python
+def test_list_returns_created_tasks(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    client.post("/tasks/", json={"title": "One"}, headers=headers)
+    client.post("/tasks/", json={"title": "Two", "completed": True}, headers=headers)
+
+    resp = client.get("/tasks/", headers=headers)
+
+    assert resp.status_code == 200
+    assert {t["title"] for t in resp.json()} == {"One", "Two"}
+
+
+def test_list_filters_by_completed(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    client.post("/tasks/", json={"title": "Open"}, headers=headers)
+    client.post("/tasks/", json={"title": "Done one", "completed": True}, headers=headers)
+
+    open_tasks = client.get("/tasks/?completed=false", headers=headers).json()
+    done_tasks = client.get("/tasks/?completed=true", headers=headers).json()
+
+    assert [t["title"] for t in open_tasks] == ["Open"]
+    assert [t["title"] for t in done_tasks] == ["Done one"]
+```
+
+تفصيلان يستحقان الحفظ:
+
+- `{t["title"] for t in resp.json()}` — مجموعة، فلا يعتمد الاختبار على ترتيب إرجاع قاعدة البيانات. إذا أضافت واجهتك لاحقاً ترتيباً، يبقى هذا الاختبار ثابتاً.
+- يُختبر اتجاهانا الفلتر معاً. اتجاه واحد ينجح حتى لو تجاهل المرشح بصمت؛ اختبار الاثنين يثبّت الفلتر.
+
+**افهم هذا قبل الانتقال للأمام:** تستطيع أن تقول ماذا يُرجع `PUT` ضد معرّف ناقص، ولماذا يوجد `test_deleted_task_is_really_gone`، ولماذا تستخدم اختبارات القائمة مجموعة من العناوين.
+
+## اختبارات المصادقة والتفويض
+
+كانت مجموعة المصادقة من المهمة الثالثة السبب وراء عمل حيلة البيئة؛ الآن تصبح السبب وراء *عمل* المجموعة. أعد إنشاءها بالـ Fixtures — هذه هي الاختبارات التي لا يجب أن تتحول إلى خضراء بالمصادفة أبداً.
+
+### عائلة 401
+
+```python
+import os
+from datetime import datetime, timedelta, timezone
+
+import jwt
+from conftest import client
+
+
+def test_protected_endpoint_requires_token():
+    resp = client.get("/users/me")
+
+    assert resp.status_code == 401
+
+
+def test_protected_endpoint_rejects_invalid_token():
+    resp = client.get("/users/me", headers={"Authorization": "Bearer not-a-real-token"})
+
+    assert resp.status_code == 401
+
+
+def test_protected_endpoint_rejects_expired_token():
+    expired = jwt.encode(
+        {"sub": "1", "exp": datetime.now(timezone.utc) - timedelta(minutes=1)},
+        os.environ["JWT_SECRET"],
+        algorithm="HS256",
+    )
+    resp = client.get("/users/me", headers={"Authorization": f"Bearer {expired}"})
+
+    assert resp.status_code == 401
+
+
+def test_valid_token_reaches_protected_endpoint(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    resp = client.get("/users/me", headers=headers)
+
+    assert resp.status_code == 200
+    assert resp.json()["username"] == "alice"
+
+
+def test_login_rejects_wrong_password():
+    client.post(
+        "/register",
+        json={"username": "alice", "email": "alice@example.com", "password": "alice-supersecret"},
+    )
+    resp = client.post("/login", data={"username": "alice", "password": "wrong-password"})
+
+    assert resp.status_code == 401
+```
+
+**ماذا يثبت كل واحد:**
+
+- رمز ناقص ← `401`. الحارس موجود.
+- رمز غير صالح ← `401`. الحارس يرفض القمامة، لا الرؤوس الفارغة فقط.
+- **رمز منتهي ← `401`.** يبني هذا الاختبار رمزاً *موقّعاً* بشكل صحيح انتهت صلاحيته (`exp` في الماضي) ويوقّعه بنفس سر الاختبار — فيجتاز التوقيع *وفك الترميز*، ويرفضه انتهاء الصلاحية وحده. هذه هي الحالة الوسطى الدقيقة التي تفوت معظم المجموعات.
+- **رمز صالح ← `200` مع المستخدم الصحيح.** الضبط الإيجابي الذي يبقي بقية الثلاثة صادقة.
+- كلمة مرور خاطئة ← `401`، حتى مع وجود المستخدم. (المهمة الثالثة عمدت إلى إبهام أيّ نصف فشل، حتى لا تُكشف حقيقة تسجيل اسم مستخدم ما).
+
+العائلة كلها، سطر المذهب واحد: **ناقص، غير صالح، منتهي، صحيح.** إذا أوقف تغيير لاحق أي فحص، سيتحول اختبار واحد بالضبط إلى أحمر ويسمّيه.
+
+### إعادة الضبط والسر — لماذا يعمل هذا في ملف واحد
+
+لاحظ أن اختبار الرمز المنتهي يقرأ `os.environ["JWT_SECRET"]`. يجب توقيع الرمز بنفس السر الذي يعمل به التطبيق في جلسة الاختبار هذه — وبفضل conftest، يعيشان في العملية نفسها وبنفس قيمة الاختبار. سلسلة `"test-only-secret"` مكتوبة حرفياً كانت ستعمل أيضاً، لكن قراءة متغير البيئة تُبقي الاختبار صادقاً عند تغيّر السر.
+
+تُعاد بناء قاعدة البيانات قبل كل اختبار بواسطة `clean_database`، فكونُ `test_login_rejects_wrong_password` لا يجد بقايا أمرٌ مضمون — لا محظوظ.
+
+### مصفوفة التفويض
+
+هذه هي الاختبارات التي علّمك المقطع الثالث أن تخاف من تخطيها. الملكية والأدوار، عند كل حافة:
+
+```python
+def test_user_can_access_own_task(auth_headers):
+    alice = auth_headers("alice", "alice-supersecret")
+    created = client.post("/tasks/", json={"title": "Mine"}, headers=alice).json()
+
+    resp = client.get(f"/tasks/{created['id']}", headers=alice)
+
+    assert resp.status_code == 200
+
+
+def test_user_cannot_read_another_users_task(auth_headers):
+    alice = auth_headers("alice", "alice-supersecret")
+    bob = auth_headers("bob", "bob-supersecret")
+    created = client.post("/tasks/", json={"title": "Alice's"}, headers=alice).json()
+
+    resp = client.get(f"/tasks/{created['id']}", headers=bob)
+
+    assert resp.status_code == 403
+
+
+def test_user_cannot_update_or_delete_another_users_task(auth_headers):
+    alice = auth_headers("alice", "alice-supersecret")
+    bob = auth_headers("bob", "bob-supersecret")
+    created = client.post("/tasks/", json={"title": "Alice's"}, headers=alice).json()
+
+    upd = client.put(f"/tasks/{created['id']}", json={"title": "Hijacked"}, headers=bob)
+    delete = client.delete(f"/tasks/{created['id']}", headers=bob)
+
+    assert upd.status_code == 403
+    assert delete.status_code == 403
+
+
+def test_list_returns_only_own_tasks(auth_headers):
+    alice = auth_headers("alice", "alice-supersecret")
+    bob = auth_headers("bob", "bob-supersecret")
+    client.post("/tasks/", json={"title": "Alice task"}, headers=alice)
+    client.post("/tasks/", json={"title": "Bob task"}, headers=bob)
+
+    resp = client.get("/tasks/", headers=alice)
+
+    assert resp.json() == []
+```
+
+انتظر — آخر اختبار يتحقق من `[]`، وهذه هي النقطة. `GET /tasks/` مقيّد بسياق المستخدم الحالي، فلا ترى أليس أي مهمة من مهام بوب. لاحظ الاختلاف المتعمد عن `test_list_returns_created_tasks` السابق: عزل القائمة يُختبر *عبر المستخدمين*، لأن ذلك هو السلوك الذي تملكه طبقة الملكية.
+
+ثم مصفوفة الأدوار — اختبار المدير يرقّي المستخدم مباشرة في قاعدة البيانات، تماماً كما فعلت المهمة الثالثة، لأنه لا توجد نقطة نهاية عامة "اجعلني مديراً":
+
+```python
+from sqlmodel import Session, select
+
+from db import engine
+from models import User
+
+
+def test_admin_reaches_admin_endpoint(auth_headers):
+    root = auth_headers("root", "root-supersecret")
+    alice = auth_headers("alice", "alice-supersecret")
+    with Session(engine) as session:
+        admin = session.exec(select(User).where(User.username == "root")).first()
+        admin.role = "admin"
+        session.add(admin)
+        session.commit()
+
+    resp = client.get("/users/", headers=root)
+
+    assert resp.status_code == 200
+    assert len(resp.json()) == 2
+
+
+def test_normal_user_is_denied_admin_endpoint(auth_headers):
+    alice = auth_headers("alice", "alice-supersecret")
+
+    resp = client.get("/users/", headers=alice)
+
+    assert resp.status_code == 403
+
+
+def test_unauthenticated_caller_is_denied_admin_endpoint():
+    resp = client.get("/users/")
+
+    assert resp.status_code == 401
+```
+
+مصفوفة الأدوار، أربع زوايا: المدير `200`؛ المستخدم العادي `403`؛ بلا رمز `401`؛ و— الزاوية الرابعة التي تلتقط خطأ الترتيب — رمز *شكله صالح لكن دوره منخفض* يصل إلى فحص الدور بعد مرور الهوية فقط. هذا الترتيب نفسه (`401` قبل `403`) مثبَّت: الاستدعاء غير المُصادق يمر ببوابة الهوية أولاً.
+
+### اكسِر حارساً، وشاهد الاحمرار
+
+التمرين الوحيد الذي يحوّل "تبدو هذه معقولة" إلى "رأيت شبكة الأمان تتعثر". اختر واحداً:
+
+1. في `get_own_task`، غيّر فحص الملكية `if` ليعطّل دائماً — سيتحول `test_user_cannot_read_another_users_task` واختبارات الملكية الأخرى إلى أحمر.
+2. في تبعية المدير، احذف عبارة `raise` لغير المديرين — سيتحول `test_normal_user_is_denied_admin_endpoint` إلى أحمر.
+3. في `main.py`، احذف `Depends` التي تحمي `/tasks/` — سيتحول نصف المجموعة إلى أحمر فوراً.
+
+شغّل `pytest` وشاهد الإخفاقات تسمّي *السلوك الدقيق الذي كسرته*. أعد كل تغيير وأكد الخضرة.
+
+<Callout kind="danger" title="مجموعة ظلت خضراء عبر التجارب الثلاث هي مجموعة زائفة">
+إذا كسرت الحرّاس الثلاثة ولم يحتقن شيء، فمجموعتك لا تختبر هذه السلوكيات — إنها ديكور. أصلح الاختبارات قبل المتابعة. هذا هو الفرق بين مجموعة يثق بها فريق ومجموعة يتجاهلها.
+</Callout>
+
+**افهم هذا قبل الانتقال للأمام:** تستطيع أن تروي أي اختبار يلتقط حذف فحص الملكية، ولماذا يوقّع اختبار الرمز المنتهي رمزه بنفسه، والترتيب الذي تُطلق فيه بوابتا `401` و `403`.
+
+## الـ Fixtures على نحو صحيح
+
+أنت الآن تستخدم ثلاثة أنواع من الـ Fixtures؛ سمّها بدقة قبل المتابعة، لأنها ستحكم مشروعك المستقل:
+
+| الـ Fixture | النوع | ماذا يوفّر | النطاق |
+|------------|-------|-----------|--------|
+| `client` | عادي (كائن مستوى وحدة) | عميل TestClient المشترك | المجموعة كلها |
+| `clean_database` | `autouse=True` | قاعدة بيانات سليمة قبل كل اختبار | دالة — مرة واحدة *لكل اختبار* |
+| `auth_headers` | افكتوري | رأس Authorization لمستخدم جديد عند الطلب | دالة |
+
+ثلاث قواعد تنتقل إلى كل مشروع ستختبره:
+
+1. **النطاق الافتراضي دالة** — يشغّل pytest الـ Fixture مرة واحدة لكل اختبار يستخدمه. تنظيف `clean_database` (عبر `yield`) وإعداد الاختبار التالي يضمنان العزل. نادراً ما تحتاج `scope="session"`؛ لا تصل إليها إلا لإعداد مكلف فعلاً وللقراءة فقط.
+2. **الكسل** — لا يعمل جسم الـ Fixture إلا عندما *يطلبه* اختبار. الـ Fixture autouse يعمل دائماً؛ وما عداه يعمل عند الطلب، فلا يكلف الإعداد غير المستخدم شيئاً.
+3. **المصانع للبيانات المرتبطة بمعاملات** — عندما تختلف "الشيء" بين الاختبارات (من المستخدم؟ ما كلمة المرور؟) رُدّ دالة، كما يفعل `auth_headers`. تثبيت *الإنشاء* في الـ Fixture وترك *الاختبار* يختار القيم يبقي عشرين سطراً من إعداد المصادقة خارج أربعين اختباراً.
+
+<Callout kind="info" title="لماذا الـ Fixtures بدل مساعد مشترك يُستدعى من كل اختبار؟">
+دالة مساعدة تستدعيها من كل اختبار تنجح — حتى ينسى اختبارٌ استدعاءها، أو يحتاج تنظيفاً مختلفاً بعض الشيء، وتنحرف المجموعة بصمت. الـ Fixtures تجعل الإعداد *مُعلناً وحقوناً ومُنظَّفاً* بواسطة الإطار، من المستحيل نسيانه، وتتركّب. وهذا هو السبب كله وراء توحيد العالم الاحترافي عليها.
+</Callout>
+
+**افهم هذا قبل الانتقال للأمام:** عند إعطائك حاجة إعداد جديدة (قلْ: "مهمة موجودة أصلاً")، تستطيع أن تقرر هل تنتمي إلى Fixture أم مساعد أم الاختبار نفسه.
+
+## قاعدة بيانات الاختبار المعزولة
+
+فكرة البنية التحتية الأخيرة، والتي بدأتها المهمتان الثانية والثالثة: **يجب ألا تلمس الاختبارات البيانات الحقيقية أبداً.**
+
+يضبط ملف `tests/conftest.py` قبل استيراد أي شيء التطبيق:
+
+```python
+os.environ["DATABASE_URL"] = "sqlite:///./test_tasks.db"
+```
+
+ذلك السطر الواحد يشتري كل شيء:
+
+- **يعمل التطبيق قيد الاختبار على SQLite في ملف مهمَل.** بيانات المهام الحقيقية — صفوف PostgreSQL في مجموعتك بـ Compose — لا تُقرأ ولا تُكتب أبداً.
+- **يعيد `clean_database` بناء المخطط لكل اختبار**، فتصبح الاختبارات حتمية. لا تسرّب حالة، لا "ينجح على طرفيتي، يفشل في CI".
+- **لا تحتاج المجموعة سوى بايثون و pytest مثبّتَين.** لا Docker ولا PostgreSQL ولا خادم يعمل — وهذا بالضبط لماذا يستطيع CI تشغيلها على جهاز فارغ.
+
+خطران منبثقان تسمعهما بوضوح:
+
+- **يجب أن يقرأ تطبيقك قيد الاختبار متغير البيئة فعلاً.** إذا بنى `db.py` المحرك من رابط مكتوب حرفياً أو قرأ `DATABASE_URL` عند الطلب فقط، فالعزل يفشل بصمت. تحقق مرة واحدة: افصل مجموعة Compose (`docker compose down`) وشغّل `pytest` — إذا بقيت مجموعتك ناجحة، فاختباراتك فعلاً لم تلمس PostgreSQL.
+- **ملف SQLite نفسه قمامة اختبارات يمكن رميها.** ينتمي إلى `.gitignore` (أضف `test_tasks.db` إن لم تفعلها المهمة الثالثة). أعد توليده — ولا تلتزمه أبداً.
+
+لكن لا تخلط بين هذا و"SQLite إلى الأبد". تشغّل المشاريع الحقيقية هذه الاختبارات نفسها مقابل نوع قاعدة البيانات الحقيقي في CI (حاوية خدمة Postgres)، ولا يتغير إلا قيمة `DATABASE_URL` في SqlAlchemy. *النمط* — البيئة أولاً، قاعدة معزولة، إعادة بناء لكل اختبار — هو ما ينتقل؛ اسم الملف تفصيل هامشي.
+
+**افهم هذا قبل الانتقال للأمام:** تستطيع أن تثبت أن اختباراتك لم تلمس قاعدة البيانات الحقيقية، وأن تقول في جملة واحدة ما علاقة `docker compose down` بإثبات ذلك.
+
+## استقلالية الاختبارات
+
+قاعدة حديدية واحدة تشرح تقريباً كل إخفاق "غريب" في CI يقابله مبتدئ:
+
+> **يجب ألا تعتمد الاختبارات على الترتيب، ولا على بعضها، ولا على البقايا.**
+
+عملياً، تطيع هذه المجموعة القاعدة لأن:
+
+- **إعادة ضبط `clean_database` لكل اختبار** — لا يستطيع الاختبار الثامن في الملف رؤية ما أنشأه الثالث. بدون ذلك تنجح المجموعة على طرفيتك (تشغّل الاختبارات بترتيب الملفات) وتفشل في CI — أو العكس — دون أي تغيير في الكود. هذه هي قصة "يعمل على جهازي، أحمر في CI" الكلاسيكية.
+- **لا تسرّب حالة تطبيق مشتركة عبر الكائنات.** يشارَك `client`، لكن كل طلب عديم الحالة من منظور الخادم؛ الممنوع هو البيانات *المشتركة*، ويزيلها إعادة الضبط.
+- **تخلق المصانع مستخدميها.** لا يعيد اختباران استخدام الحساب نفسه، فتعارضات التسجيل مستحيلة بالتركيب.
+
+العادة التي تُلبّس الاستقلالية: **فكّر دائماً في حالة بداية الاختبار على أنها فارغة**، ومرّر كل ما يحتاجه الاختبار تحديداً بصورة صريحة — وهي العادة المتبناة من قراءة OWASP في المهمة الثالثة.
+
+**افهم هذا قبل الانتقال للأمام:** تستطيع أن تشرح لماذا يحوّل حذف `clean_database` المجموعة إلى أحمر في النهاية، ولماذا يستغرق ذلك وقتاً أطول ليظهر محلياً مقارنة بـ CI.
+
+## تشغيل المجموعة وقراءة الإخفاقات
+
+الأخضر لا يعني شيئاً حتى تعرف قراءة الأحمر. هذه عضلة المصحّح المحترف، وتُدرَّب في خمس دقائق.
+
+شغّل المجموعة كلها:
+
+```bash
+pytest
+```
+
+يجب أن ينتهي بشيء مثل `... passed` وقائمة نقاط. عدد النقاط *هي* تغطيتك، تنمو مع كل اختبار في هذه المهمة.
+
+الآن اصنع فشلاً حقيقياً. في `tests/test_tasks.py`، غيّر أحد التحققات ليفترض حالة خاطئة:
+
+```python
+def test_create_task(auth_headers):
+    headers = auth_headers("alice", "alice-supersecret")
+    resp = client.post("/tasks/", json={"title": "Buy groceries"}, headers=headers)
+
+    assert resp.status_code == 500   # خطأ متعمد، القيمة الحقيقية 201
+```
+
+شغّل `pytest` مجدداً واقرأ الكتلة. ثلاث مناطق، ثلاث إجابات:
+
+```text
+_________________________ test_create_task _________________________
+
+    def test_create_task(auth_headers):
+        headers = auth_headers("alice", "alice-supersecret")
+        resp = client.post("/tasks/", json={"title": "Buy groceries"}, headers=headers)
+
+>       assert resp.status_code == 500   # deliberately wrong, real value is 201
+E       assert 201 == 500
+E         +201
+E         -500
+
+tests/test_tasks.py:12: AssertionError
+```
+
+- **الترويسة** تسمّي الاختبار الفاشل — كل ما بين شريطَي `___` يعرّف هذا الفشل الدقيق.
+- **سطر `>` داخل الجسم** هو العبارة الفاشلة بالضبط، مع رقم سطرها.
+- **سطر `E assert 201 == 500`** هو الحكم — الفعلي مقابل المتوقع. في اختبار طلب، الحيلة *الأكثر فائدة* عندما يفاجئك رمز الحالة: نفّذ الطلب في جلسة تفاعلية وافحص `resp.text` — جسم خطأ JSON — الذي لا تُظهره كتلة الفشل:
+
+```bash
+python -c "from fastapi.testclient import TestClient; import main; 
+r = TestClient(main.app).post('/tasks/', json={'title': 'x'});
+print(r.status_code, r.text)"
+```
+
+تطبع هذه الجملة الواحدة (شغّلها من جذر المشروع، مع ضبط متغيرات البيئة عند الحاجة) *سبب* الخادم — عادةً `detail` الذي يفسّر الطلب المرفوض.
+
+أعد `201` وأكد الخضرة. لقد أنجزت المهارة كلها الآن: أعدت الفشل، وقرأت الكتلة، وحددت السطر، وفحصت الاستجابة الفعلية، وأصلحت، وأعدت الأخضر.
+
+<Callout kind="tip" title="شغّل اختباراً فاشلاً (أو ملفاً) واحداً في المرة">
+`pytest tests/test_tasks.py` يشغّل ملفاً واحداً؛ `pytest tests/test_tasks.py::test_create_task` يشغّل اختباراً واحداً؛ `pytest -k "delete"` يشغّل كل اختبار يحوي اسمه "delete". عندما تحمر المجموعة، صغّر السطح أولاً — أسرع مصحِّح هو اختبار واحد.
+</Callout>
+
+**افهم هذا قبل الانتقال للأمام:** عند إعطائك كتلة فشل، تستطيع تحديد أي اختبار وأي عبارة وأي قيم — وقد أعدت إنتاج مجموعة حمراء عمداً، مرتين.
+
+## المجموعة في Docker و CI
+
+كل ما سبق يجب أن ينجو من واقع المهمتين السابقتين.
+
+**Docker + PostgreSQL.** تشغّل مجموعتك بـ Compose التطبيق مقابل PostgreSQL حقيقي — لكن *اختباراتك* تتجنب ذلك عمداً. تستخدم المجموعة ملف SQLite خاصاً بها ولا تحتاج حاوية إطلاقاً. عملياً:
+
+- مع توقف المجموعة (`docker compose down`)، تظل المجموعة ناجحة — هذه ثابتة العزل، المثبتة.
+- هذا لا يجعل عمل Docker عديم الجدوى؛ بل يجعل الاختبارات *قابلة للنقل*. تعبئة الحاويات وأتمتة CI مبنيتان على هذه القابلية للنقل بالضبط، كما شرحت المهمة الثانية.
+
+**CI — مجموعتك موجودة في الخط بالفعل.** يتضمن سير عمل المهمة الثانية `ci.yml` خطوةً `run: pytest`. كل اختبار كتبته للتو يُكتشف تلقائياً ويُشغَّل مع كل push وسحب طلب، على جهاز نظيف، مجاناً:
+
+```yaml
+      - name: Run tests
+        run: pytest
+```
+
+ما تغيّر ليس الخط — بل ما *يثبته* الخط. قبل هذه المهمة، تحقق CI من أن "الواجهة تُبنى ومجموعتها الصغيرة ناجحة". بعده، يتحقق CI من العقد كله: كل وعد CRUD، وكل قاعدة تحقق، وكل حارس 401/403، وكل حافة ملكية — على جهاز لم يلقَ حاسوبك قط.
+
+التزم بالكود وادفعه، ثم افتح تبويب Actions وشاهد التشغيل:
+
+1. ادفع مجموعتك المعاد هيكلتها والموسَّعة.
+2. يُطلق سير عمل `CI` (تأكد أن `pytest.ini` ومجلد `tests/` الجديد ضمن الدفعة — أكّد عبر `git add tests/ pytest.ini conftest.py`).
+3. أخضر: ثبّت الجهاز النظيف الاعتماديات وشغّل المجموعة كلها. أحمر: افتح خطوة `Run tests` الفاشلة — كتلة فشل pytest موجودة هناك، بنفس الصيغة التي تعلمت قراءتها أعلاه.
+
+ثم اسحب العتلة التي عرفتها من المهمة الثانية: اكسِر اختباراً متعمداً، ادفع، وشاهد CI يحمر — ثم أرسل الإصلاح وشاهدها تتعافى. الخط الذي رأيت احمراره أداة؛ والخط الذي لم تَرَ فشله أمنية.
+
+**افهم هذا قبل الانتقال للأمام:** تستطيع أن تشرح لماذا يعمل ملف الاختبار نفسه في بناء الحاوية وفي CI، وما الذي يغطيه تحقق CI ولم يكن يغطيه قبل هذه المهمة.
+
+## الأخطاء الشائعة وكيف تتجنبها
+
+أربعة أخطاء تهيمن على مجموعات المبتدئين. لكل واحد حارس بسطر واحد:
+
+<Callout kind="danger" title="ضبط متغيرات البيئة بعد الاستيرادات">
+كتابة `os.environ[...] = ...` في أسفل الملف، تحت سطر `import main` — يكون التطبيق قد قرأ إعداده الحقيقي عند الاستيراد، وقاعدة البيانات "المعزولة" ليست معزولة. القاعدة: البيئة أولاً، ثم الاستيرادات، دائماً.
+</Callout>
+
+<Callout kind="danger" title="اختبار المسار السعيد فقط">
+`test_create_task` ينجح، وكل شيء أخضر — وتبقى المجموعة خضراء لو حذف أحد كل فحص تحقق وكل حارس تفويض. الحالات المرفوضة (422/401/403/404) ليست إضافات اختيارية؛ هي غالب القيمة.
+</Callout>
+
+<Callout kind="danger" title="التحقق من أجسام استجابات كاملة فيها حقول مولّدة">
+`assert resp.json() == {"id": ..., "title": ...}` ينكسر في اللحظة التي تتغير فيها المعرفات أو الطوابع الزمنية أو الترتيب — ويعلّمك تجاهل الإخفاقات. ثبّت السلوك: رمز الحالة بالإضافة إلى الحقول التي يمنع العقد تغييرها.
+</Callout>
+
+<Callout kind="danger" title="جعل الاختبارات تعتمد على بعضها">
+يعتمد الاختبار الثالث على المستخدم الذي أنشأه الثاني. ينجح اليوم، ويحمر غداً، ويستحيل تصحيحه في CI. إعادة الضبط التلقائي ليست رفاهية — إنها الانضباط الذي يبقي كل اختبار صادقاً.
+</Callout>
+
+إضافة إلى مأزقَي بيئة خاصّين بهذه المهمة:
+
+<Callout kind="warning" title="حالة التأكيد: httpx ناقص">
+مبني TestClient على **httpx**. إذا فشل الجمع أو أخطأ أول استدعاء بشأن اعتماد HTTPX، شغّل `pip install httpx` (أو `pip install "fastapi[standard]"`). المهمة الأولى ثبّتته، لكن إعادة توليد `requirements.txt` قد تُسقطه.
+</Callout>
+
+<Callout kind="warning" title="خطأ استيراد بعد نقل الاختبارات">
+رسالة `ModuleNotFoundError: No module named 'main'` بعد النقل مباشرة تعني أن pytest لا يرى جذر المشروع — `pythonpath = .` في `pytest.ini` (مع pytest 7+) أو `conftest.py` على مستوى الجذر ناقصان. هذا هو كاسر السبب الأول لأول `git mv`.
+</Callout>
+
+## استكشاف الأخطاء وإصلاحها
+
+| العَرَض | السبب المحتمل | الإصلاح |
+|---------|---------------|---------|
+| `No module named 'main'` | جذر المشروع ليس على `sys.path` | أضف `pythonpath = .` إلى `pytest.ini` أو `conftest.py` فارغاً في الجذر |
+| الاختبار لا يُشغَّل أبداً (0 اختبارات مجمَّعة) | اسم الملف/الدالة يفتقد بادئة `test_`، أو يقع خارج `testpaths` | أعد تسمية الملف/الدالة؛ تحقق عبر `pytest --collect-only` |
+| الاختبارات تنجح محلياً وتفشل في CI | اعتماد على ترتيب/بقايا — اختبار نسي إعادة الضبط، أو حالة مشتركة | اعتمد على `clean_database` التلقائي؛ لا بيانات بين الاختبارات |
+| `201` حيث كان متوقعاً `422` | تغيّر النموذج (مثل السماح بالعنوان الفارغ) | هذا *كسر عقد* حقيقي التقطته — أصلح التطبيق أو التحقق بعد تحديد الصواب |
+| `401`/`403` غير متوقعين | عدم تطابق سر الرمز أو دور غير مرفوع في قاعدة البيانات | أكد تطابق السر في أعلى البيئة، واضبط `role = "admin"` في جلسة كما تفعل الاختبارات |
+| `sqlite3.OperationalError: table already exists` | مُحرَّكان على الملف نفسه | `DATABASE_URL` واحد (متغير البيئة) في أعلى conftest؛ لا تستورد `db` مرتين قبل ضبطه |
+| بطء بدء التشغيل | أول `pip install` على جهاز CI بارد | طبيعي؛ مرحلة البيئة وحدها بطيئة، تبقى الاختبارات ثوانٍ |
+
+عندما لا يناسبك شيء أعلاه، صغّر إلى اختبار واحد (`pytest tests/test_tasks.py::test_create_task`) واقرأ كتلة فشله كاملة — الإجابة في المخرجات، كما درّبك مقطع قراءة الإخفاقات.
+
+## التحقق النهائي
+
+نفّذ قائمة الفحص الصاخبة قبل أن تسمي المهمة منجزة:
+
+<Checklist items={[
+  "pytest تعمل خضراء من جذر المشروع مع توقف مجموعة Docker/PostgreSQL تماماً",
+  "المجموعة تسكن في tests/ فيها test_health.py و test_tasks.py و test_auth.py، مع pytest.ini و conftest.py يحويان إعداد البيئة قبل كل شيء و Fixture تنظيف تلقائي لقاعدة البيانات ومصنع رؤوس مصادقة",
+  "كل وعد CRUD مثبَّت: إنشاء 201، قراءة/عرض 200، تحديث 200، حذف 200 مع فحص الاختفاء بعده، وفلتر completed في الاتجاهين",
+  "كل حالة مرفوضة مثبتة: عنوان ناقص/فارغ/أطول من اللازم ونوع خاطئ (422)، معرّفان ناقص وغير صحيح (404 و 422)، قيم 401 للمصادقة (ناقص/غير صالح/منتهي)، قيم 403 للملكية، ومصفوفة الأدوار كاملة",
+  "كسرت حارساً (ملكية أو دوراً أو حماية) وشاهدت الاختبار الدقيق يحمر ثم أعدت الأخضر",
+  "قرأت كتلة فشل كاملة وحددت التحقق والسطر في أقل من دقيقة",
+  "عملت المجموعة في CI عند push، ورأيت CI يحمر ويتعافى مرة واحدة على الأقل",
+  "test_tasks.db مستبعد في git ولا يُلتزم أبداً",
+  "git mv (أو mv) حفظ التاريخ، والدفعة الأخيرة أظهرت مجلد tests/ الجديد في تشغيل Actions بالمستودع"
+]} />
+
+**لا تنتقل إلا بعد وضع علامة على كل صندوق — وخصوصاً صندوق العزل (الأخضر مع توقف المجموعة)، لأنه هو الادعاء الذي تصنعه المجموعة كلها.**
+
+## التدريب المستقل: واجهة إدارة الموظفين
+
+هنا تُنزع عجلات التدريب — نفس نمط المسارات الثلاثة السابقة. ابنِ منصة واجهة إدارة الموظفين **بنفسك**، من الصفر، بنفس الأدوات التي استخدمتها في المهام 1–4: FastAPI و SQLModel و PostgreSQL عبر compose و مصادقة JWT و CI. لن يُكتب لك أي جزء من الحل هنا. ما يلي هو *المواصفة* — ولاحظ أين يقع التأكيد: في هذه المهمة، الاختبارات هي المخرَج.
+
+### وصف المشروع
+
+**واجهة إدارة موظفين** ينتمي فيها الموظفون المصدَّقون إلى أقسام ويحملون أدواراً، ويُجري المدراء/الموارد البشرية عمليات إدارية عليهم. أنت تقرر الحقول الدقيقة (الاسم والبريد والقسم والراتب والدور…) لكن يجب أن يكون العقد قابلاً للاختبار.
+
+### المتطلبات الوظيفية
+
+- CRUD للموظفين: إنشاء، عرض، قراءة واحد، تحديث، حذف.
+- الموظفون مرتبطون بالمستخدم الذي أنشأهم، أو مركزيون للمديرين — اختر النموذج، لكن صرّح به و*اختبره باستمرار*.
+- دعم تصفية القائمة (بالقسم أو تاريخ التوظيف) ونقطة صحة/جذر.
+- التحقق: الاسم مطلوب وغير فارغ؛ البريد صالح؛ الدرجة/الراتب عددي بحدود معقولة.
+
+### قواعد المصادقة والتفويض
+
+- تسجيل وتسجيل دخول يريان JWT (`register`, `login`).
+- كل نقطة ليست عامة تتطلب رمزاً صالحاً غير منتهٍ.
+- دور مدير يصل إلى نقاط خاصة بالمدير؛ المستخدمون العاديون لا يصلون.
+- قاعدة ملكية (تختارها، يجب أن تعلنها): إما أن يلمس المستخدمون موظفيهم فقط، أو يقرأ الجميع كل الموظفين ولا يكتب إلا المديرون — اختر واحداً، برّره، واختبر الجانبَين المسموح والمرفوض.
+
+### متطلبات الاختبار (قلب هذه المهمة)
+
+- مجلد `tests/` فيه `conftest.py`: إعداد البيئة قبل كل شيء، و Fixture قاعدة سليمة تلقائي، ومساعدو رؤوس.
+- اختبار واحد على الأقل **لكل حالة مرفوضة** إضافة لكل مسار سعيد: حقل ناقص/فارغ/غير صالح (`422`)، مورد ناقص (`404`)، غير مُصادق (`401`)، وممنوع (`403`) حيث ينطبق.
+- اختبارات لانتهاء الرمز والرموز غير الصالحة.
+- استقلالية الاختبار: لا يعتمد أي اختبار على بيانات أنشأها اختبار آخر؛ شغّل المجموعة بترتيب عشوائي (`pytest-randomly`) لتثبت ذلك.
+- عزل كامل: تبقى المجموعة خضراء مع توقف مجموعة PostgreSQL.
+- اختبار واحد على الأقل **ينكسر عمداً** موثَّق في README (أظهر كيف يبدو التشغيل الفاشل).
+
+### معايير القبول
+
+- `pytest` خضراء محلياً بلا حاويات تعمل.
+- CI (`ci.yml`) يشغّل المجموعة ويصبح **أحمر عند دفع اختبار مكسور متعمداً**، ثم أخضر بعد الإصلاح.
+- اختبارات المصادقة والتفويض ستلتقط حذف الحرّاس الثلاثة (جرّبها، أعدها، وصف ما احمرّ في README).
+- المجموعة مقروءة: أسماء الاختبارات تذكر السلوك، والـ Fixtures تزيل التكرار، ولا يتحقق أي اختبار من جسم مولّد كامل.
+
+### المخرجات المقترحة
+
+1. المشروع كاملاً في مستودع GitHub (الكود والاختبارات و `compose.yaml` و `ci.yml` و README).
+2. قسم في README بعنوان **"الاختبار"** يوثّق: ماذا تغطي كل مجموعة، وكيف تشغّلها، وادعاء العزل، ومشياً واحداً على اختبار مُكسَر عمداً (مع مخرجاته الحمراء).
+3. ملاحظة مراجعة قصيرة: أي اختبار للحالات المرفوضة تفخر به أكثر، ولماذا.
+
+## المشروع المرجعي
+
+خريطة من العالم الحقيقي تستحق الدراسة قبل أو أثناء بناء مشروعك المستقل — **كخريطة فقط، لا كشيء ينسخ**.
+
+**`iammikek/fastAPI-101`** — https://github.com/iammikek/fastAPI-101
+
+ما هو: مشروع FastAPI مرجعي كامل وعام من مؤلف خارجي (لم يصنعه هذا الموقع) يطبّق بالضبط الأداة التي تتعلمها — FastAPI و pytest مع TestClient و fixtures اختبار وقاعدة بيانات اختبار و Docker و PostgreSQL وربط CI/CD.
+
+لماذا هو خريطة جيدة لهذه المهمة: تستطيع أن تراقب كيف اتخذ مؤلف *مختلف* القرارات نفسها التي تتخذها — أين وضع `conftest.py`، وكيف بنى الـ Fixtures، وأي الحالات المرفوضة تذكر اختبارها، وكيف ربط مجموعة الاختبار بـ Docker و CI. رؤية تنازلات منفّذٍ ثانٍ هي تحديداً مهارة "قراءة كود الآخرين" التي يريدها التدريب.
+
+ماذا تفحص، بالترتيب:
+
+- **مجلد الاختبارات و conftest** — كيف تُسمّى الـ Fixtures وتُحدَّد نطاقاتها، وكيف تُوصَّل قاعدة بيانات الاختبار عبر البيئة.
+- **اختبارات المصادقة/الواجهة** — أي الحالات السلبية (401/403/404/422) فكّر فيها، وأيها تخطى. عملك ليس استنساخ قائمته؛ بل ملاحظة ما يضيفه رأي ثانٍ.
+- **سير عمل CI** — كيف تعمل نفس المجموعة على جهاز نظيف، وعلى ماذا يبوّبها.
+
+<Callout kind="danger" title="لا تنسخ المشروع المرجعي">
+هذا المستودع *دليل دراسة*، لا مادة مصدر. نسخ كوده بالكامل من شأنه أن يتجاوز نقطة المهمة المستقلة كلها — بناء القرارات بنفسك. عندما تجلس لتكتب `conftest.py`، أغلق التبويب واكتب من رأسك، ثم افتحه لتقارن اختيارك لا لتلصق اختيارهم. نفس القاعدة سارت على كل مرجع في المسارات السابقة.
+</Callout>
+
+## مصادر مختارة
+
+لكل مصدر: **ما هو، ولماذا هو مفيد، ومتى تفتحه، وعلى ماذا تركّز** — الوثائق الرسمية هي المصدر الفني للحقيقة؛ عندما تختلف هذه الصفحة معها، فالوثائق تنتصر.
+
+أولاً، الدروس الثلاثة التي تقف عليها، مبنية في هذا الموقع:
+
+**[FastAPI: A Guided Learning Path](/docs/learning-paths/fastapi)** — حيث جاء `TestClient` و pytest و تحقق Pydantic ونقاط CRUD قيد الاختبار كلها. عُد إليه كلما كان سلوك متوقع في هذه المهمة غير واضح.
+
+**[Docker & CI/CD: A Guided Learning Path](/docs/learning-paths/docker-cicd)** — حيث جاءت فكرة قابلية النقل ومجموعة Compose و `ci.yml` الدقيق الذي يشغّل مجموعتك.
+
+**[Authentication & Authorization: A Guided Learning Path](/docs/learning-paths/authentication-authorization)** — حيث وُلدت البيئة قبل الاستيراد و `reset_db` ومساعدا المصادقة ومصفوفة 401/403 كلها. الـ Fixtures في هذه المهمة هي تلك المجموعة، وقد نضجت.
+
+<ResourceItem
+  label="FastAPI: Testing"
+  href="https://fastapi.tiangolo.com/tutorial/testing/"
+  why="الفصل الرسمي عن اختبار تطبيقات FastAPI بـ TestClient — الوصف القانوني لكل ما تبنيه هذه المهمة."
+  when="قبل كتابة ملفات الاختبار الأولى، ومرة أخرى كلما فاجأك سلوك TestClient."
+  focus="استخدام TestClient وتجاوز التبعيات وكيف تصل الاختبارات إلى التطبيق دون خادم."
+/>
+
+<ResourceItem
+  label="FastAPI: TestClient (المرجع)"
+  href="https://fastapi.tiangolo.com/reference/testclient/"
+  why="واجهة TestClient الدقيقة: كل دالة ومعامل وشكل إرجاع — الخريطة الموثوقة لأي طلب تحتاج صنعه."
+  when="أثناء كتابة أي اختبار يحتاج ترويسة أو معاملاً أو هيئة حمولة غير معتادة."
+  focus="توقيعات الدوال (get/post/put/delete و json= و data= و headers= و params=) وخصائص الاستجابة (status_code و json() و text)."
+/>
+
+<ResourceItem
+  label="pytest: How to use fixtures"
+  href="https://docs.pytest.org/en/stable/how-to/fixtures.html"
+  why="الدليل الرسمي للـ Fixtures — النطاق و autouse والمصانع والتنظيف والتركيب؛ الأدوات الدقيقة التي يستخدمها conftest.py في هذه المهمة."
+  when="عندما تريد Fixtureاً له مصنع أو نطاق أو تنظيف لم تكتبه من قبل."
+  focus='معاملات الـ Fixture والتنظيف عبر yield و autouse ومتى يكون scope="session" مناسباً (ومتى لا يكون).'
+/>
+
+<ResourceItem
+  label="pytest: How to write and report assertions"
+  href="https://docs.pytest.org/en/stable/how-to/assert.html"
+  why="المعالجة الرسمية لـ assert — بما فيها رسائل الفشل المقروءة والفرق بين المساواة الصارمة وفحوصات العضوية."
+  when="عندما لا يخبرك مخرج التوكيد الفاشل فوراً بما تغير."
+  focus="إبلاغ الفشل المقروء والاستبطان الذي يقوم به pytest في التحققات."
+/>
+
+<ResourceItem
+  label="HTTPX: Requests (مرجع العميل)"
+  href="https://www.python-httpx.org/"
+  why="مكتبة HTTP تحت TestClient. قراءة دلالات طلباتها تجعل استدعاءات TestClient تتوقف عن أن تبدو سحرية."
+  when="عندما يفشل استدعاء TestClient على نحو يوحي بهجين HTTP (مهلات أو redirects أو ترويسات)."
+  focus="كيف تُبنى الطلبات من دالة + رابط + params + headers + json — نفس الأشكال التي يقبلها TestClient."
+/>
+
+<ResourceItem
+  label="OWASP: Authorization Testing Automation Cheat Sheet"
+  href="https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Testing_Automation_Cheat_Sheet.html"
+  why="التشكيل الاحترافي لقاعدة هذه المهمة «اختبر كل حالة مرفوضة» — مصفوفة التفويض كنظام."
+  when="عند تصميم قائمة اختبارات مشروعك المستقل، وفي كل مرة تضيف نقطة نهاية تعصّ مورداً."
+  focus="نمذجة تركيبات الدور/المورد التي يجب أن تختبرها، بما فيها المرفوضة."
+/>
+
+<ResourceItem
+  label="pytest-randomly"
+  href="https://pypi.org/project/pytest-randomly/"
+  why="يشغّل اختباراتك بترتيب عشوائي في CI، فيلتقط بالضبط أخطاء استقلالية الاختبارات التي تعلّمها قائمة فحص هذه المهمة."
+  when="في مشروعك المستقل، بعد أن تكون المجموعة خضراء — الأداة التي تثبت «لا يعتمد اختبار على غيره»."
+  focus="تفعيل الترتيب العشوائي وقراءة فشل يكشفه: اختبار نجح فقط لأن أخاً له عمل قبله."
+/>
+
+## إلى ما بعد هذا المسار
+
+الانضباط موجود الآن؛ الخطوات التالية المتعمدة، بترتيب القيمة:
+
+1. **قياس التغطية** — أضف `pytest-cov` واقرأ التقرير سطراً سطراً: الفروع غير المُزارة هي عادةً الحالات المرفوضة التي تخطيتها.
+2. **اختبارات معاملية** — دالة اختبار واحدة والعديد من المدخلات: جدول حمولات غير صالحة يصبح صفوف `@pytest.mark.parametrize` بدل خمس دوال شبه متطابقة.
+3. **الاختبار مقابل PostgreSQL حقيقي** — استبدل سطر SQLite بحاوية خدمة Postgres في CI. النمط متطابق؛ لا يتغير إلا `DATABASE_URL`، وستثق بأن SQL الذي يعمل عليه تطبيقك فعلاً هو الذي تتحقق منه اختباراتك.
+4. **مزدوجات اختبار فقط حيث تدفع مقابلها** — تجاوزات تبعية للعملاء الخارجيين البطيئين (بريد، SMS). انضباط المهمة الثالثة: استخدم الحقيقي حيث رخيص، واقلد فقط ما هو مكلف فعلاً.
+5. **اختبارات تقييد المعدل والقوة الغاشمة** — لتسجيل الدخول الآن حرّاس؛ اختبر الحرّاس: محاولات فاشلة كثيرة، ثم الإغلاق.
+6. **اختبار التطفير** — أداة تحذف أسطراً من كود التطبيق وتتحقق من احمرار مجموعتك. تجربة "اكسر الحارس" من هذه المهمة، مؤتمتة عبر الكود كله.
+
+الأثر الذي يستحق المتابعة أكثر هو **تغطية تقيس الحالات المرفوضة**: عندما ترى لكل سطر أن كل فرع 401/403/404/422 ممارس، تصبح العادة التي ثبتتها هذه المهمة ذاتية الرقابة.
+
+## ملاحظة عن كيفية بناء هذه المهمة
+
+هذه هي الدرجة الرابعة المتعمدة من السلم. المهمة الأولى علمتك *كتابة* خلفية؛ الثانية *تعبئتها وتشغيلها وأتمتتها*؛ الثالثة *معرفة من يستدعيها وما الذي قد يلمسه*؛ وهذه المهمة علمتك **إثبات كل وعد من تلك الوعود بمجموعة يثق بها فريق**. لم يتغير شيء في الواجهة — كل ما حولها أصبح مواصفة قابلة للتنفيذ. كل مقطع اتبع النبضات الأربع نفسها — اشرح، اعرض، نفّذ، تحقق، انتقل للأمام — وكل ادعاء أحال إلى المصادر الرسمية أعلاه كمصدر حقيقي، وحمل OWASP سبب انضباط الحالات المرفوضة. عند انتهائك بواجهة مهام مثبّت فيه كل قاعدة تحقق وكل حارس 401/403 وكل حافة ملكية باختبار كتبته وفهمته ورأيت مرةً احمرارُه عمداً — وبواجهة موظفين مجموعتها أشرف مخرجاتها — تكون قد عبرت من "أكتب كوداً" إلى "أثبت أن كودي ما زال يعمل بعد أن أرحل". ذلك الإثبات — لا عدد الاختبارات — هو ما وُجدت هذه المهمة لتُنمّيه.
