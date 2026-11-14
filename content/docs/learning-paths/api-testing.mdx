@@ -8,6 +8,23 @@ readingTime: 75
 
 # API Testing with FastAPI & Pytest: A Guided Learning Path
 
+## Quick Summary (Read This First)
+
+| | |
+|---|---|
+| **Task** | Build a professional pytest suite for the Task API (CRUD + auth + ownership) |
+| **Time to apply** | ~45–60 minutes if you copy and modify |
+| **Libraries** | `pytest`, `httpx` (already installed with FastAPI) |
+| **Main new files** | `pytest.ini`, `tests/conftest.py`, `tests/test_tasks.py`, `tests/test_auth.py` |
+| **What you change** | Test cases, fixture setup, and assertion rules for your own project |
+
+**Key files to copy:**
+- `tests/conftest.py` — shared fixtures (client, clean database, auth headers)
+- `pytest.ini` — pytest configuration
+
+---
+
+
 This is the **fourth technical task** in your internship. You already have a serious backend: in the [first learning path](/docs/learning-paths/fastapi) you built the Task Management API; in the [second](/docs/learning-paths/docker-cicd) you containerized it, gave it PostgreSQL, and automated tests in CI; in the [third](/docs/learning-paths/authentication-authorization) you added users, JWTs, ownership, and roles. Every feature works. So this task is not about writing new features at all.
 
 This task asks a different, uncomfortable question: **how do you *prove* the API still works tomorrow?**
@@ -238,6 +255,16 @@ If the move broke anything, this is the moment to see it — pytest will report 
 - The suites may still pass as-is — that's fine. Renaming `test_main.py` to `tests/test_tasks.py` does not change what pytest finds; the tidy-up happens in the next steps.
 
 ### Step 3 — The fixtures: `tests/conftest.py`
+
+**Ready-to-copy `tests/conftest.py`:**  
+Create this file inside the `tests/` folder and paste the code below. It gives every test a clean database and an easy way to get auth headers.
+
+**What to modify:**
+- Change the registration payload fields if your User model is different.
+- Update the database URL if you use a different test database.
+- Adjust the `auth_headers` function if your login endpoint expects different fields.
+
+
 
 Now the rewrite that makes the suite maintainable. Create `tests/conftest.py`:
 
