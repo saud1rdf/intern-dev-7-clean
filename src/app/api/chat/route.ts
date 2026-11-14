@@ -1,62 +1,110 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+const MODELS = [
+  'gemini-3.5-flash-lite',
+  'gemini-3.1-flash-lite',
+  'gemini-3.6-flash',
+  'gemini-3.8-flash',
+]
+
 export async function POST(request: NextRequest) {
   try {
     const { message, language, conversationHistory } = await request.json()
 
-    if (!message) {
+    if (!message || typeof message !== 'string') {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 })
     }
 
     const apiKey = process.env.GEMINI_API_KEY
     if (!apiKey) {
-      return NextResponse.json({ error: 'GEMINI_API_KEY is missing' }, { status: 500 })
+      return NextResponse.json({ error: 'GEMINI_API_KEY is missing in Vercel' }, { status: 500 })
     }
 
     const systemPrompt = language === 'ar'
-      ? `أنت مساعد برمجي عملي. جاوب بشكل مباشر وأعطِ الكود أولاً.`
-      : `You are a practical programming assistant. Answer directly and give code first.`
+      ? 'You are a practical programming tutor. Answer in Arabic. Be direct. Put ready-to-copy code first, then a short explanation of what to change. Do not ask questions unless the request is impossible to understand.'
+      : 'You are a practical programming tutor. Answer directly. Put ready-to-copy code first, then a short explanation of what to change. Do not ask questions unless the request is impossible to understand.'
 
-    const contents = [
-      { role: 'user', parts: [{ text: systemPrompt }] },
-      { role: 'model', parts: [{ text: 'OK' }] },
-      ...((conversationHistory || []).slice(-6).map((msg: any) => ({
-        role: msg.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: msg.content || '' }]
-      }))),
-      { role: 'user', parts: [{ text: message }] }
-    ]
+    const history = Array.isArray(conversationHistory) ? conversationHistory : []
+    const contents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = []
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`
+    for (const msg of history.slice(-8)) {
+      const text = typeof msg?.content === 'string' ? msg.content.trim() : ''
+      if (!text) continue
+      const role: 'user' | 'model' = msg.role === 'assistant' ? 'model' : 'user'
+      const last = contents[contents.length - 1]
+      if (last && last.role === role) {
+        last.parts[0].text += '\n' + text
+      } else {
+        contents.push({ role, parts: [{ text }] })
+      }
+    }
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents,
-        generationConfig: { temperature: 0.4, maxOutputTokens: 800 }
-      })
+    while (contents[0]?.role === 'model') contents.shift()
+
+    const last = contents[contents.length - 1]
+    if (last?.role === 'user') {
+      last.parts[0].text += '\n' + message
+    } else {
+      contents.push({ role: 'user', parts: [{ text: message }] })
+    }
+
+    const body = JSON.stringify({
+      system_instruction: { parts: [{ text: systemPrompt }] },
+      contents,
     })
 
-    const rawText = await response.text()
+    const failures: string[] = []
 
-    if (!response.ok) {
-      return NextResponse.json({
-        error: 'Gemini API failed',
-        status: response.status,
-        details: rawText.slice(0, 400)
-      }, { status: 500 })
+    for (const model of MODELS) {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': apiKey,
+          },
+          body,
+        }
+      )
+
+      const rawText = await response.text()
+
+      if (!response.ok) {
+        failures.push(`${model}: ${response.status} ${rawText.slice(0, 180)}`)
+        if (response.status === 401 || response.status === 403) {
+          return NextResponse.json({
+            error: 'Gemini rejected the API key. Create a new key in Google AI Studio and replace GEMINI_API_KEY in Vercel.',
+            details: failures.join(' | '),
+          }, { status: 500 })
+        }
+        continue
+      }
+
+      let data: any
+      try {
+        data = JSON.parse(rawText)
+      } catch {
+        failures.push(`${model}: invalid JSON`)
+        continue
+      }
+
+      const aiResponse = data.candidates?.[0]?.content?.parts
+        ?.map((part: { text?: string }) => part.text || '')
+        .join('')
+        .trim()
+
+      if (aiResponse) {
+        return NextResponse.json({ response: aiResponse, model })
+      }
+
+      failures.push(`${model}: empty candidates`)
     }
 
-    const data = JSON.parse(rawText)
-    const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text
-
-    if (!aiResponse) {
-      return NextResponse.json({ error: 'Empty response' }, { status: 500 })
-    }
-
-    return NextResponse.json({ response: aiResponse })
-
+    return NextResponse.json({
+      error: 'All Gemini models failed. Try again in a minute.',
+      details: failures.join(' | '),
+    }, { status: 500 })
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || 'Server error' }, { status: 500 })
   }

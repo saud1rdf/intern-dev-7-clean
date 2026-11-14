@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useLanguage } from '@/components/providers/LanguageProvider'
 import { Button } from '@/components/ui/Button'
-import { MessageCircle, X, Send, Bot, User } from 'lucide-react'
+import { MessageCircle, X, Send, Bot } from 'lucide-react'
 
 interface Message {
   id: string
@@ -18,9 +18,9 @@ export default function Chatbot() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      content: language === 'ar' 
+      content: language === 'ar'
         ? 'مرحباً! أنا المعلم الذكي. كيف يمكنني مساعدتك في تعلم البرمجة اليوم؟'
-        : 'Hello! I\'m your AI tutor. How can I help you learn programming today?',
+        : "Hello! I'm your AI tutor. How can I help you learn programming today?",
       role: 'assistant',
       timestamp: new Date()
     }
@@ -38,15 +38,17 @@ export default function Chatbot() {
   }, [messages])
 
   const sendMessage = async () => {
-    if (!inputValue.trim() || isLoading) return
+    const text = inputValue.trim()
+    if (!text || isLoading) return
 
     const userMessage: Message = {
       id: Date.now().toString(),
-      content: inputValue,
+      content: text,
       role: 'user',
       timestamp: new Date()
     }
 
+    const history = messages
     setMessages(prev => [...prev, userMessage])
     setInputValue('')
     setIsLoading(true)
@@ -54,37 +56,34 @@ export default function Chatbot() {
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: inputValue,
-          language: language,
-          conversationHistory: messages
+          message: text,
+          language,
+          conversationHistory: history
         }),
       })
 
       const data = await response.json()
+      const fallback = language === 'ar'
+        ? 'عذراً، ما قدرت أجيب رد. حاول مرة ثانية.'
+        : 'Sorry, I could not get a reply. Try again.'
 
-      const assistantMessage: Message = {
+      setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
-        content: data.response,
+        content: data.response || data.error || fallback,
         role: 'assistant',
         timestamp: new Date()
-      }
-
-      setMessages(prev => [...prev, assistantMessage])
-    } catch (error) {
-      console.error('Error sending message:', error)
-      const errorMessage: Message = {
+      }])
+    } catch {
+      setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
-        content: language === 'ar' 
-          ? 'عذراً، حدث خطأ. يرجى المحاولة مرة أخرى.'
-          : 'Sorry, an error occurred. Please try again.',
+        content: language === 'ar'
+          ? 'عذراً، حدث خطأ في الاتصال. حاول مرة ثانية.'
+          : 'Sorry, the connection failed. Please try again.',
         role: 'assistant',
         timestamp: new Date()
-      }
-      setMessages(prev => [...prev, errorMessage])
+      }])
     } finally {
       setIsLoading(false)
     }
@@ -134,7 +133,7 @@ export default function Chatbot() {
                 className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                  className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg whitespace-pre-wrap ${
                     message.role === 'user'
                       ? 'bg-blue-600 text-white'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
@@ -142,11 +141,6 @@ export default function Chatbot() {
                 >
                   <div className={`text-sm ${language === 'ar' ? 'font-arabic' : 'font-english'}`}>
                     {message.content}
-                  </div>
-                  <div className={`text-xs mt-1 opacity-70 ${
-                    message.role === 'user' ? 'text-blue-100' : 'text-gray-500'
-                  }`}>
-                    {message.timestamp.toLocaleTimeString()}
                   </div>
                 </div>
               </div>
