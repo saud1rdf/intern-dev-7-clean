@@ -8,6 +8,24 @@ readingTime: 90
 
 # Authentication & Authorization: A Guided Learning Path
 
+## Quick Summary (Read This First)
+
+| | |
+|---|---|
+| **Task** | Add user registration, login, JWT tokens, ownership, and roles to the Task API |
+| **Time to apply** | ~60–90 minutes if you copy and modify |
+| **Libraries** | `pwdlib[argon2]`, `pyjwt`, `python-multipart` |
+| **Main new files** | `security.py`, `test_auth.py` |
+| **What you change** | User model fields, role names, and protected endpoint logic for your project |
+
+**Key libraries:**
+- [pwdlib](https://github.com/frankie567/pwdlib) + Argon2 — password hashing
+- [PyJWT](https://pyjwt.readthedocs.io/) — JWT creation and verification
+- Official FastAPI security docs: https://fastapi.tiangolo.com/tutorial/security/
+
+---
+
+
 This is the **third technical task** in your internship. It is the natural next step on the **same Task Management API** you have been carrying forward. In the [first learning path](/docs/learning-paths/fastapi) you built the API. In the [second learning path](/docs/learning-paths/docker-cicd) you containerized it, gave it a real PostgreSQL database, and automated its tests. Now an uncomfortable question finally has to be answered: **right now, anyone who can reach your API can read, edit, and delete every task. Who are these people, and what are they allowed to do?**
 
 This task gives your backend the two capabilities every real system needs:
