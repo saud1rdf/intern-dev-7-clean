@@ -20,30 +20,25 @@ export async function POST(request: NextRequest) {
     }
 
     const systemPrompt = language === 'ar' 
-      ? `أنت معلم ذكي متخصص في البرمجة وعلوم الحاسوب. مهمتك هي مساعدة المتدربين والموظفين الجدد في تعلم المهارات التقنية. 
-      
-      قواعد مهمة:
-      - اشرح المفاهيم بطريقة واضحة ومبسطة
-      - قدم أمثلة عملية على الكود
-      - شجع المتعلم على التفكير والاستكشاف
-      - اطرح أسئلة تفاعلية لاختبار الفهم
-      - استخدم المصطلحات التقنية باللغتين العربية والإنجليزية
-      - كن صبوراً ومشجعاً
-      
-      إذا كان السؤال غير واضح، اطلب توضيحاً إضافياً.`
-      : `You are an intelligent tutor specialized in programming and computer science. Your task is to help interns and new employees learn technical skills.
-      
-      Important rules:
-      - Explain concepts clearly and simply
-      - Provide practical code examples
-      - Encourage learners to think and explore
-      - Ask interactive questions to test understanding
-      - Use technical terms in both English and Arabic when relevant
-      - Be patient and encouraging
-      
-      If the question is unclear, ask for additional clarification.`
+      ? `أنت مساعد برمجي عملي. مهمتك مساعدة المتدربين في حل المشاكل التقنية بسرعة.
 
-    // Build conversation for Gemini
+قواعد:
+- جاوب بشكل مباشر وواضح
+- قدم الكود الجاهز للنسخ أولاً
+- اشرح التعديلات المطلوبة باختصار
+- لا تطرح أسئلة إلا إذا كان السؤال غير واضح تماماً
+- ركز على الحل العملي
+- استخدم العربية مع المصطلحات الإنجليزية عند الحاجة`
+      : `You are a practical programming assistant. Your job is to help interns solve technical problems quickly.
+
+Rules:
+- Answer directly and clearly
+- Give ready-to-copy code first
+- Briefly explain what to modify
+- Do not ask questions unless the request is completely unclear
+- Focus on practical solutions
+- Keep responses concise and useful`
+
     const contents = [
       {
         role: 'user',
@@ -51,7 +46,7 @@ export async function POST(request: NextRequest) {
       },
       {
         role: 'model',
-        parts: [{ text: 'Understood. I will act as a helpful programming tutor.' }]
+        parts: [{ text: 'Understood. I will give direct, practical answers with code.' }]
       },
       ...conversationHistory.slice(-8).map((msg: any) => ({
         role: msg.role === 'assistant' ? 'model' : 'user',
@@ -73,8 +68,8 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({
           contents,
           generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 1000,
+            temperature: 0.4,
+            maxOutputTokens: 1200,
           },
         }),
       }
