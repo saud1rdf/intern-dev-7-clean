@@ -11,11 +11,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get OpenAI API key from environment variables
-    const apiKey = process.env.OPENAI_API_KEY
+    // Groq API key (free tier)
+    const apiKey = process.env.GROQ_API_KEY
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'OpenAI API key not configured' },
+        { error: 'Groq API key not configured' },
         { status: 500 }
       )
     }
@@ -54,15 +54,15 @@ export async function POST(request: NextRequest) {
       { role: 'user', content: message }
     ]
 
-    // Call OpenAI API
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Call Groq API (OpenAI-compatible)
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4',
+        model: 'llama-3.3-70b-versatile',
         messages: messages,
         max_tokens: 1000,
         temperature: 0.7,
@@ -70,14 +70,16 @@ export async function POST(request: NextRequest) {
     })
 
     if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`)
+      const errorText = await response.text()
+      console.error('Groq API error:', response.status, errorText)
+      throw new Error(`Groq API error: ${response.status}`)
     }
 
     const data = await response.json()
     const aiResponse = data.choices[0]?.message?.content
 
     if (!aiResponse) {
-      throw new Error('No response from OpenAI')
+      throw new Error('No response from Groq')
     }
 
     return NextResponse.json({ response: aiResponse })
