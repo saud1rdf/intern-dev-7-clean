@@ -11,16 +11,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Groq API key (free tier)
-    const apiKey = process.env.GROQ_API_KEY
+    const apiKey = process.env.GEMINI_API_KEY
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'Groq API key not configured' },
+        { error: 'Gemini API key not configured' },
         { status: 500 }
       )
     }
 
-    // Prepare the conversation context
     const systemPrompt = language === 'ar' 
       ? `أنت معلم ذكي متخصص في البرمجة وعلوم الحاسوب. مهمتك هي مساعدة المتدربين والموظفين الجدد في تعلم المهارات التقنية. 
       
@@ -45,41 +43,54 @@ export async function POST(request: NextRequest) {
       
       If the question is unclear, ask for additional clarification.`
 
-    const messages = [
-      { role: 'system', content: systemPrompt },
-      ...conversationHistory.slice(-10).map((msg: any) => ({
-        role: msg.role,
-        content: msg.content
+    // Build conversation for Gemini
+    const contents = [
+      {
+        role: 'user',
+        parts: [{ text: systemPrompt }]
+      },
+      {
+        role: 'model',
+        parts: [{ text: 'Understood. I will act as a helpful programming tutor.' }]
+      },
+      ...conversationHistory.slice(-8).map((msg: any) => ({
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: msg.content }]
       })),
-      { role: 'user', content: message }
+      {
+        role: 'user',
+        parts: [{ text: message }]
+      }
     ]
 
-    // Call Groq API (OpenAI-compatible)
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: messages,
-        max_tokens: 1000,
-        temperature: 0.7,
-      }),
-    })
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents,
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 1000,
+          },
+        }),
+      }
+    )
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('Groq API error:', response.status, errorText)
-      throw new Error(`Groq API error: ${response.status}`)
+      console.error('Gemini API error:', response.status, errorText)
+      throw new Error(`Gemini API error: ${response.status}`)
     }
 
     const data = await response.json()
-    const aiResponse = data.choices[0]?.message?.content
+    const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text
 
     if (!aiResponse) {
-      throw new Error('No response from Groq')
+      throw new Error('No response from Gemini')
     }
 
     return NextResponse.json({ response: aiResponse })
