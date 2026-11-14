@@ -27,8 +27,7 @@ export async function POST(request: NextRequest) {
       { role: 'user', parts: [{ text: message }] }
     ]
 
-    // Use a currently available Gemini model
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`
 
     const response = await fetch(url, {
       method: 'POST',
@@ -42,7 +41,6 @@ export async function POST(request: NextRequest) {
     const rawText = await response.text()
 
     if (!response.ok) {
-      console.error('Gemini error:', response.status, rawText)
       return NextResponse.json({
         error: 'Gemini API failed',
         status: response.status,
@@ -54,7 +52,7 @@ export async function POST(request: NextRequest) {
     const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text
 
     if (!aiResponse) {
-      return NextResponse.json({ error: 'Empty response', raw: rawText.slice(0, 300) }, { status: 500 })
+      return NextResponse.json({ error: 'Empty response' }, { status: 500 })
     }
 
     return NextResponse.json({ response: aiResponse })
