@@ -9,7 +9,6 @@ interface Message {
   id: string
   content: string
   role: 'user' | 'assistant'
-  timestamp: Date
 }
 
 export default function Chatbot() {
@@ -19,37 +18,26 @@ export default function Chatbot() {
     {
       id: '1',
       content: language === 'ar'
-        ? 'مرحباً! أنا المعلم الذكي. كيف يمكنني مساعدتك في تعلم البرمجة اليوم؟'
-        : "Hello! I'm your AI tutor. How can I help you learn programming today?",
-      role: 'assistant',
-      timestamp: new Date()
+        ? 'مرحباً! اكتب المهمة وبعطيك الكود.'
+        : 'Hello. Describe the task and I will give you the code.',
+      role: 'assistant'
     }
   ])
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
+  const listRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+    const el = listRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [messages, isLoading, isOpen])
 
   const sendMessage = async () => {
     const text = inputValue.trim()
     if (!text || isLoading) return
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content: text,
-      role: 'user',
-      timestamp: new Date()
-    }
-
     const history = messages
-    setMessages(prev => [...prev, userMessage])
+    setMessages(prev => [...prev, { id: Date.now().toString(), content: text, role: 'user' }])
     setInputValue('')
     setIsLoading(true)
 
@@ -57,42 +45,36 @@ export default function Chatbot() {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: text,
-          language,
-          conversationHistory: history
-        }),
+        body: JSON.stringify({ message: text, language, conversationHistory: history }),
       })
 
-      const data = await response.json()
+      const raw = await response.text()
+      let data: { response?: string; error?: string } = {}
+      try {
+        data = JSON.parse(raw)
+      } catch {
+        data = { error: raw.slice(0, 180) }
+      }
+
       const fallback = language === 'ar'
         ? 'عذراً، ما قدرت أجيب رد. حاول مرة ثانية.'
         : 'Sorry, I could not get a reply. Try again.'
 
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
-        content: data.response || data.error || fallback,
-        role: 'assistant',
-        timestamp: new Date()
+        content: (data.response || data.error || fallback).trim() || fallback,
+        role: 'assistant'
       }])
     } catch {
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
         content: language === 'ar'
-          ? 'عذراً، حدث خطأ في الاتصال. حاول مرة ثانية.'
-          : 'Sorry, the connection failed. Please try again.',
-        role: 'assistant',
-        timestamp: new Date()
+          ? 'عذراً، الاتصال انقطع. حاول مرة ثانية.'
+          : 'Connection failed. Try again.',
+        role: 'assistant'
       }])
     } finally {
       setIsLoading(false)
-    }
-  }
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      sendMessage()
     }
   }
 
@@ -108,13 +90,11 @@ export default function Chatbot() {
       )}
 
       {isOpen && (
-        <div className="chatbot-window slide-in-right">
-          <div className="bg-blue-600 text-white p-4 flex items-center justify-between">
+        <div className="chatbot-window">
+          <div className="bg-blue-600 text-white p-4 flex items-center justify-between shrink-0">
             <div className="flex items-center">
               <Bot className="h-5 w-5 mr-2" />
-              <h3 className={`font-semibold ${language === 'ar' ? 'font-arabic' : 'font-english'}`}>
-                {t('chatbot.title')}
-              </h3>
+              <h3 className="font-semibold">{t('chatbot.title')}</h3>
             </div>
             <Button
               variant="ghost"
@@ -126,50 +106,31 @@ export default function Chatbot() {
             </Button>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 h-80">
+          <div className="chat-messages" ref={listRef}>
             {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg whitespace-pre-wrap ${
-                    message.role === 'user'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
-                  }`}
-                >
-                  <div className={`text-sm ${language === 'ar' ? 'font-arabic' : 'font-english'}`}>
-                    {message.content}
-                  </div>
-                </div>
+              <div key={message.id} className={`chat-bubble ${message.role}`}>
+                {message.content}
               </div>
             ))}
             {isLoading && (
-              <div className="flex justify-start">
-                <div className="bg-gray-100 dark:bg-gray-700 px-4 py-2 rounded-lg">
-                  <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                  </div>
-                </div>
-              </div>
+              <div className="chat-bubble assistant">...</div>
             )}
-            <div ref={messagesEndRef} />
           </div>
 
-          <div className="p-4 border-t">
+          <div className="p-3 border-t shrink-0 bg-white dark:bg-gray-800">
             <div className="flex space-x-2">
               <input
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                onKeyPress={handleKeyPress}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    sendMessage()
+                  }
+                }}
                 placeholder={t('chatbot.placeholder')}
-                className={`flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white ${
-                  language === 'ar' ? 'font-arabic text-right' : 'font-english text-left'
-                }`}
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white"
                 disabled={isLoading}
               />
               <Button
