@@ -27,7 +27,8 @@ export async function POST(request: NextRequest) {
       { role: 'user', parts: [{ text: message }] }
     ]
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`
+    // Use a currently available Gemini model
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`
 
     const response = await fetch(url, {
       method: 'POST',
@@ -41,12 +42,11 @@ export async function POST(request: NextRequest) {
     const rawText = await response.text()
 
     if (!response.ok) {
-      console.error('Gemini error status:', response.status)
-      console.error('Gemini error body:', rawText)
+      console.error('Gemini error:', response.status, rawText)
       return NextResponse.json({
         error: 'Gemini API failed',
         status: response.status,
-        details: rawText.slice(0, 500)
+        details: rawText.slice(0, 400)
       }, { status: 500 })
     }
 
@@ -54,19 +54,12 @@ export async function POST(request: NextRequest) {
     const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text
 
     if (!aiResponse) {
-      return NextResponse.json({
-        error: 'Empty response from Gemini',
-        raw: rawText.slice(0, 500)
-      }, { status: 500 })
+      return NextResponse.json({ error: 'Empty response', raw: rawText.slice(0, 300) }, { status: 500 })
     }
 
     return NextResponse.json({ response: aiResponse })
 
   } catch (error: any) {
-    console.error('Chat route crash:', error)
-    return NextResponse.json({
-      error: 'Server crash',
-      message: error?.message || String(error)
-    }, { status: 500 })
+    return NextResponse.json({ error: error?.message || 'Server error' }, { status: 500 })
   }
 }
