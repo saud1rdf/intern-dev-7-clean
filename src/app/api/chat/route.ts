@@ -5,96 +5,68 @@ export async function POST(request: NextRequest) {
     const { message, language, conversationHistory } = await request.json()
 
     if (!message) {
-      return NextResponse.json(
-        { error: 'Message is required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Message is required' }, { status: 400 })
     }
 
     const apiKey = process.env.GEMINI_API_KEY
     if (!apiKey) {
-      return NextResponse.json(
-        { error: 'Gemini API key not configured' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: 'GEMINI_API_KEY is missing' }, { status: 500 })
     }
 
-    const systemPrompt = language === 'ar' 
-      ? `أنت مساعد برمجي عملي. مهمتك مساعدة المتدربين في حل المشاكل التقنية بسرعة.
-
-قواعد:
-- جاوب بشكل مباشر وواضح
-- قدم الكود الجاهز للنسخ أولاً
-- اشرح التعديلات المطلوبة باختصار
-- لا تطرح أسئلة إلا إذا كان السؤال غير واضح تماماً
-- ركز على الحل العملي
-- استخدم العربية مع المصطلحات الإنجليزية عند الحاجة`
-      : `You are a practical programming assistant. Your job is to help interns solve technical problems quickly.
-
-Rules:
-- Answer directly and clearly
-- Give ready-to-copy code first
-- Briefly explain what to modify
-- Do not ask questions unless the request is completely unclear
-- Focus on practical solutions
-- Keep responses concise and useful`
+    const systemPrompt = language === 'ar'
+      ? `أنت مساعد برمجي عملي. جاوب بشكل مباشر وأعطِ الكود أولاً.`
+      : `You are a practical programming assistant. Answer directly and give code first.`
 
     const contents = [
-      {
-        role: 'user',
-        parts: [{ text: systemPrompt }]
-      },
-      {
-        role: 'model',
-        parts: [{ text: 'Understood. I will give direct, practical answers with code.' }]
-      },
-      ...conversationHistory.slice(-8).map((msg: any) => ({
+      { role: 'user', parts: [{ text: systemPrompt }] },
+      { role: 'model', parts: [{ text: 'OK' }] },
+      ...((conversationHistory || []).slice(-6).map((msg: any) => ({
         role: msg.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: msg.content }]
-      })),
-      {
-        role: 'user',
-        parts: [{ text: message }]
-      }
+        parts: [{ text: msg.content || '' }]
+      }))),
+      { role: 'user', parts: [{ text: message }] }
     ]
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents,
-          generationConfig: {
-            temperature: 0.4,
-            maxOutputTokens: 1200,
-          },
-        }),
-      }
-    )
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents,
+        generationConfig: { temperature: 0.4, maxOutputTokens: 800 }
+      })
+    })
+
+    const rawText = await response.text()
 
     if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Gemini API error:', response.status, errorText)
-      throw new Error(`Gemini API error: ${response.status}`)
+      console.error('Gemini error status:', response.status)
+      console.error('Gemini error body:', rawText)
+      return NextResponse.json({
+        error: 'Gemini API failed',
+        status: response.status,
+        details: rawText.slice(0, 500)
+      }, { status: 500 })
     }
 
-    const data = await response.json()
+    const data = JSON.parse(rawText)
     const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text
 
     if (!aiResponse) {
-      throw new Error('No response from Gemini')
+      return NextResponse.json({
+        error: 'Empty response from Gemini',
+        raw: rawText.slice(0, 500)
+      }, { status: 500 })
     }
 
     return NextResponse.json({ response: aiResponse })
 
-  } catch (error) {
-    console.error('Chat API error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+  } catch (error: any) {
+    console.error('Chat route crash:', error)
+    return NextResponse.json({
+      error: 'Server crash',
+      message: error?.message || String(error)
+    }, { status: 500 })
   }
 }
