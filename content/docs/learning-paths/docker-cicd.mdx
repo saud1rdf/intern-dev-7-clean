@@ -8,6 +8,24 @@ readingTime: 75
 
 # Docker & CI/CD: A Guided Learning Path
 
+## Quick Summary (Read This First)
+
+| | |
+|---|---|
+| **Task** | Containerize the FastAPI Task API + add PostgreSQL + automate tests with GitHub Actions |
+| **Time to apply** | ~45–60 minutes if you copy and modify |
+| **Libraries / Tools** | Docker, Docker Compose, GitHub Actions, PostgreSQL |
+| **Main files** | `Dockerfile`, `compose.yaml`, `.github/workflows/ci.yml` |
+| **What you change** | Image name, ports, environment variables, and service names for your project |
+
+**Key files to copy:**
+- `Dockerfile` — packages the app
+- `compose.yaml` — runs app + database together
+- `.github/workflows/ci.yml` — automated tests
+
+---
+
+
 This is the **second technical task** in your internship. It does **not** start a new app. You will take the **FastAPI Task Management API** you finished in the [previous learning path](/docs/learning-paths/fastapi) and carry it through the rest of a real developer's journey: **package it, run it next to a database, and automate it.**
 
 Follow every section in order. Each one ends with a *"understand this before moving forward"* checkpoint. You move on only when you pass it.
@@ -201,6 +219,16 @@ Trace the relationship through these three: `docker images` tells you what *pack
 **Understand this before moving forward:** you can say out loud, without looking, "an image is the blueprint; a container is a running copy of that blueprint; destroying a container does not touch its image."
 
 ## Create the Dockerfile
+
+**Ready-to-copy Dockerfile:**  
+Create a file named exactly `Dockerfile` (no extension) in your project root and paste the code below.
+
+**What to modify:**
+- Change the base image if you use a different Python version.
+- Update the `CMD` if your app entry point is not `main:app`.
+- Adjust the exposed port if your app uses something other than 8000.
+
+
 
 A **Dockerfile** is the recipe file for building an image: plain text, one instruction per line, executed from top to bottom by `docker build`. Its name is exactly `Dockerfile` — no extension.
 
