@@ -118,7 +118,7 @@ body {
 
 .chat-bubble.user {
   align-self: flex-end;
-  background: #2563eb;
+  background: #1f2937;
   color: #ffffff;
 }
 
@@ -131,6 +131,11 @@ body {
 .dark .chatbot-window {
   background: #1f2937;
   border-color: #374151;
+}
+
+.dark .chat-bubble.user {
+  background: #e5e7eb;
+  color: #111827;
 }
 
 .dark .chat-bubble.assistant {
