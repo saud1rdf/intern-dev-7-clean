@@ -83,7 +83,7 @@ export default function Chatbot() {
       {!isOpen && (
         <Button
           onClick={() => setIsOpen(true)}
-          className="rounded-full p-4 bg-blue-600 hover:bg-blue-700 text-white shadow-lg"
+          className="rounded-full p-4 bg-gray-800 hover:bg-gray-700 text-white shadow-lg dark:bg-gray-200 dark:text-gray-900 dark:hover:bg-gray-300"
         >
           <MessageCircle className="h-6 w-6" />
         </Button>
@@ -91,7 +91,7 @@ export default function Chatbot() {
 
       {isOpen && (
         <div className="chatbot-window">
-          <div className="bg-blue-600 text-white p-4 flex items-center justify-between shrink-0">
+          <div className="bg-gray-800 text-white p-4 flex items-center justify-between shrink-0 dark:bg-gray-200 dark:text-gray-900">
             <div className="flex items-center">
               <Bot className="h-5 w-5 mr-2" />
               <h3 className="font-semibold">{t('chatbot.title')}</h3>
@@ -100,7 +100,7 @@ export default function Chatbot() {
               variant="ghost"
               size="sm"
               onClick={() => setIsOpen(false)}
-              className="text-white hover:bg-blue-700 p-1"
+              className="text-white hover:bg-gray-700 p-1 dark:text-gray-900 dark:hover:bg-gray-300"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -130,13 +130,13 @@ export default function Chatbot() {
                   }
                 }}
                 placeholder={t('chatbot.placeholder')}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white dark:bg-gray-700 dark:text-white dark:border-gray-600"
                 disabled={isLoading}
               />
               <Button
                 onClick={sendMessage}
                 disabled={!inputValue.trim() || isLoading}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-gray-800 hover:bg-gray-700 text-white dark:bg-gray-200 dark:text-gray-900 dark:hover:bg-gray-300"
               >
                 <Send className="h-4 w-4" />
               </Button>
