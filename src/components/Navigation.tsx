@@ -42,8 +42,8 @@ export default function Navigation() {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <Code className="h-5 w-5 text-white" />
+            <div className="w-8 h-8 bg-gray-800 dark:bg-gray-200 rounded-lg flex items-center justify-center">
+              <Code className="h-5 w-5 text-white dark:text-gray-900" />
             </div>
             <span className={`text-xl font-bold text-gray-900 dark:text-white ${
               language === 'ar' ? 'font-arabic' : 'font-english'
@@ -58,7 +58,7 @@ export default function Navigation() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors ${
+                className={`flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors ${
                   language === 'ar' ? 'font-arabic' : 'font-english'
                 }`}
               >
