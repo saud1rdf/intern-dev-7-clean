@@ -83,19 +83,19 @@ export default function LearningPathSection() {
           )}
           <Link
             href={path.href}
-            className="block rounded-xl border border-indigo-200 dark:border-indigo-800/60 bg-white dark:bg-slate-900/60 p-5 hover:shadow-lg transition-all duration-200 group"
+            className="block rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/60 p-5 hover:shadow-md transition-all duration-200 group"
           >
-            <p className="text-xs uppercase tracking-wide text-indigo-500 dark:text-indigo-300 mb-1">
+            <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
               {isAr ? path.stepAr : path.step} • {path.meta}
             </p>
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2 flex items-center">
-              <Map className={`h-5 w-5 mr-2 text-indigo-500 ${isAr ? 'ml-2 mr-0' : ''}`} />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 flex items-center">
+              <Map className={`h-5 w-5 mr-2 text-gray-600 dark:text-gray-400 ${isAr ? 'ml-2 mr-0' : ''}`} />
               {isAr ? path.titleAr : path.titleEn}
             </h3>
-            <p className="text-sm text-slate-600 dark:text-slate-300 mb-3 line-clamp-3">
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-3">
               {isAr ? path.descriptionAr : path.descriptionEn}
             </p>
-            <p className="inline-flex items-center text-sm font-medium text-indigo-600 dark:text-indigo-300 group-hover:underline">
+            <p className="inline-flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:underline">
               {isAr ? 'ابدأ المسار' : 'Start the path'}
               <ArrowRight className={`h-4 w-4 ${isAr ? 'mr-1' : 'ml-1'}`} />
             </p>
