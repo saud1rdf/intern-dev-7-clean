@@ -57,6 +57,19 @@ const learningPaths = [
     descriptionAr:
       'اجعل لمشروع إدارة المهام الذي بنيته مجموعة اختبارات احترافية يعتمد عليها: pytest و TestClient و Fixtures وقاعدة بيانات معزولة وتغطية كاملة للحالات المرفوضة، مع مشروع تجربة عملي تبني اختباراته بنفسك.',
   },
+  {
+    step: 'Learning Path 5',
+    stepAr: 'المسار الخامس',
+    href: '/docs/learning-paths/database',
+    meta: 'Database • SQLAlchemy • Backend • Intermediate',
+    title: 'Database Integration: A Guided Learning Path',
+    titleEn: 'Database Integration: A Guided Learning Path',
+    titleAr: 'ربط قاعدة البيانات: مسار تعلّم موجّه',
+    descriptionEn:
+      'Replace in-memory storage with a real database. Learn SQLAlchemy, SQLModel, and Tortoise ORM, then add persistence to the Task Management API.',
+    descriptionAr:
+      'استبدل التخزين المؤقت بقاعدة بيانات حقيقية. تعلّم SQLAlchemy و SQLModel و Tortoise ORM، ثم أضف الحفظ الدائم لمشروع إدارة المهام.',
+  },
 ];
 
 export default function LearningPathSection() {
