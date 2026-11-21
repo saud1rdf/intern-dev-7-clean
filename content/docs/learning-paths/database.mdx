@@ -1,0 +1,194 @@
+---
+title: "Database Integration: A Guided Learning Path"
+slug: "database"
+category: "learning-paths"
+summary: "Add a real database to the Task Management API you already built. Learn the three most common Python libraries — SQLAlchemy, SQLModel, and Tortoise ORM — then replace the in-memory storage with a persistent database."
+readingTime: 50
+---
+
+# Database Integration: A Guided Learning Path
+
+## Quick Summary (Read This First)
+
+| | |
+|---|---|
+| **Task** | Replace in-memory storage with a real database in the Task Management API |
+| **Time to apply** | ~40–60 minutes |
+| **Libraries** | SQLAlchemy, SQLModel, Tortoise ORM |
+| **Main file** | `main.py` + `database.py` |
+| **What you change** | The storage layer. Endpoints stay the same. |
+
+**Libraries used:**
+- [SQLAlchemy](https://www.sqlalchemy.org/) — the most widely used Python ORM
+- [SQLModel](https://sqlmodel.tiangolo.com/) — built by the FastAPI creator, combines SQLAlchemy + Pydantic
+- [Tortoise ORM](https://tortoise.github.io/) — async ORM popular with FastAPI
+- Official SQLAlchemy docs: https://docs.sqlalchemy.org/
+- Official SQLModel docs: https://sqlmodel.tiangolo.com/
+- Official Tortoise docs: https://tortoise.github.io/
+
+---
+
+This path takes the Task Management API you built in the FastAPI path and replaces the in-memory dictionary with a real database. You will see three common ways to do it, then implement one fully.
+
+## What Is a Database in an API?
+
+Until now, your tasks lived in a Python dictionary. When the server restarts, the data disappears. A database keeps the data on disk so it survives restarts and can be shared across requests.
+
+You will use **SQLite** for this path (a file-based database, no server needed). The same code works with PostgreSQL later by changing only the connection string.
+
+## The Three Most Common Libraries
+
+| Library | Best for | Async | Notes |
+|---------|----------|-------|-------|
+| **SQLAlchemy** | Most projects | Yes (with asyncio) | Industry standard. Steeper learning curve. |
+| **SQLModel** | FastAPI projects | Yes | Made by the FastAPI author. Uses SQLAlchemy under the hood. |
+| **Tortoise ORM** | Async-first apps | Yes | Inspired by Django ORM. Clean async syntax. |
+
+You do not need to master all three. Pick one for the guided project. The others are shown so you know they exist and can look them up later.
+
+## Guided Project: Add a Database to the Task API
+
+We will use **SQLModel** for the full example because it is the simplest with FastAPI. The concepts transfer to the other libraries.
+
+### Step 1 — Install
+
+```bash
+pip install sqlmodel
+```
+
+### Step 2 — Create the database file
+
+Create `database.py`:
+
+```python
+from sqlmodel import SQLModel, create_engine, Session
+
+sqlite_url = "sqlite:///./tasks.db"
+engine = create_engine(sqlite_url, connect_args={"check_same_thread": False})
+
+def create_db_and_tables():
+    SQLModel.metadata.create_all(engine)
+
+def get_session():
+    with Session(engine) as session:
+        yield session
+```
+
+**What this does:** creates a SQLite file called `tasks.db` and a session you can use in your endpoints.
+
+### Step 3 — Define the model
+
+In `main.py`, replace the old models with:
+
+```python
+from sqlmodel import SQLModel, Field
+from typing import Optional
+
+class Task(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    title: str
+    description: Optional[str] = None
+    completed: bool = False
+```
+
+**What this does:** one class is both the Pydantic model (for validation) and the database table.
+
+### Step 4 — Use the database in endpoints
+
+```python
+from fastapi import FastAPI, Depends, HTTPException
+from sqlmodel import Session, select
+from database import create_db_and_tables, get_session
+
+app = FastAPI()
+
+@app.on_event("startup")
+def on_startup():
+    create_db_and_tables()
+
+@app.post("/tasks/")
+def create_task(task: Task, session: Session = Depends(get_session)):
+    session.add(task)
+    session.commit()
+    session.refresh(task)
+    return task
+
+@app.get("/tasks/")
+def list_tasks(session: Session = Depends(get_session)):
+    tasks = session.exec(select(Task)).all()
+    return tasks
+
+@app.get("/tasks/{task_id}")
+def get_task(task_id: int, session: Session = Depends(get_session)):
+    task = session.get(Task, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return task
+```
+
+**What changed:** instead of writing to a dictionary, you write to the database session. The data now stays after you restart the server.
+
+### Step 5 — Run it
+
+```bash
+uvicorn main:app --reload
+```
+
+Create a task with the `/docs` page, then restart the server. The task is still there.
+
+## Other Libraries (Quick Reference)
+
+### SQLAlchemy (classic style)
+
+```python
+from sqlalchemy import create_engine, Column, Integer, String, Boolean
+from sqlalchemy.orm import declarative_base, sessionmaker
+
+Base = declarative_base()
+engine = create_engine("sqlite:///./tasks.db")
+SessionLocal = sessionmaker(bind=engine)
+
+class Task(Base):
+    __tablename__ = "tasks"
+    id = Column(Integer, primary_key=True)
+    title = Column(String)
+    completed = Column(Boolean, default=False)
+```
+
+Docs: https://docs.sqlalchemy.org/en/20/orm/quickstart.html
+
+### Tortoise ORM (async)
+
+```python
+from tortoise import fields
+from tortoise.models import Model
+
+class Task(Model):
+    id = fields.IntField(pk=True)
+    title = fields.CharField(max_length=120)
+    completed = fields.BooleanField(default=False)
+```
+
+Docs: https://tortoise.github.io/getting_started.html
+
+## Common Mistakes
+
+- Forgetting to call `create_db_and_tables()` on startup — the tables never appear.
+- Using the same session across requests — always use `Depends(get_session)`.
+- Not committing after `session.add()` — the data is not saved.
+
+## Official Documentation
+
+- SQLModel tutorial: https://sqlmodel.tiangolo.com/tutorial/
+- SQLAlchemy ORM quickstart: https://docs.sqlalchemy.org/en/20/orm/quickstart.html
+- Tortoise getting started: https://tortoise.github.io/getting_started.html
+
+## Independent Practice
+
+Add a database to the Employee Management API you built earlier. Use SQLModel (or SQLAlchemy if you prefer). The employee model should have: `id`, `name`, `email`, `department`.
+
+Do not copy the task code. Change the model fields and the endpoint paths.
+
+## Beyond This Path
+
+Once this works with SQLite, change the connection string to PostgreSQL (the same one used in the Docker path). The rest of the code stays the same.
